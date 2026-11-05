@@ -41,7 +41,10 @@ All commands are subcommands of the `sim-anything` console script
 
 **Errors.** No command prints a Python traceback for bad input; it prints a
 message to stderr (`build failed: ...`, `eval failed: ...`, `render failed:
-...`, `FAILED: ...`) and exits 1. Schema errors (spec in `validate`, `build`,
+...`, `FAILED: ...`) and exits 1. Command-line usage errors (a missing input
+file, an unknown option or command, `--max-iter 0`, a missing required option)
+also exit 1, with the usage line and the error on stderr; exit code 2 is never
+a usage error (for `loop` it means "max iterations reached"). Schema errors (spec in `validate`, `build`,
 `check`, `loop`; mapping file in `eval`) list *every* error, one per line, as
 `<path>: <message>` with the repo's bracket field paths
 (`joints[2].effort_limit`, `sources['joints[0].dh']`), no pydantic URLs, and

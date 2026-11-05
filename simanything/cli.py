@@ -8,10 +8,38 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from typer.core import TyperGroup
 
 from .errors import describe_exception
 
-app = typer.Typer(add_completion=False, no_args_is_help=True,
+# click's UsageError (typer may vendor its own copy of click, so take it from typer).
+_USAGE_ERROR = next(c for c in typer.BadParameter.__mro__ if c.__name__ == "UsageError")
+
+
+class _Group(TyperGroup):
+    """Command group whose usage errors exit 1, not click's 2.
+
+    Bad input (a missing file, ``--max-iter 0``, an unknown option) is exit 1
+    on every command (docs/CONTRACTS.md section 2); exit 2 is reserved for
+    ``loop``'s "max iterations reached".
+    """
+
+    def make_context(self, *args, **kwargs):  # type: ignore[override]
+        try:
+            return super().make_context(*args, **kwargs)
+        except _USAGE_ERROR as e:
+            e.exit_code = 1
+            raise
+
+    def invoke(self, ctx):  # type: ignore[override]
+        try:
+            return super().invoke(ctx)
+        except _USAGE_ERROR as e:
+            e.exit_code = 1
+            raise
+
+
+app = typer.Typer(cls=_Group, add_completion=False, no_args_is_help=True, pretty_exceptions_enable=False,
                   help="Reverse-engineer a robot arm into a verified MuJoCo simulation.")
 
 

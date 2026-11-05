@@ -130,3 +130,26 @@ def test_render_broken_model_is_a_clean_error(tmp_path):
     assert res.exit_code == 1 and isinstance(res.exception, SystemExit)
     assert res.stderr.startswith("render failed:") and res.stdout == ""
     assert "does not load" in res.stderr and "Traceback" not in res.stderr
+
+
+@pytest.mark.parametrize("args", [
+    ["build", "/nonexistent/spec.yaml", "-o", "m.xml"],
+    ["build", str(ROOT / "examples" / "toy_2link.yaml"), "--bogus"],
+    ["check", "/nonexistent/model.xml"],
+    ["validate", "/nonexistent/spec.yaml"],
+    ["loop", "/nonexistent/spec.yaml", "--run-dir", "run"],
+    ["loop", str(ROOT / "examples" / "toy_2link.yaml"), "--run-dir", "run", "--max-iter", "0"],
+    ["loop", str(ROOT / "examples" / "toy_2link.yaml")],
+    ["nosuchcommand"],
+])
+def test_usage_errors_exit_1_not_2(tmp_path, monkeypatch, args):
+    # exit 2 means "max iterations reached" for loop; bad input is always exit 1
+    monkeypatch.chdir(tmp_path)
+    res = _runner().invoke(app, args)
+    assert res.exit_code == 1, (res.exit_code, res.output)
+    assert "Traceback" not in res.stderr and res.stderr.strip()
+    assert not (tmp_path / "run").exists()
+
+
+def test_help_still_exits_0():
+    assert _runner().invoke(app, ["loop", "--help"]).exit_code == 0
