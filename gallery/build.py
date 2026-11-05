@@ -43,7 +43,8 @@ def card_data(robot: dict, split: str) -> dict | None:
         return None
     run = rd / "run"
     d: dict = {"id": robot["id"], "name": robot["name"], "manufacturer": robot.get("manufacturer", ""),
-               "split": split, "round": rd.name, "renders": {}, "publishes_dh": robot.get("publishes_dh")}
+               "split": split, "round": rd.name, "renders": {},
+               "kinematic_source": robot.get("kinematic_source", "unknown")}
     for v in ("front", "side", "top"):
         if (run / "renders" / f"{v}.png").exists():
             d["renders"][v] = run / "renders" / f"{v}.png"
@@ -117,7 +118,7 @@ def render_card(d: dict) -> str:
                  ("Joint-limit MAE", f'{ev["limit_mae"]:.1f}°'), ("Score", f'{ev["score"]:.1f} / 100')]
     else:
         rows.append(("EE error vs official model", "not evaluated"))
-    rows.append(("Kinematic table published", {True: "yes", False: "no"}.get(d.get("publishes_dh"), "unknown")))
+    rows.append(("Public kinematic source", d["kinematic_source"]))
     dl = "".join(f"<dt>{e(k)}</dt><dd>{e(v)}</dd>" for k, v in rows)
     links = [f'<a href="{e(d["sources_url"])}">sources</a>', f'<a href="{e(d["spec_url"])}">spec.yaml</a>']
     if d.get("report_rel"):
