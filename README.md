@@ -13,7 +13,7 @@ only, for now.
 A separate evaluator scores generated models against reference models, which is
 how we measure whether it works.
 
-![Six arms generated blind from public specs](docs/img/round0_sheet.png)
+![Six arms generated blind from public specs (round 1, home poses)](docs/img/dev_set.png)
 
 ## How it works
 
