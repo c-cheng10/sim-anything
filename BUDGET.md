@@ -18,8 +18,10 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 9 | 4 | blind round0: xarm7 | done: reach fails (unstated definition), refused to alter sourced numbers |
 | 10 | 4 | blind round0: kuka_iiwa14 | done: all pass in 1 iteration (offset chain from dimension table) |
 | 11 | 4 | blind round0: viperx_300s | done: all pass in 1 iteration (Trossen docs screw-axis table) |
-| 12 | 5 r1 | review: new-user tester | running |
-| 13 | 5 r1 | review: code reviewer | running |
-| 14 | 5 r1 | review: benchmark auditor | running |
+| 12 | 5 r1 | review: new-user tester | done: quickstart works (23 s); stale report, name clash, hint/validate issues |
+| 13 | 5 r1 | review: code reviewer | done: 12 findings (no kinematic-consistency check, silent collision exclusions, ...) |
+| 14 | 5 r1 | review: benchmark auditor | done: no leakage found, metrics reproduce; framing + weak sources |
+| 15 | 5 r1 | fixer A: checker/builder/spec | running |
+| 16 | 5 r1 | fixer B: loop/CLI/report/eval/plugin/docs | running |
 
 ## Refinement rounds used: 1 / 3 (in progress)
