@@ -24,6 +24,10 @@ Conventions
                         d_i, theta_offset_i), i.e. exactly one row of the table.
   For DH conventions a revolute joint's variable is theta (q + theta_offset); a
   prismatic joint's variable is d (q + d).
+* "Link frame" (used by ``link.com``, explicit geometry ``pos``/``fromto``):
+  for ``offset`` it is the child frame of the joint (the joint's own frame); for
+  DH conventions link i's frame is DH frame i (for ``dh_standard`` that is at
+  the distal end of link i, as in published DH dynamics tables).
 * ``ee`` is a fixed offset from the frame after the last joint (frame n for DH,
   the last link frame for ``offset``) to the end-effector site (tool flange).
 * ``sources`` maps a field path to the URL that supports it. ``estimates`` lists
