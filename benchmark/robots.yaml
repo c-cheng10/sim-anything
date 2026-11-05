@@ -34,6 +34,8 @@ dev:
     reference: third_party/mujoco_menagerie/kinova_gen3/gen3.xml
     publishes_dh: true
     kinematic_source: DH table (via third-party quote)
+    kinematic_source_by_round:
+      round2: dimension table (official guide lengths, lateral offsets omitted)
   - id: xarm7
     name: UFactory xArm 7
     manufacturer: UFactory
@@ -55,6 +57,8 @@ dev:
     reference: third_party/mujoco_menagerie/trossen_vx300s/vx300s.xml
     publishes_dh: false
     kinematic_source: screw-axis (PoE) table
+    kinematic_source_by_round:
+      round2: reach/offset tables (shoulder height estimated)
 
 holdout:
   - id: ur10e

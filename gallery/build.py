@@ -44,7 +44,8 @@ def card_data(robot: dict, split: str) -> dict | None:
     run = rd / "run"
     d: dict = {"id": robot["id"], "name": robot["name"], "manufacturer": robot.get("manufacturer", ""),
                "split": split, "round": rd.name, "renders": {},
-               "kinematic_source": robot.get("kinematic_source", "unknown")}
+               "kinematic_source": robot.get("kinematic_source_by_round", {}).get(
+                   rd.name, robot.get("kinematic_source", "unknown"))}
     for v in ("front", "side", "top"):
         if (run / "renders" / f"{v}.png").exists():
             d["renders"][v] = run / "renders" / f"{v}.png"
