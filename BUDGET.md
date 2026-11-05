@@ -9,7 +9,7 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 |---|---|---|---|
 | 1 | 2 | A: builder (spec -> MJCF) | running |
 | 2 | 2 | B: checker | running |
-| 3 | 2 | C: evaluator | running |
+| 3 | 2 | C: evaluator | done: evaluate.py + 40 tests, merged |
 | 4 | 2 | D: render + report | running |
 | 5 | 2 | E: plugin, loop, benchmark inputs | running |
 

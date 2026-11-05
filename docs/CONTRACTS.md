@@ -146,8 +146,12 @@ searched; no continuous parameters are fitted.
 
 `n_samples` configurations are drawn uniformly (seeded) from the intersection
 of the candidate's limits and the reference's limits mapped into candidate
-coordinates. Unlimited joints use [-π, π]. If an intersection is empty the
-candidate range is used and a note is added.
+coordinates. An unlimited joint imposes no constraint; [-π, π] is used only
+when both sides are unlimited. If an intersection is empty the candidate range
+is used and a note is added. Convention-fit ties (joints that don't move the
+EE point, e.g. a final roll) are broken by aligned orientation error. Slide
+joints are never convention-fitted and don't count toward the limit MAE; an
+unlimited joint is compared as [-π, π] in limit diffs.
 
 ### Metrics (`simanything.schemas.EvalResult`)
 
