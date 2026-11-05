@@ -5,4 +5,5 @@ candidate:
 reference:
   joints: [j1, j2, j3, j4]
   ee: {site: tool}
+base_yaw: 0.0   # pin the mounting yaw so the joint-1 offset is what gets fitted
 fit_conventions: true

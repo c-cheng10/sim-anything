@@ -324,3 +324,18 @@ def test_ur5e_lengthened_forearm(menagerie_dir, tmp_path):
         assert v == pytest.approx(delta * 1000, abs=1e-6)
     assert res.ee_orientation_error_deg.max < 1e-6
     assert res.score_breakdown["pos"] == pytest.approx(math.exp(-50.0 / 25.0))
+
+
+def test_base_yaw_is_fitted_instead_of_joint1_offset(tmp_path):
+    """A candidate whose base frame is turned 180 deg about z (a mounting convention)
+    gets base_yaw_deg = 180 with identity joint conventions, so limits compare cleanly."""
+    xml = REF.read_text().replace('<body name="base">', '<body name="base" euler="0 0 3.14159265358979">')
+    cand = tmp_path / "turned.xml"
+    cand.write_text(xml)
+    m = {"candidate": {"joints": ["j1", "j2", "j3", "j4"], "ee": {"site": "tool"}},
+         "reference": {"joints": ["j1", "j2", "j3", "j4"], "ee": {"site": "tool"}}}
+    res = evaluate(cand, REF, m, n_samples=300)
+    assert abs(abs(res.base_yaw_deg) - 180.0) < 1e-6
+    assert [(c.sign, c.offset) for c in res.conventions] == [(1, 0.0)] * 4
+    assert res.ee_position_error_mm.max < 1e-6
+    assert res.joint_limit_mae_deg == pytest.approx(0.0, abs=1e-9)

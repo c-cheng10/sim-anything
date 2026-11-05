@@ -99,6 +99,7 @@ class Mapping(BaseModel):
     candidate: MappingSide
     reference: MappingSide
     joint_conventions: Optional[list[JointConvention]] = None
+    base_yaw: Optional[float] = None  # rad; rotation of the candidate about world z (given, else fitted)
     fit_conventions: bool = True
 
 
@@ -128,6 +129,7 @@ class EvalResult(BaseModel):
     dof_match: bool
     conventions: list[JointConvention]
     conventions_fitted: bool
+    base_yaw_deg: float = 0.0  # candidate rotated about world z by this (mounting-frame convention)
     ee_position_error_mm: ErrorStats
     ee_orientation_error_deg: ErrorStats  # raw frames
     ee_orientation_error_aligned_deg: ErrorStats  # after best constant tool-frame rotation

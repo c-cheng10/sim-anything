@@ -127,6 +127,7 @@ reference:
   ee: {site: attachment_site}            # or {body: name, pos: [x,y,z], quat: [w,x,y,z]}
 joint_conventions:                       # optional, one per mapped joint:
   - {sign: 1, offset: 0.0}               #   q_ref = sign * q_cand + offset
+base_yaw: null                           # optional, rad; null = fitted (see below)
 fit_conventions: true                    # default true; see below
 ```
 
@@ -140,7 +141,11 @@ given it is used as-is. Otherwise, if `fit_conventions` is true, the evaluator
 picks, per hinge joint, `sign ∈ {+1,-1}` and `offset ∈ {0, +π/2, -π/2, π}`
 minimising mean EE position error on 256 configurations (coordinate descent,
 2 sweeps), and reports the choice in `conventions` with
-`conventions_fitted: true`. Only these discrete conventional choices are
+`conventions_fitted: true`. Before the joints in every sweep it also fits a
+candidate base yaw (rotation of the whole candidate about world z, from the
+same four angles) unless `base_yaw` is given; reported as `base_yaw_deg`.
+A base frame turned relative to the datasheet frame is a mounting convention;
+fitting it explicitly keeps it out of joint 1's offset and the limit comparison. Only these discrete conventional choices are
 searched; no continuous parameters are fitted.
 
 ### Sampling
@@ -186,7 +191,7 @@ score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
 ```json
 {"candidate": "...", "reference": "...", "robot": "ur5e", "n_samples": 2000, "seed": 0,
  "dof_candidate": 6, "dof_reference": 6, "dof_match": true,
- "conventions": [{"sign": 1, "offset": 3.14159}, ...], "conventions_fitted": true,
+ "conventions": [{"sign": 1, "offset": 0.0}, ...], "conventions_fitted": true, "base_yaw_deg": 180.0,
  "ee_position_error_mm": {"mean": 1.2, "p95": 2.0, "max": 3.1},
  "ee_orientation_error_deg": {"mean": 90.0, "p95": 90.0, "max": 90.0},
  "ee_orientation_error_aligned_deg": {"mean": 0.1, "p95": 0.2, "max": 0.3},

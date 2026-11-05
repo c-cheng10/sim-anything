@@ -13,6 +13,8 @@ Interpretation notes (where the contract leaves room):
   passes through the EE point) are separated by the mean aligned orientation
   error, and the current choice is kept on a full tie. Slide joints are not
   fitted (sign 1, offset 0).
+* Base yaw: the candidate may be rotated about world z by a fitted (or given)
+  multiple of 90 deg before comparison, reported as ``base_yaw_deg``.
 * Joint-limit diffs: an unlimited joint is reported as [-pi, pi] in its own
   coordinates; if both joints of a pair are unlimited the diff is 0.
 """
@@ -95,6 +97,7 @@ class _Side:
     body_id: int
     ee_pos: np.ndarray
     ee_rot: np.ndarray
+    yaw: float = 0.0  # rotation of this whole model about world z (base mounting convention)
 
     def fk(self, Q: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """EE world positions (N,3) and rotation matrices (N,3,3) for joint configs Q (N,n)."""
@@ -114,6 +117,11 @@ class _Side:
                 Rb = d.xmat[self.body_id].reshape(3, 3)
                 P[i] = d.xpos[self.body_id] + Rb @ self.ee_pos
                 R[i] = Rb @ self.ee_rot
+        if self.yaw != 0.0:
+            c, s = math.cos(self.yaw), math.sin(self.yaw)
+            Rz = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+            P = P @ Rz.T
+            R = np.einsum("ij,njk->nik", Rz, R)
         return P, R
 
 
@@ -262,22 +270,49 @@ def _uniform(rng: np.random.Generator, bounds: list[tuple[float, float]], n: int
     return lo + (hi - lo) * rng.random((n, len(bounds)))
 
 
-def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray,
-                    sweeps: int = FIT_SWEEPS) -> list[JointConvention]:
-    """Discrete per-hinge sign/offset fit by coordinate descent (see module docstring)."""
+def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, sweeps: int = FIT_SWEEPS,
+                    fit_yaw: bool = True) -> list[JointConvention]:
+    """Discrete per-hinge sign/offset fit by coordinate descent (see module docstring).
+
+    If ``fit_yaw`` is true, the candidate's base yaw (``cand.yaw``, a rotation of
+    the whole candidate about world z from {0, +90, -90, 180} deg) is fitted first
+    in every sweep and left set on ``cand``. A base frame turned relative to the
+    datasheet frame is a mounting convention; fitting it explicitly keeps it from
+    being absorbed into joint 1's offset (which would distort the limit comparison).
+    """
     n = len(cand.jtypes)
-    Pc, Rc = cand.fk(Q)
     conv = [JointConvention() for _ in range(n)]
     fittable = [i for i in range(n) if cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE]
     options = [(s, o) for s in (1, -1) for o in OFFSET_CHOICES]
+    Pr_cache: dict = {}
+    Pc_cache: dict = {}
 
     def cost(cv: list[JointConvention]) -> tuple[float, float]:
-        Pr, Rr = ref.fk(_apply(cv, Q))
+        if cand.yaw not in Pc_cache:
+            Pc_cache[cand.yaw] = cand.fk(Q)
+        Pc, Rc = Pc_cache[cand.yaw]
+        key = tuple((c.sign, c.offset) for c in cv)
+        if key not in Pr_cache:
+            Pr_cache[key] = ref.fk(_apply(cv, Q))
+        Pr, Rr = Pr_cache[key]
         pos = float(np.mean(np.linalg.norm(Pc - Pr, axis=1)))
         ori = float(np.mean(_aligned_angles(Rc, Rr)))
         return pos, ori
 
+    def pick(results):
+        best_pos = min(r[1] for r in results)
+        near = [r for r in results if r[1] <= best_pos + 1e-9 + 1e-6 * best_pos]
+        best_ori = min(r[2] for r in near)
+        return next(r for r in near if r[2] <= best_ori + 1e-9)
+
     for _ in range(sweeps):
+        if fit_yaw:
+            cur = cand.yaw
+            results = []
+            for y in [cur] + [o for o in OFFSET_CHOICES if o != cur]:
+                cand.yaw = y
+                results.append((y, *cost(conv)))
+            cand.yaw = pick(results)[0]
         for i in fittable:
             cur = (conv[i].sign, conv[i].offset)
             ordered = [cur] + [o for o in options if o != cur]
@@ -286,10 +321,7 @@ def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray,
                 trial = list(conv)
                 trial[i] = JointConvention(sign=s, offset=o)
                 results.append(((s, o), *cost(trial)))
-            best_pos = min(r[1] for r in results)
-            near = [r for r in results if r[1] <= best_pos + 1e-9 + 1e-6 * best_pos]
-            best_ori = min(r[2] for r in near)
-            choice = next(r for r in near if r[2] <= best_ori + 1e-9)
+            choice = pick(results)
             conv[i] = JointConvention(sign=choice[0][0], offset=choice[0][1])
     return conv
 
@@ -353,6 +385,8 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
                          f"{_TYPE_NAMES[ref.jtypes[i]]}")
 
     rng = np.random.default_rng(seed)
+    if mapping.base_yaw is not None:
+        cand.yaw = float(mapping.base_yaw)
 
     # -- conventions ------------------------------------------------------------
     if mapping.joint_conventions is not None:
@@ -361,8 +395,10 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
     elif mapping.fit_conventions:
         fit_bounds = [_own_range(r) for r in cand.ranges]
         Qfit = _uniform(rng, fit_bounds, N_FIT_CONFIGS)
-        conv = fit_conventions(cand, ref, Qfit)
+        conv = fit_conventions(cand, ref, Qfit, fit_yaw=mapping.base_yaw is None)
         fitted = True
+        if cand.yaw != 0.0:
+            notes.append(f"fitted candidate base yaw {math.degrees(cand.yaw):+.0f} deg (mounting-frame convention)")
         if any(t == _SLIDE for t in cand.jtypes):
             notes.append("slide joint conventions are not fitted (sign 1, offset 0)")
         changed = [f"{mapping.candidate.joints[i]}: sign {c.sign:+d}, offset {math.degrees(c.offset):+.0f} deg"
@@ -411,7 +447,7 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
     return EvalResult(
         candidate=str(candidate_path), reference=str(reference_path), robot=mapping.robot,
         n_samples=n_samples, seed=seed, dof_candidate=dof_c, dof_reference=n, dof_match=dof_match,
-        conventions=conv, conventions_fitted=fitted,
+        conventions=conv, conventions_fitted=fitted, base_yaw_deg=math.degrees(cand.yaw),
         ee_position_error_mm=pos_stats, ee_orientation_error_deg=_stats(raw_deg),
         ee_orientation_error_aligned_deg=aligned_stats,
         joint_limits=limit_diffs, joint_limit_mae_deg=limit_mae,
