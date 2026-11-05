@@ -18,7 +18,9 @@ Follow the `robot-to-mujoco` skill exactly (load it now if it is not already loa
    second-hand source (forum, reseller copy, third-party page, search excerpt) as such. Never use
    URDF/MJCF/SDF/xacro files, MuJoCo Menagerie or ROS description packages as sources, and never
    invent numbers: unknown -> omit, or an estimate listed in `estimates` with the reasoning in
-   `notes`.
+   `notes`. Generated outputs are not sources: while gathering, never read other runs (`runs/`,
+   `benchmark/runs/`), HANDOFF/RESULTS files, eval outputs or the git history of this repository;
+   sources are external public documents only (your own `runs/<slug>/` files are fine).
 3. **Spec**: classify the kinematic source and state it first in `notes`: published DH table
    (`dh_standard`/`dh_modified`, rows copied verbatim) / published screw-axis or "home
    configuration + joint axes" table (converted exactly to `offset` as the skill explains) /

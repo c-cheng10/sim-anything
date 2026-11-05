@@ -43,6 +43,12 @@ right and prove where each one came from.
   Allowed: manufacturer datasheets, product pages, user/service manuals,
   dimension drawings, published DH / kinematic-parameter tables (in manuals,
   support articles, papers that quote the manufacturer).
+* **Generated outputs are not sources.** While gathering, never read other
+  runs (`runs/`, `benchmark/runs/`, any other run directory), HANDOFF or
+  RESULTS files, evaluation outputs, or the git history of this repository:
+  they hold models and numbers produced earlier, not evidence. Sources are
+  external public documents only. (Your own `runs/<slug>/` files from this
+  task are fine to read and edit.)
 
 ## Workflow
 
