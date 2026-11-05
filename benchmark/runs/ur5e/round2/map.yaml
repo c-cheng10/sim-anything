@@ -1,0 +1,23 @@
+robot: ur5e
+candidate:
+  joints:
+  - shoulder_pan
+  - shoulder_lift
+  - elbow
+  - wrist_1
+  - wrist_2
+  - wrist_3
+  ee:
+    site: ee_site
+reference:
+  joints:
+  - shoulder_pan_joint
+  - shoulder_lift_joint
+  - elbow_joint
+  - wrist_1_joint
+  - wrist_2_joint
+  - wrist_3_joint
+  ee:
+    site: attachment_site
+  base_body: base
+fit_conventions: true

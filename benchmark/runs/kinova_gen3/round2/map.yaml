@@ -1,0 +1,25 @@
+robot: kinova_gen3
+candidate:
+  joints:
+  - actuator_1
+  - actuator_2
+  - actuator_3
+  - actuator_4
+  - actuator_5
+  - actuator_6
+  - actuator_7
+  ee:
+    site: ee_site
+reference:
+  joints:
+  - joint_1
+  - joint_2
+  - joint_3
+  - joint_4
+  - joint_5
+  - joint_6
+  - joint_7
+  ee:
+    site: pinch_site
+  base_body: base_link
+fit_conventions: true

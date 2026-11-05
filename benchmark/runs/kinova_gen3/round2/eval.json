@@ -1,0 +1,174 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/kinova_gen3/round2/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/kinova_gen3/gen3.xml",
+  "robot": "kinova_gen3",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 7,
+  "dof_reference": 7,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 180.0,
+  "ee_position_error_mm": {
+    "mean": 15.586718089268745,
+    "p95": 24.48795716998379,
+    "max": 24.849112737910023
+  },
+  "ee_orientation_error_deg": {
+    "mean": 179.99999620002117,
+    "p95": 179.99999829245272,
+    "max": 180.0
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 9.06979561932514e-14,
+    "p95": 1.2989450210718085e-13,
+    "max": 1.704242064278185e-13
+  },
+  "joint_limits": [
+    {
+      "candidate": "actuator_1",
+      "reference": "joint_1",
+      "candidate_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "reference_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "lower_diff": 0.0,
+      "upper_diff": 0.0
+    },
+    {
+      "candidate": "actuator_2",
+      "reference": "joint_2",
+      "candidate_range": [
+        -2.24972940582,
+        2.24972940582
+      ],
+      "reference_range": [
+        -2.24,
+        2.24
+      ],
+      "lower_diff": -0.009729405819999926,
+      "upper_diff": 0.009729405819999926
+    },
+    {
+      "candidate": "actuator_3",
+      "reference": "joint_3",
+      "candidate_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "reference_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "lower_diff": 0.0,
+      "upper_diff": 0.0
+    },
+    {
+      "candidate": "actuator_4",
+      "reference": "joint_4",
+      "candidate_range": [
+        -2.57959663445,
+        2.57959663445
+      ],
+      "reference_range": [
+        -2.57,
+        2.57
+      ],
+      "lower_diff": -0.009596634450000252,
+      "upper_diff": 0.009596634450000252
+    },
+    {
+      "candidate": "actuator_5",
+      "reference": "joint_5",
+      "candidate_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "reference_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "lower_diff": 0.0,
+      "upper_diff": 0.0
+    },
+    {
+      "candidate": "actuator_6",
+      "reference": "joint_6",
+      "candidate_range": [
+        -2.09963109015,
+        2.09963109015
+      ],
+      "reference_range": [
+        -2.09,
+        2.09
+      ],
+      "lower_diff": -0.009631090150000077,
+      "upper_diff": 0.009631090150000077
+    },
+    {
+      "candidate": "actuator_7",
+      "reference": "joint_7",
+      "candidate_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "reference_range": [
+        -3.141592653589793,
+        3.141592653589793
+      ],
+      "lower_diff": 0.0,
+      "upper_diff": 0.0
+    }
+  ],
+  "joint_limit_mae_deg": 0.23701733712512907,
+  "mass_candidate": 8.19999988,
+  "mass_reference": 8.187899999999999,
+  "mass_diff": 0.012099880000000951,
+  "mass_rel_diff": 0.00147777574225393,
+  "score": 68.34963444968555,
+  "score_breakdown": {
+    "pos": 0.3754919347140803,
+    "orient": 0.999999999999987,
+    "limits": 0.9765769463029479,
+    "mass": 0.9926383519437568,
+    "dof": 1.0
+  },
+  "notes": [
+    "fitted candidate base yaw +180 deg (mounting-frame convention)",
+    "fitted non-identity conventions: actuator_1: sign -1, offset +0 deg; actuator_2: sign -1, offset +0 deg; actuator_3: sign -1, offset +0 deg; actuator_4: sign -1, offset +0 deg; actuator_5: sign -1, offset +0 deg; actuator_6: sign -1, offset +0 deg; actuator_7: sign -1, offset +0 deg"
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/franka_panda/round2/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/franka_emika_panda/panda_nohand.xml",
+  "robot": "franka_panda",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 7,
+  "dof_reference": 7,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 0.0,
+  "ee_position_error_mm": {
+    "mean": 0.0,
+    "p95": 0.0,
+    "max": 0.0
+  },
+  "ee_orientation_error_deg": {
+    "mean": 135.00000200075849,
+    "p95": 135.0000020007586,
+    "max": 135.00000200075885
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 1.7888925355964134e-13,
+    "p95": 1.8609850672818552e-13,
+    "max": 1.9439880260500654e-13
+  },
+  "joint_limits": [
+    {
+      "candidate": "A1",
+      "reference": "joint1",
+      "candidate_range": [
+        -2.89724655831,
+        2.89724655831
+      ],
+      "reference_range": [
+        -2.8973,
+        2.8973
+      ],
+      "lower_diff": 5.3441689999988995e-05,
+      "upper_diff": -5.3441689999988995e-05
+    },
+    {
+      "candidate": "A2",
+      "reference": "joint2",
+      "candidate_range": [
+        -1.76278254451,
+        1.76278254451
+      ],
+      "reference_range": [
+        -1.7628,
+        1.7628
+      ],
+      "lower_diff": 1.7455489999873564e-05,
+      "upper_diff": -1.7455489999873564e-05
+    },
+    {
+      "candidate": "A3",
+      "reference": "joint3",
+      "candidate_range": [
+        -2.89724655831,
+        2.89724655831
+      ],
+      "reference_range": [
+        -2.8973,
+        2.8973
+      ],
+      "lower_diff": 5.3441689999988995e-05,
+      "upper_diff": -5.3441689999988995e-05
+    },
+    {
+      "candidate": "A4",
+      "reference": "joint4",
+      "candidate_range": [
+        -3.07177948351,
+        -0.0698131700798
+      ],
+      "reference_range": [
+        -3.0718,
+        -0.0698
+      ],
+      "lower_diff": 2.0516490000233034e-05,
+      "upper_diff": -1.3170079799992851e-05
+    },
+    {
+      "candidate": "A5",
+      "reference": "joint5",
+      "candidate_range": [
+        -2.89724655831,
+        2.89724655831
+      ],
+      "reference_range": [
+        -2.8973,
+        2.8973
+      ],
+      "lower_diff": 5.3441689999988995e-05,
+      "upper_diff": -5.3441689999988995e-05
+    },
+    {
+      "candidate": "A6",
+      "reference": "joint6",
+      "candidate_range": [
+        -0.0174532925199,
+        3.75245789179
+      ],
+      "reference_range": [
+        -0.0175,
+        3.7525
+      ],
+      "lower_diff": 4.670748010000142e-05,
+      "upper_diff": -4.210820999972498e-05
+    },
+    {
+      "candidate": "A7",
+      "reference": "joint7",
+      "candidate_range": [
+        -2.89724655831,
+        2.89724655831
+      ],
+      "reference_range": [
+        -2.8973,
+        2.8973
+      ],
+      "lower_diff": 5.3441689999988995e-05,
+      "upper_diff": -5.3441689999988995e-05
+    }
+  ],
+  "joint_limit_mae_deg": 0.002393927184435717,
+  "mass_candidate": 17.80000002,
+  "mass_reference": 16.691901,
+  "mass_diff": 1.1080990199999974,
+  "mass_rel_diff": 0.06638542967634407,
+  "score": 97.17180548771559,
+  "score_breakdown": {
+    "pos": 1.0,
+    "orient": 0.9999999999999813,
+    "limits": 0.9997606359337068,
+    "mass": 0.7175395948710358,
+    "dof": 1.0
+  },
+  "notes": []
+}

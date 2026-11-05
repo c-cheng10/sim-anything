@@ -1,0 +1,155 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/ur5e/round2/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml",
+  "robot": "ur5e",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 6,
+  "dof_reference": 6,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 180.0,
+  "ee_position_error_mm": {
+    "mean": 0.9759245267546166,
+    "p95": 1.385313362495301,
+    "max": 1.4898197643438236
+  },
+  "ee_orientation_error_deg": {
+    "mean": 2.897341678291286e-14,
+    "p95": 5.0205306359923986e-14,
+    "max": 8.917614010086387e-14
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 8.291094055496284e-14,
+    "p95": 1.0435647069395565e-13,
+    "max": 1.3586237647255524e-13
+  },
+  "joint_limits": [
+    {
+      "candidate": "shoulder_pan",
+      "reference": "shoulder_pan_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "shoulder_lift",
+      "reference": "shoulder_lift_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "elbow",
+      "reference": "elbow_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -3.1415,
+        3.1415
+      ],
+      "lower_diff": -3.14168530718,
+      "upper_diff": 3.14168530718
+    },
+    {
+      "candidate": "wrist_1",
+      "reference": "wrist_1_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "wrist_2",
+      "reference": "wrist_2_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "wrist_3",
+      "reference": "wrist_3_joint",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    }
+  ],
+  "joint_limit_mae_deg": 30.001108842262617,
+  "mass_candidate": 20.6,
+  "mass_reference": 20.9949,
+  "mass_diff": -0.3948999999999998,
+  "mass_rel_diff": -0.018809329884876793,
+  "score": 82.15386474694226,
+  "score_breakdown": {
+    "pos": 0.9460947707039714,
+    "orient": 0.9999999999999896,
+    "limits": 0.049781548073372574,
+    "mass": 0.9102402990643308,
+    "dof": 1.0
+  },
+  "notes": [
+    "fitted candidate base yaw +180 deg (mounting-frame convention)"
+  ]
+}
