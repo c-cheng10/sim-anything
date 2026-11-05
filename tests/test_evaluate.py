@@ -356,7 +356,10 @@ MENAGERIE_ARMS = {
 @pytest.mark.parametrize("robot", sorted(MENAGERIE_ARMS))
 def test_reconventioned_menagerie_arm_is_recovered(menagerie_dir, tmp_path, robot):
     """Re-conventioned exact copies (random signs/offsets on all or some joints plus a base
-    yaw) must fit to ~0 EE error: the discrete search must not stop in a local minimum."""
+    yaw) must fit to ~0 EE error (the discrete search must not stop in a local minimum)
+    and ~0 limit MAE (among kinematically equivalent conventions, e.g. yaw vs joint-1
+    offset or the Panda's roll-pitch-roll shoulder flip, the one matching the limits wins),
+    so they score 100."""
     rel, joints = MENAGERIE_ARMS[robot]
     ref = menagerie_dir / rel
     side = {"joints": joints, "ee": {"site": "attachment_site"}}
@@ -368,6 +371,8 @@ def test_reconventioned_menagerie_arm_is_recovered(menagerie_dir, tmp_path, robo
         res = evaluate(cand, ref, {"candidate": side, "reference": side}, n_samples=500, seed=trial)
         assert res.ee_position_error_mm.max < 1e-6, (trial, conv, yaw, res.conventions, res.base_yaw_deg)
         assert res.ee_orientation_error_aligned_deg.max < 1e-6, (trial, conv, yaw)
+        assert res.joint_limit_mae_deg < 1e-6, (trial, conv, yaw, res.conventions, res.base_yaw_deg)
+        assert res.score == pytest.approx(100.0, abs=1e-4)
 
 
 @pytest.mark.menagerie
@@ -424,6 +429,30 @@ def test_base_yaw_is_fitted_instead_of_joint1_offset(tmp_path):
     assert [(c.sign, c.offset) for c in res.conventions] == [(1, 0.0)] * 4
     assert res.ee_position_error_mm.max < 1e-6
     assert res.joint_limit_mae_deg == pytest.approx(0.0, abs=1e-9)
+
+
+def test_equal_cost_conventions_resolve_to_lowest_limit_mae(tmp_path):
+    """The candidate is the reference with joint 1's zero turned by +90 deg about z and
+    joint 4's zero by +90 deg about its own (EE-through) axis, limits moved accordingly.
+    'yaw +90, j1 offset 0' fits the EE as well as 'j1 offset +90' (and j4 offsets 0 or
+    +-90 only rotate the tool frame by a constant), but only the latter matches the
+    limits; the simpler/yaw-first choice would cost ~45 deg of limit MAE."""
+    h = PI / 2
+    ref = _variant(tmp_path, REF, "ref_lim.xml",
+                   ('<joint name="j4" axis="1 0 0"/>', '<joint name="j4" axis="1 0 0" range="-1 2"/>'))
+    cand = _variant(tmp_path, ref, "cand_lim.xml",
+                    ('<body name="link1" pos="0 0 0.1">', f'<body name="link1" pos="0 0 0.1" euler="0 0 {h!r}">'),
+                    ('<joint name="j1" axis="0 0 1" range="-3 3"/>',
+                     f'<joint name="j1" axis="0 0 1" range="{-3 - h!r} {3 - h!r}"/>'),
+                    ('<body name="link4" pos="0.3 0 0">', f'<body name="link4" pos="0.3 0 0" euler="{h!r} 0 0">'),
+                    ('range="-1 2"', f'range="{-1 - h!r} {2 - h!r}"'))
+    res = evaluate(cand, ref, _self_mapping(REF_JOINTS + ["finger"]), n_samples=300)
+    assert res.ee_position_error_mm.max < 1e-6
+    assert res.ee_orientation_error_aligned_deg.max < 1e-6
+    assert res.base_yaw_deg == 0.0
+    assert [(c.sign, c.offset) for c in res.conventions] == [(1, h), (1, 0.0), (1, 0.0), (1, h), (1, 0.0)]
+    assert res.joint_limit_mae_deg == pytest.approx(0.0, abs=1e-9)
+    assert res.score == pytest.approx(100.0, abs=1e-6)
 
 
 def test_base_body_frames_remove_mounting_offset(tmp_path):

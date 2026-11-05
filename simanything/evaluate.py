@@ -14,8 +14,10 @@ Interpretation notes (where the contract leaves room):
   Options whose position error ties the best one (e.g. a wrist roll whose axis
   passes through the EE point) are separated by the mean aligned orientation
   error. The discrete search (single, then pair and triple changes, restarted
-  until two runs agree) is described in :func:`fit_conventions`. Slide joints
-  are not fitted (sign 1, offset 0).
+  until two runs agree) is described in :func:`fit_conventions`. Conventions
+  that are kinematically indistinguishable (same EE positions and aligned
+  orientation errors) resolve to the lowest joint-limit MAE, then the simplest.
+  Slide joints are not fitted (sign 1, offset 0).
 * Base yaw: the candidate may be rotated about world z by a fitted (or given)
   multiple of 90 deg before comparison, reported as ``base_yaw_deg``.
 * Joint-limit diffs: an unlimited joint is reported as its default range
@@ -277,23 +279,27 @@ def _own_range(r: Optional[tuple[float, float]], jtype: int = _HINGE) -> tuple[f
     return default_range(jtype) if r is None else (float(r[0]), float(r[1]))
 
 
+def _ranges_in_ref_coords(cand: _Side, ref: _Side, i: int, sign: int, offset: float
+                          ) -> tuple[tuple[float, float], tuple[float, float]]:
+    """(candidate range mapped into reference coordinates, reference range) of joint pair i;
+    an unlimited joint counts as its default range, and two unlimited joints as equal."""
+    cr, rr = cand.ranges[i], ref.ranges[i]
+    rref = _own_range(rr, ref.jtypes[i])
+    if cr is None and rr is None:
+        return rref, rref
+    lo, hi = _own_range(cr, cand.jtypes[i])
+    a, b = sign * lo + offset, sign * hi + offset
+    return (min(a, b), max(a, b)), rref
+
+
 def _limit_diffs(cand: _Side, ref: _Side, mapping: Mapping, conv: list[JointConvention],
                  notes: list[str]) -> tuple[list[JointLimitDiff], float]:
     diffs, hinge_abs = [], []
     unlimited = []
     for i, (cn, rn) in enumerate(zip(mapping.candidate.joints, mapping.reference.joints)):
-        cr, rr, c = cand.ranges[i], ref.ranges[i], conv[i]
-        rref = _own_range(rr, ref.jtypes[i])
-        if cr is None and rr is None:
-            cref = rref
-        else:
-            lo, hi = _own_range(cr, cand.jtypes[i])
-            a, b = c.sign * lo + c.offset, c.sign * hi + c.offset
-            cref = (min(a, b), max(a, b))
-            if cr is None:
-                unlimited.append(f"candidate {cn}")
-            if rr is None:
-                unlimited.append(f"reference {rn}")
+        cref, rref = _ranges_in_ref_coords(cand, ref, i, conv[i].sign, conv[i].offset)
+        if (cand.ranges[i] is None) != (ref.ranges[i] is None):
+            unlimited.append(f"candidate {cn}" if cand.ranges[i] is None else f"reference {rn}")
         d = JointLimitDiff(candidate=cn, reference=rn, candidate_range=[cref[0], cref[1]],
                            reference_range=[rref[0], rref[1]], lower_diff=cref[0] - rref[0],
                            upper_diff=cref[1] - rref[1])
@@ -401,9 +407,15 @@ def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, fit_yaw: bool = True
     is a product of precomputed per-joint screw transforms
     (:func:`_poe_factors`, checked against MuJoCo's kinematics), so a move is
     cheap to evaluate. Equal-cost alternatives (reachable from the best by
-    cost-preserving changes of up to ``MAX_MOVE_ORDER`` variables) resolve to
-    the simplest (identity < sign flip < offset; a base yaw before joint
-    offsets). ``cand.yaw`` is left set to the fitted yaw.
+    cost-preserving changes of up to ``MAX_MOVE_ORDER`` variables, at most
+    ``PLATEAU_MAX`` of them) resolve to the lowest joint-limit MAE as reported
+    by :func:`evaluate`, then to the simplest (identity < sign flip < offset;
+    a base yaw before joint offsets). This only chooses among kinematically
+    indistinguishable conventions (e.g. a base yaw vs a joint-1 offset, a
+    roll-pitch-roll shoulder flip, a last-joint offset vs a constant tool
+    rotation); without it an exact model could lose its limits score. A mapped
+    joint that cannot move the EE gets its lowest-MAE option. ``cand.yaw`` is
+    left set to the fitted yaw.
     """
     n = len(cand.jtypes)
     hinge_opts = [(s, o) for s in (1, -1) for o in OFFSET_CHOICES]
@@ -426,6 +438,15 @@ def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, fit_yaw: bool = True
     def cx(v: int, k: int) -> int:
         s, o = var_opts[v][k]
         return (s == -1) + 2 * (o != 0.0)
+
+    def lim(i: int, so: tuple[int, float]) -> float:
+        """Joint-limit error of mapped joint i under option so (sum over both bounds)."""
+        if not (cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE):
+            return 0.0
+        c, r = _ranges_in_ref_coords(cand, ref, i, *so)
+        return abs(c[0] - r[0]) + abs(c[1] - r[1])
+
+    var_lim = [[0.0] * len(yaw_opts)] + [[lim(i, so) for so in opts[i]] for i in order] + [[0.0]]
 
     def chain(x: tuple, stop: Optional[int] = None, lo: int = 0, hi: Optional[int] = None) -> np.ndarray:
         T = np.broadcast_to(np.eye(4), (1, 4, 4))
@@ -545,12 +566,16 @@ def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, fit_yaw: bool = True
                     if y not in tied and same(cost(y), best_cost):
                         tied.add(y)
                         queue.append(y)
-    # simplest first; on equal complexity a base yaw rather than joint offsets
-    x = min(tied, key=lambda t: (sum(cx(v, t[v]) for v in range(nv)), sum(cx(v, t[v]) for v in range(1, nv)), t))
+    # lowest limit error, then simplest; on equal complexity a base yaw rather than joint offsets
+    x = min(tied, key=lambda t: (round(sum(var_lim[v][t[v]] for v in range(nv)), 9),
+                                 sum(cx(v, t[v]) for v in range(nv)), sum(cx(v, t[v]) for v in range(1, nv)), t))
     cand.yaw = var_opts[0][x[0]][1]
     conv = [JointConvention() for _ in range(n)]
     for j, i in enumerate(order):
         s, o = var_opts[j + 1][x[j + 1]]
+        conv[i] = JointConvention(sign=s, offset=o)
+    for i in set(range(n)) - set(order):  # cannot move the EE: limits decide
+        s, o = min(opts[i], key=lambda so: (round(lim(i, so), 9), (so[0] == -1) + 2 * (so[1] != 0.0)))
         conv[i] = JointConvention(sign=s, offset=o)
     return conv
 

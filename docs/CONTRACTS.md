@@ -183,8 +183,7 @@ minimising mean EE position error on 256 configurations (steepest descent over
 single changes, escalating to simultaneous changes of two and then three
 variables when single changes stall above 1 µm; run from the identity and
 then from seeded random starts until two runs reach the same best cost, at
-most 16 runs; equal-cost alternatives resolve to the simplest: identity <
-sign flip < offset, a base yaw before joint offsets), and
+most 16 runs; see "Equal-cost conventions" below), and
 reports the choice in `conventions` with `conventions_fitted: true`. Before
 the joints it also considers a candidate base yaw (rotation of the whole
 candidate about world z, from the same four angles) unless `base_yaw` is
@@ -192,6 +191,19 @@ given; reported as `base_yaw_deg`. A base frame turned relative to the
 datasheet frame is a mounting convention; fitting it explicitly keeps it out
 of joint 1's offset and the limit comparison. Only these discrete conventional choices are
 searched; no continuous parameters are fitted.
+
+**Equal-cost conventions.** Several conventions can be kinematically
+indistinguishable: they give the same EE position in every configuration and
+the same aligned orientation error (a base yaw vs a joint-1 offset; a
+roll-pitch-roll shoulder flip such as Panda `joint1 + π, -joint2, joint3 + π`;
+a final-roll offset vs a constant tool rotation). The evaluator collects the
+alternatives that tie the best cost (reachable by cost-preserving changes of
+up to three variables, at most 128) and picks the one with the lowest
+joint-limit MAE (as reported in `joint_limit_mae_deg`), then the simplest
+(identity < sign flip < offset; a base yaw before joint offsets). This only
+chooses among conventions the EE kinematics cannot tell apart; it never trades
+EE error for limit agreement. A mapped joint that cannot move the EE gets its
+lowest-MAE option.
 
 ### Sampling
 
