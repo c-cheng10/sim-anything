@@ -270,7 +270,7 @@ score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
 
 | Module | Public API |
 |---|---|
-| `simanything.spec` | `Spec`, `load_spec(path)`, `dump_spec(spec, path)`, `Spec.to_si()`, `Spec.chain()` / `build_chain(spec) -> Chain` (body poses in SI, DH folded in), `Chain.fk(q) -> 4x4`, `dh_to_offset`, `dh_fk`, `iter_numeric_fields`, `uncovered_fields`, `path_covers`, `is_estimate`, `json_schema()` |
+| `simanything.spec` | `Spec`, `load_spec(path)`, `dump_spec(spec, path)`, `Spec.to_si()`, `Spec.chain()` / `build_chain(spec) -> Chain` (body poses in SI, DH folded in), `Chain.fk(q) -> 4x4`, `dh_to_offset`, `dh_fk`, `iter_numeric_fields`, `uncovered_fields`, `path_covers`, `is_estimate`, source hygiene helpers `bad_source_values`, `unmatched_keys`, `suggest_key`, `describe_key`, `duplicate_keys`, `json_schema()` |
 | `simanything.schemas` | `CheckResult`, `CheckReport`, `Mapping`, `EvalResult`, `History`, `IterationRecord` |
 | `simanything.builder` | `build_mjcf(spec: Spec) -> str`, `build_file(spec_path, out_path) -> Path` |
 | `simanything.check` | `run_checks(model_path, spec_path=None, *, seed=0, n_reach_samples=5000) -> CheckReport` |
