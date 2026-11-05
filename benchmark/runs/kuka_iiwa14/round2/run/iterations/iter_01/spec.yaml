@@ -1,0 +1,101 @@
+name: kuka_iiwa14
+manufacturer: KUKA
+model: LBR iiwa 14 R820 (7-DOF), arm only, no media flange
+description: KUKA LBR iiwa 14 R820, offset convention from the KUKA work-envelope dimension table (letters C, D, E, A).
+dof: 7
+units: {length: mm, angle: deg}
+convention: offset                     # no DH table published by KUKA; q = 0 is the stretched (vertical) pose
+base:
+  link:
+    geometry:
+      - {shape: cylinder, radius: 80, fromto: [0, 0, 0, 0, 0, 150]}
+joints:
+  - name: A1
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 85
+    effort_limit: 320
+    link: {geometry: [{shape: capsule, radius: 65, fromto: [0, 0, 150, 0, 0, 360]}]}
+  - name: A2
+    origin: {xyz: [0, 0, 360]}
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 85
+    effort_limit: 320
+    link: {geometry: [{shape: sphere, radius: 65}]}
+  - name: A3
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 100
+    link: {geometry: [{shape: capsule, radius: 60, fromto: [0, 0, 80, 0, 0, 340]}]}
+  - name: A4
+    origin: {xyz: [0, 0, 420]}
+    axis: [0, -1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 75
+    link: {geometry: [{shape: sphere, radius: 60}]}
+  - name: A5
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 130
+    link: {geometry: [{shape: capsule, radius: 55, fromto: [0, 0, 80, 0, 0, 330]}]}
+  - name: A6
+    origin: {xyz: [0, 0, 400]}
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 135
+    link: {geometry: [{shape: sphere, radius: 55}]}
+  - name: A7
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -175, upper: 175}
+    velocity_limit: 135
+    link: {geometry: [{shape: cylinder, radius: 45, fromto: [0, 0, 70, 0, 0, 126]}]}
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 126]}             # A6/A7 intersection -> flange face (1306 - 360 - 420 - 400)
+total_mass: 29.9
+payload: 14
+reach: {value: 820, measured_from: shoulder, measured_to: wrist_center}
+repeatability: 0.15
+sources:
+  joints[*].limits: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[0].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[1].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[2].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[3].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[4].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[0].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[1].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  reach.value: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  total_mass: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  payload: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  repeatability: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+estimates:
+  - joints[*].origin                   # C/D/E letters mapped to A2 height / A2-A4 / A4-A6 (mapping inferred)
+  - joints[*].axis                     # A2/A4/A6 positive directions not published in the extracts
+  - joints[5].velocity_limit           # 135 deg/s taken from the cleanroom (CR) variant page
+  - joints[6].velocity_limit
+  - ee.origin                          # 126 mm = A - C - D - E (inferred)
+  - base.link.geometry
+  - joints[*].link.geometry
+  - reach.measured_from
+  - reach.measured_to
+notes: >
+  Kinematic source: dimension table/drawing (KUKA work-envelope dimensions A-G for the LBR iiwa 14 R820, read from
+  search extracts of KUKA documents), letter-to-link mapping inferred, so all origins are estimates. Values
+  (14 R820): A 1306, B 1180, C 360, D 420, E 400, F 255, G 820 mm. Mapping used: C = base to A2 axis, D = A2 to A4,
+  E = A4 to A6, G = 820 = D + E (rated reach, so reach is taken as A2 (shoulder) -> A6 (wrist centre)),
+  B = 1180 = C + G (top of the reach sphere), A = 1306 = C + D + E + 126, so the A6-axis -> flange distance is
+  taken as 126 mm (no media flange). The letters are not labelled in the extracts, hence estimates. q = 0 is the
+  stretched vertical pose (ranges are symmetric about it); A1/A3/A5/A7 are coaxial with the vertical, A2/A4/A6 are
+  horizontal pitch axes. Positive directions of A2/A4/A6 are not in any available source: +y, -y, +y chosen as a
+  guess (estimate). Joint ranges and A1-A5 speeds: my.KUKA product page; A6/A7 135 deg/s only on the cleanroom
+  variant page (assumed same arm). Torques: only A1/A2 = 320 Nm kept, from a search extract of a KUKA brochure copy
+  hosted on git.phschoen.de (second-hand host); other axes omitted because the extracts were garbled and mixed with
+  the 7 R800 column. Mass 29.9 kg is "approx." on the product page. All link and base radii are estimates from
+  product photos (no housing diameters found). The KUKA spec notes the arm height depends on the media flange; the
+  model has no media flange.

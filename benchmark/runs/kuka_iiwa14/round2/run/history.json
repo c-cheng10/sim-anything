@@ -1,0 +1,18 @@
+{
+  "robot": "kuka_iiwa14",
+  "spec": "benchmark/runs/kuka_iiwa14/round2/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T10:55:11+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 1,
+      "failed_ids": [],
+      "note": "initial spec: offset chain from KUKA envelope letters C/D/E/A (mapping estimated), product-page ranges/speeds",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

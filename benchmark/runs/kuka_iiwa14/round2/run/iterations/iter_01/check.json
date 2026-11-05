@@ -1,0 +1,620 @@
+{
+  "model": "benchmark/runs/kuka_iiwa14/round2/run/iterations/iter_01/model.xml",
+  "spec": "benchmark/runs/kuka_iiwa14/round2/run/iterations/iter_01/spec.yaml",
+  "passed": true,
+  "n_checks": 14,
+  "n_failed": 1,
+  "n_errors": 0,
+  "checks": [
+    {
+      "id": "compiles",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "loads with MuJoCo 3.3.0, mj_forward finite",
+      "fix_hint": null,
+      "details": {
+        "nq": 7,
+        "nv": 7,
+        "nbody": 9,
+        "njnt": 7,
+        "nu": 7,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'"
+      }
+    },
+    {
+      "id": "joint_structure",
+      "pass": true,
+      "measured": [
+        [
+          "A1",
+          "hinge"
+        ],
+        [
+          "A2",
+          "hinge"
+        ],
+        [
+          "A3",
+          "hinge"
+        ],
+        [
+          "A4",
+          "hinge"
+        ],
+        [
+          "A5",
+          "hinge"
+        ],
+        [
+          "A6",
+          "hinge"
+        ],
+        [
+          "A7",
+          "hinge"
+        ]
+      ],
+      "expected": [
+        [
+          "A1",
+          "hinge"
+        ],
+        [
+          "A2",
+          "hinge"
+        ],
+        [
+          "A3",
+          "hinge"
+        ],
+        [
+          "A4",
+          "hinge"
+        ],
+        [
+          "A5",
+          "hinge"
+        ],
+        [
+          "A6",
+          "hinge"
+        ],
+        [
+          "A7",
+          "hinge"
+        ]
+      ],
+      "tolerance": null,
+      "severity": "error",
+      "message": "7 joints match by name, type and chain order",
+      "fix_hint": null,
+      "details": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "id": "ee_site",
+      "pass": true,
+      "measured": "ee_site",
+      "expected": "ee_site",
+      "tolerance": null,
+      "severity": "error",
+      "message": "site 'ee_site' on last body 'A7_link'",
+      "fix_hint": null,
+      "details": {
+        "site": "ee_site",
+        "last_body": "A7_link",
+        "site_body": "A7_link"
+      }
+    },
+    {
+      "id": "kinematics_match",
+      "pass": true,
+      "measured": {
+        "ee_position_m": 4.871083751574258e-16,
+        "ee_orientation_rad": 1.0030482555430182e-15,
+        "joint_axis_rad": 6.280369834735101e-16,
+        "joint_position_m": 3.957066134497324e-16
+      },
+      "expected": 0.0,
+      "tolerance": {
+        "position_m": 1e-06,
+        "orientation_rad": 1e-06
+      },
+      "severity": "error",
+      "message": "model kinematics match the spec on 20 configurations (max EE error 4.9e-16 m, 1.0e-15 rad)",
+      "fix_hint": null,
+      "details": {
+        "samples": 20,
+        "seed": 0,
+        "joints": [
+          {
+            "joint": "A1",
+            "axis_error_rad": 0.0,
+            "axis_line_offset_m": 0.0
+          },
+          {
+            "joint": "A2",
+            "axis_error_rad": 1.5700924586837752e-16,
+            "axis_line_offset_m": 5.551115123125783e-17
+          },
+          {
+            "joint": "A3",
+            "axis_error_rad": 2.9893669801409083e-16,
+            "axis_line_offset_m": 5.286962627713262e-17
+          },
+          {
+            "joint": "A4",
+            "axis_error_rad": 6.280369834735101e-16,
+            "axis_line_offset_m": 2.0584141538706772e-16
+          },
+          {
+            "joint": "A5",
+            "axis_error_rad": 5.876386976949624e-16,
+            "axis_line_offset_m": 1.782999407071772e-16
+          },
+          {
+            "joint": "A6",
+            "axis_error_rad": 4.775249788392736e-16,
+            "axis_line_offset_m": 3.881084600026053e-16
+          },
+          {
+            "joint": "A7",
+            "axis_error_rad": 5.087681048627601e-16,
+            "axis_line_offset_m": 3.957066134497324e-16
+          }
+        ]
+      }
+    },
+    {
+      "id": "joint_limits",
+      "pass": true,
+      "measured": {
+        "A1": [
+          -2.96705972839,
+          2.96705972839
+        ],
+        "A2": [
+          -2.09439510239,
+          2.09439510239
+        ],
+        "A3": [
+          -2.96705972839,
+          2.96705972839
+        ],
+        "A4": [
+          -2.09439510239,
+          2.09439510239
+        ],
+        "A5": [
+          -2.96705972839,
+          2.96705972839
+        ],
+        "A6": [
+          -2.09439510239,
+          2.09439510239
+        ],
+        "A7": [
+          -3.05432619099,
+          3.05432619099
+        ]
+      },
+      "expected": {
+        "A1": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ],
+        "A2": [
+          -2.0943951023931953,
+          2.0943951023931953
+        ],
+        "A3": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ],
+        "A4": [
+          -2.0943951023931953,
+          2.0943951023931953
+        ],
+        "A5": [
+          -2.9670597283903604,
+          2.9670597283903604
+        ],
+        "A6": [
+          -2.0943951023931953,
+          2.0943951023931953
+        ],
+        "A7": [
+          -3.0543261909900767,
+          3.0543261909900767
+        ]
+      },
+      "tolerance": {
+        "hinge_rad": 0.001,
+        "slide_m": 0.0001
+      },
+      "severity": "error",
+      "message": "all joint ranges match the spec (max diff 3.20e-12)",
+      "fix_hint": null,
+      "details": {
+        "joints": [
+          {
+            "joint": "A1",
+            "model": [
+              -2.96705972839,
+              2.96705972839
+            ],
+            "spec": [
+              -2.9670597283903604,
+              2.9670597283903604
+            ],
+            "max_abs_diff": 3.601563491884008e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "A2",
+            "model": [
+              -2.09439510239,
+              2.09439510239
+            ],
+            "spec": [
+              -2.0943951023931953,
+              2.0943951023931953
+            ],
+            "max_abs_diff": 3.1952218648712005e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "A3",
+            "model": [
+              -2.96705972839,
+              2.96705972839
+            ],
+            "spec": [
+              -2.9670597283903604,
+              2.9670597283903604
+            ],
+            "max_abs_diff": 3.601563491884008e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "A4",
+            "model": [
+              -2.09439510239,
+              2.09439510239
+            ],
+            "spec": [
+              -2.0943951023931953,
+              2.0943951023931953
+            ],
+            "max_abs_diff": 3.1952218648712005e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "A5",
+            "model": [
+              -2.96705972839,
+              2.96705972839
+            ],
+            "spec": [
+              -2.9670597283903604,
+              2.9670597283903604
+            ],
+            "max_abs_diff": 3.601563491884008e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "A6",
+            "model": [
+              -2.09439510239,
+              2.09439510239
+            ],
+            "spec": [
+              -2.0943951023931953,
+              2.0943951023931953
+            ],
+            "max_abs_diff": 3.1952218648712005e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "A7",
+            "model": [
+              -3.05432619099,
+              3.05432619099
+            ],
+            "spec": [
+              -3.0543261909900767,
+              3.0543261909900767
+            ],
+            "max_abs_diff": 7.682743330406083e-14,
+            "unit": "rad"
+          }
+        ],
+        "missing_spec_limits": []
+      }
+    },
+    {
+      "id": "reach",
+      "pass": true,
+      "measured": 0.819999999884109,
+      "expected": 0.8200000000000001,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "max reach 0.820 m within 0.0% of rated 0.820 m",
+      "fix_hint": null,
+      "details": {
+        "samples": 5000,
+        "seed": 0,
+        "sample_max": 0.8199999436141969,
+        "refined_max": 0.819999999884109,
+        "relative_error": -1.4133057867647172e-10,
+        "measured_from": "shoulder",
+        "measured_to": "wrist_center",
+        "origin": "body 'A2_link' (2nd joint)",
+        "point": "origin of body 'A6_link' (joints[5], wrist centre)",
+        "home_source": "keyframe 'home'",
+        "argmax_q": {
+          "A1": 2.0518361385876287,
+          "A2": -1.4248259822854334,
+          "A3": -2.8996177206782083,
+          "A4": -3.363505711283818e-05,
+          "A5": -1.9292020962086935,
+          "A6": -0.20272431883851652,
+          "A7": -0.696459453420266
+        },
+        "definition_estimated": true,
+        "definition_unstated": [],
+        "value_estimated": false
+      }
+    },
+    {
+      "id": "total_mass",
+      "pass": true,
+      "measured": 29.90000006,
+      "expected": 29.9,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "model mass 29.900 kg within 0.0% of 29.900 kg",
+      "fix_hint": null,
+      "details": {
+        "relative_error": 2.006689010425036e-09,
+        "body_masses": {
+          "base": 5.3107366,
+          "A1_link": 6.9339226,
+          "A2_link": 2.0256403,
+          "A3_link": 6.7711891,
+          "A4_link": 1.593221,
+          "A5_link": 5.4107739,
+          "A6_link": 1.2271858,
+          "A7_link": 0.62733076
+        }
+      }
+    },
+    {
+      "id": "mass_plausibility",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "link densities, mass shares and mass per reach are plausible",
+      "fix_hint": null,
+      "details": {
+        "density_range_kg_m3": [
+          100.0,
+          20000.0
+        ],
+        "min_link_fraction": 0.005,
+        "min_kg_per_m_reach": 0.1,
+        "total_mass": 29.90000006,
+        "density": {
+          "base": 1760.895794477179,
+          "A1_link": 1760.8957757701328,
+          "A2_link": 1760.8957669794256,
+          "A3_link": 1760.8957775734673,
+          "A4_link": 1760.8958165820322,
+          "A5_link": 1760.8957903469968,
+          "A6_link": 1760.8957430099063,
+          "A7_link": 1760.8957920210842
+        },
+        "link_fraction": {
+          "A1_link": 0.2319037654209289,
+          "A2_link": 0.06774716708813278,
+          "A3_link": 0.22646117345860634,
+          "A4_link": 0.05328498317066559,
+          "A5_link": 0.18096233742950701,
+          "A6_link": 0.04104300326212106,
+          "A7_link": 0.020980961830807433
+        },
+        "kg_per_m_reach": 36.46341470731707
+      }
+    },
+    {
+      "id": "inertia_valid",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "8 bodies have positive mass and valid inertia",
+      "fix_hint": null,
+      "details": {
+        "bodies_checked": 8
+      }
+    },
+    {
+      "id": "self_collision_home",
+      "pass": true,
+      "measured": 0.0,
+      "expected": 0.0,
+      "tolerance": 0.001,
+      "severity": "error",
+      "message": "no self-collision deeper than 1 mm at home (0 touching pairs)",
+      "fix_hint": null,
+      "details": {
+        "home_source": "keyframe 'home'",
+        "contacts": []
+      }
+    },
+    {
+      "id": "collision_exclusions",
+      "pass": true,
+      "measured": 0,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "4 excluded pair(s), all parent/child or separated only by zero-length links: base / A1_link (parent/child; MuJoCo does not filter a world-fixed parent); A1_link / A3_link (only zero-length links between them (origins coincide with the end of 'A1_link')); A3_link / A5_link (only zero-length links between them (origins coincide with the end of 'A3_link')); A5_link / A7_link (only zero-length links between them (origins coincide with the end of 'A5_link'))",
+      "fix_hint": null,
+      "details": {
+        "excluded": [
+          {
+            "body1": "base",
+            "body2": "A1_link",
+            "spec1": "base.link",
+            "spec2": "joints[0].link",
+            "kind": "parent/child",
+            "reason": "parent/child; MuJoCo does not filter a world-fixed parent"
+          },
+          {
+            "body1": "A1_link",
+            "body2": "A3_link",
+            "spec1": "joints[0].link",
+            "spec2": "joints[2].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'A1_link')"
+          },
+          {
+            "body1": "A3_link",
+            "body2": "A5_link",
+            "spec1": "joints[2].link",
+            "spec2": "joints[4].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'A3_link')"
+          },
+          {
+            "body1": "A5_link",
+            "body2": "A7_link",
+            "spec1": "joints[4].link",
+            "spec2": "joints[6].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'A5_link')"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stable_hold",
+      "pass": true,
+      "measured": 0.0,
+      "expected": 0.0,
+      "tolerance": {
+        "drift_hinge_rad": 0.05,
+        "drift_slide_m": 0.005,
+        "final_speed": 0.1
+      },
+      "severity": "error",
+      "message": "holds home for 2 s: max drift 0.0000, final speed 0.0000",
+      "fix_hint": null,
+      "details": {
+        "seconds": 2.0,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'",
+        "warnings": {},
+        "actuator_kinds": [
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position"
+        ],
+        "max_drift": {
+          "A1": 0.0,
+          "A2": 0.0,
+          "A3": 0.0,
+          "A4": 0.0,
+          "A5": 0.0,
+          "A6": 0.0,
+          "A7": 0.0
+        },
+        "final_speed": {
+          "A1": 0.0,
+          "A2": 0.0,
+          "A3": 0.0,
+          "A4": 0.0,
+          "A5": 0.0,
+          "A6": 0.0,
+          "A7": 0.0
+        },
+        "tolerance": {
+          "drift_hinge_rad": 0.05,
+          "drift_slide_m": 0.005,
+          "speed": 0.1
+        },
+        "saturated_joints": []
+      }
+    },
+    {
+      "id": "actuators",
+      "pass": true,
+      "measured": 7,
+      "expected": 7,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every spec joint is driven by exactly one actuator",
+      "fix_hint": null,
+      "details": {
+        "actuators_by_joint": {
+          "A1": [
+            "A1_act"
+          ],
+          "A2": [
+            "A2_act"
+          ],
+          "A3": [
+            "A3_act"
+          ],
+          "A4": [
+            "A4_act"
+          ],
+          "A5": [
+            "A5_act"
+          ],
+          "A6": [
+            "A6_act"
+          ],
+          "A7": [
+            "A7_act"
+          ]
+        },
+        "nu": 7
+      }
+    },
+    {
+      "id": "sources_complete",
+      "pass": false,
+      "measured": 0.5098039215686274,
+      "expected": 0,
+      "tolerance": 0.5,
+      "severity": "warning",
+      "message": "every number is covered, but 26 of 51 (51%) are estimates",
+      "fix_hint": "More than half of the numbers are estimates: look for sources (datasheet, manual, DH table) for the ones that matter most, i.e. link lengths / DH rows, joint limits, total_mass and reach, and move them from `estimates` to `sources`.",
+      "details": {
+        "uncovered": [],
+        "bad_sources": {},
+        "unmatched_keys": [],
+        "duplicate_keys": [],
+        "n_numbers": 51,
+        "n_estimated": 26,
+        "estimate_fraction": 0.5098039215686274
+      }
+    }
+  ],
+  "mujoco_version": "3.3.0"
+}
