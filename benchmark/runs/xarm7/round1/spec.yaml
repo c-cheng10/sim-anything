@@ -1,0 +1,62 @@
+name: xarm7
+manufacturer: UFactory
+model: xArm 7 (7-DOF), without gripper
+dof: 7
+units: {length: mm, angle: deg}     # table is mm + rad; -pi/2, pi/2 written as -90 / 90 deg
+convention: dh_modified             # page section "Modified D-H parameters": row i holds a_{i-1}, alpha_{i-1}, d_i, theta_i
+base:
+  link:
+    geometry:
+      - {shape: cylinder, radius: 50}
+joints:
+  - {name: joint1, dh: {a: 0,    alpha: 0,   d: 267},   limits: {lower: -360, upper: 360}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 50}]}}
+  - {name: joint2, dh: {a: 0,    alpha: -90, d: 0},     limits: {lower: -117, upper: 116}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 48}]}}
+  - {name: joint3, dh: {a: 0,    alpha: 90,  d: 293},   limits: {lower: -360, upper: 360}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 45}]}}
+  - {name: joint4, dh: {a: 52.5, alpha: 90,  d: 0},     limits: {lower: -6,   upper: 225}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 42}]}}
+  - {name: joint5, dh: {a: 77.5, alpha: 90,  d: 342.5}, limits: {lower: -360, upper: 360}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 40}]}}
+  - {name: joint6, dh: {a: 0,    alpha: 90,  d: 0},     limits: {lower: -97,  upper: 180}, velocity_limit: 180,
+     link: {geometry: [{shape: capsule, radius: 38}]}}
+  - {name: joint7, dh: {a: 76,   alpha: -90, d: 97},    limits: {lower: -360, upper: 360}, velocity_limit: 180,
+     link: {geometry: [{shape: cylinder, radius: 38}]}}
+ee: {name: ee_site}                 # frame 7 (after d7 = 97 mm) taken as the tool flange face
+total_mass: 13.7
+payload: 3.5
+repeatability: 0.1
+reach: {value: 700, measured_from: shoulder, measured_to: ee_site}
+sources:
+  joints[*].dh: https://docs.supportarticle.ufactory.cc/zhHans/support_articles/developer/kinematic-and-dynamic-parameters/xArm_Series/xarm-7.html
+  joints[*].limits: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  joints[*].velocity_limit: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  repeatability: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  total_mass: https://www.ufactory.us/product/ufactory-xarm-7
+  payload: https://www.ufactory.us/product/ufactory-xarm-7
+  reach.value: https://www.ufactory.us/product/ufactory-xarm-7
+estimates:
+  - reach.measured_from
+  - reach.measured_to
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  Kinematic source: published DH table (UFACTORY support article "Kinematic and dynamic parameters
+  - xArm 7", section "Modified D-H parameters", manufacturer, primary; read through web-search
+  extracts because the page itself was blocked from this session). Columns theta(rad) | d(mm) |
+  alpha(rad) | a(mm) | offset(rad); copied row by row into dh_modified (row i = a_{i-1}, alpha_{i-1},
+  d_i, theta_i), -pi/2 / pi/2 written as -90 / 90 deg; theta and offset columns are 0 on every row.
+  The table has no separate flange row; the EE site is put at frame 7 (after d7 = 97 mm), taken to be
+  the tool flange face (UFACTORY's default TCP is the flange centre); this placement is my
+  interpretation of the table. Joint limits are the user-manual technical specifications
+  (J1..J7 +-360, -117~116, +-360, -6~225, +-360, -97~180, +-360 deg); the xArm5/6/7 comparison
+  support article gives J2 -118~120 and J4 -11~225 (conflict noted, manual values used).
+  +-360 joints are kept as +-360 as published. velocity_limit = "maximum joint speed 180 deg/s"
+  (one figure for all joints). Total mass 13.7 kg from the product page and comparison article
+  (technical specifications chapter says 14.3 kg). Payload 3.5 kg, repeatability +-0.1 mm.
+  Reach 700 mm is published without saying from where to where: assumed shoulder (J2 axis) to the
+  flange (ee_site), the usual cobot definition; measured_from / measured_to are estimates, so the
+  reach check only warns. Joint torques and link masses not found (omitted; total mass distributed
+  by volume). Link radii are estimates from product photos (~100 mm diameter at the base and
+  shoulder tapering to ~76 mm at the wrist); no housing diameters were found.

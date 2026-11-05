@@ -1,0 +1,626 @@
+{
+  "model": "benchmark/runs/xarm7/round1/run/iterations/iter_01/model.xml",
+  "spec": "benchmark/runs/xarm7/round1/run/iterations/iter_01/spec.yaml",
+  "passed": true,
+  "n_checks": 14,
+  "n_failed": 2,
+  "n_errors": 0,
+  "checks": [
+    {
+      "id": "compiles",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "loads with MuJoCo 3.3.0, mj_forward finite",
+      "fix_hint": null,
+      "details": {
+        "nq": 7,
+        "nv": 7,
+        "nbody": 9,
+        "njnt": 7,
+        "nu": 7,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'"
+      }
+    },
+    {
+      "id": "joint_structure",
+      "pass": true,
+      "measured": [
+        [
+          "joint1",
+          "hinge"
+        ],
+        [
+          "joint2",
+          "hinge"
+        ],
+        [
+          "joint3",
+          "hinge"
+        ],
+        [
+          "joint4",
+          "hinge"
+        ],
+        [
+          "joint5",
+          "hinge"
+        ],
+        [
+          "joint6",
+          "hinge"
+        ],
+        [
+          "joint7",
+          "hinge"
+        ]
+      ],
+      "expected": [
+        [
+          "joint1",
+          "hinge"
+        ],
+        [
+          "joint2",
+          "hinge"
+        ],
+        [
+          "joint3",
+          "hinge"
+        ],
+        [
+          "joint4",
+          "hinge"
+        ],
+        [
+          "joint5",
+          "hinge"
+        ],
+        [
+          "joint6",
+          "hinge"
+        ],
+        [
+          "joint7",
+          "hinge"
+        ]
+      ],
+      "tolerance": null,
+      "severity": "error",
+      "message": "7 joints match by name, type and chain order",
+      "fix_hint": null,
+      "details": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "id": "ee_site",
+      "pass": true,
+      "measured": "ee_site",
+      "expected": "ee_site",
+      "tolerance": null,
+      "severity": "error",
+      "message": "site 'ee_site' on last body 'joint7_link'",
+      "fix_hint": null,
+      "details": {
+        "site": "ee_site",
+        "last_body": "joint7_link",
+        "site_body": "joint7_link"
+      }
+    },
+    {
+      "id": "kinematics_match",
+      "pass": true,
+      "measured": {
+        "ee_position_m": 6.684427777288335e-16,
+        "ee_orientation_rad": 2.4835485363789334e-15,
+        "joint_axis_rad": 2.2519784363552593e-15,
+        "joint_position_m": 5.197497356488052e-16
+      },
+      "expected": 0.0,
+      "tolerance": {
+        "position_m": 1e-06,
+        "orientation_rad": 1e-06
+      },
+      "severity": "error",
+      "message": "model kinematics match the spec on 20 configurations (max EE error 6.7e-16 m, 2.5e-15 rad)",
+      "fix_hint": null,
+      "details": {
+        "samples": 20,
+        "seed": 0,
+        "joints": [
+          {
+            "joint": "joint1",
+            "axis_error_rad": 0.0,
+            "axis_line_offset_m": 0.0
+          },
+          {
+            "joint": "joint2",
+            "axis_error_rad": 2.7582103268031233e-16,
+            "axis_line_offset_m": 0.0
+          },
+          {
+            "joint": "joint3",
+            "axis_error_rad": 9.142502916948183e-16,
+            "axis_line_offset_m": 1.0756215926109746e-16
+          },
+          {
+            "joint": "joint4",
+            "axis_error_rad": 1.236681433853482e-15,
+            "axis_line_offset_m": 2.2547188888154497e-16
+          },
+          {
+            "joint": "joint5",
+            "axis_error_rad": 1.4098083921610154e-15,
+            "axis_line_offset_m": 3.672861673693334e-16
+          },
+          {
+            "joint": "joint6",
+            "axis_error_rad": 2.169378346924448e-15,
+            "axis_line_offset_m": 5.197497356488052e-16
+          },
+          {
+            "joint": "joint7",
+            "axis_error_rad": 2.2519784363552593e-15,
+            "axis_line_offset_m": 4.440999541736083e-16
+          }
+        ]
+      }
+    },
+    {
+      "id": "joint_limits",
+      "pass": true,
+      "measured": {
+        "joint1": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "joint2": [
+          -2.04203522483,
+          2.02458193231
+        ],
+        "joint3": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "joint4": [
+          -0.10471975512,
+          3.92699081699
+        ],
+        "joint5": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "joint6": [
+          -1.69296937443,
+          3.14159265359
+        ],
+        "joint7": [
+          -6.28318530718,
+          6.28318530718
+        ]
+      },
+      "expected": {
+        "joint1": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "joint2": [
+          -2.0420352248333655,
+          2.0245819323134224
+        ],
+        "joint3": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "joint4": [
+          -0.10471975511965978,
+          3.9269908169872414
+        ],
+        "joint5": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "joint6": [
+          -1.6929693744344996,
+          3.141592653589793
+        ],
+        "joint7": [
+          -6.283185307179586,
+          6.283185307179586
+        ]
+      },
+      "tolerance": {
+        "hinge_rad": 0.001,
+        "slide_m": 0.0001
+      },
+      "severity": "error",
+      "message": "all joint ranges match the spec (max diff 4.50e-12)",
+      "fix_hint": null,
+      "details": {
+        "joints": [
+          {
+            "joint": "joint1",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint2",
+            "model": [
+              -2.04203522483,
+              2.02458193231
+            ],
+            "spec": [
+              -2.0420352248333655,
+              2.0245819323134224
+            ],
+            "max_abs_diff": 3.4225955403144326e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint3",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint4",
+            "model": [
+              -0.10471975512,
+              3.92699081699
+            ],
+            "spec": [
+              -0.10471975511965978,
+              3.9269908169872414
+            ],
+            "max_abs_diff": 2.758682171588589e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint5",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint6",
+            "model": [
+              -1.69296937443,
+              3.14159265359
+            ],
+            "spec": [
+              -1.6929693744344996,
+              3.141592653589793
+            ],
+            "max_abs_diff": 4.4995118742008344e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "joint7",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          }
+        ],
+        "missing_spec_limits": []
+      }
+    },
+    {
+      "id": "reach",
+      "pass": false,
+      "measured": 0.7720509006743862,
+      "expected": 0.7000000000000001,
+      "tolerance": 0.05,
+      "severity": "warning",
+      "message": "max reach 0.772 m is 10.3% above rated 0.700 m; warning only: the reach definition is assumed (reach.measured_from and reach.measured_to listed in estimates)",
+      "fix_hint": "Reach is too long: re-check the lengths that set the measured reach (joints[4].dh.d, joints[2].dh.d, joints[6].dh.d, joints[6].dh.a; largest effect first) against the datasheet. Also check `units.length` (mm vs m). The reach definition (measured_from = shoulder, measured_to = ee_site) is assumed, so this is only a warning. If the source does not state the reach definition, list reach.measured_from/measured_to in `estimates` instead of switching endpoints until it passes.",
+      "details": {
+        "samples": 5000,
+        "seed": 0,
+        "sample_max": 0.7715827420234965,
+        "refined_max": 0.7720509006743862,
+        "relative_error": 0.1029298581062659,
+        "measured_from": "shoulder",
+        "measured_to": "ee_site",
+        "origin": "body 'joint2_link' (2nd joint)",
+        "point": "site 'ee_site'",
+        "home_source": "keyframe 'home'",
+        "argmax_q": {
+          "joint1": -4.2745709115352035,
+          "joint2": 1.114116132013416,
+          "joint3": -5.8839996101974466,
+          "joint4": 2.7461897183549597,
+          "joint5": -6.28318530718,
+          "joint6": 0.4454145561668343,
+          "joint7": 0.05092658717362916
+        },
+        "definition_estimated": true,
+        "value_estimated": false,
+        "length_sensitivity": {
+          "joints[4].dh.d": 0.3342235641645708,
+          "joints[2].dh.d": 0.2885192714996432,
+          "joints[6].dh.d": 0.07628898243461357,
+          "joints[6].dh.a": 0.04693883849604674,
+          "joints[4].dh.a": 0.016935083868574452,
+          "joints[3].dh.a": 0.009146698982664958
+        }
+      }
+    },
+    {
+      "id": "total_mass",
+      "pass": true,
+      "measured": 13.69999987,
+      "expected": 13.7,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "model mass 13.700 kg within 0.0% of 13.700 kg",
+      "fix_hint": null,
+      "details": {
+        "relative_error": -9.489051102051621e-09,
+        "body_masses": {
+          "base": 3.0357686,
+          "joint1_link": 0.75799465,
+          "joint2_link": 3.7408309,
+          "joint3_link": 1.0360839,
+          "joint4_link": 3.2664784,
+          "joint5_link": 0.38809326,
+          "joint6_link": 1.1420087,
+          "joint7_link": 0.33274146
+        }
+      }
+    },
+    {
+      "id": "mass_plausibility",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "link densities, mass shares and mass per reach are plausible",
+      "fix_hint": null,
+      "details": {
+        "density_range_kg_m3": [
+          100.0,
+          20000.0
+        ],
+        "min_link_fraction": 0.005,
+        "min_kg_per_m_reach": 0.1,
+        "total_mass": 13.69999987,
+        "density": {
+          "base": 1447.6631573727723,
+          "joint1_link": 1447.6631446165334,
+          "joint2_link": 1447.663128807539,
+          "joint3_link": 1447.6630926128198,
+          "joint4_link": 1447.6631370792124,
+          "joint5_link": 1447.663141632378,
+          "joint6_link": 1447.6630931938003,
+          "joint7_link": 1447.6631468858664
+        },
+        "link_fraction": {
+          "joint1_link": 0.05532807716734672,
+          "joint2_link": 0.27305335295598077,
+          "joint3_link": 0.07562656276141994,
+          "joint4_link": 0.23842908255443657,
+          "joint5_link": 0.02832797545128736,
+          "joint6_link": 0.08335830006106418,
+          "joint7_link": 0.024287698040686187
+        },
+        "kg_per_m_reach": 19.57142838571428
+      }
+    },
+    {
+      "id": "inertia_valid",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "8 bodies have positive mass and valid inertia",
+      "fix_hint": null,
+      "details": {
+        "bodies_checked": 8
+      }
+    },
+    {
+      "id": "self_collision_home",
+      "pass": true,
+      "measured": 0.0,
+      "expected": 0.0,
+      "tolerance": 0.001,
+      "severity": "error",
+      "message": "no self-collision deeper than 1 mm at home (0 touching pairs)",
+      "fix_hint": null,
+      "details": {
+        "home_source": "keyframe 'home'",
+        "contacts": []
+      }
+    },
+    {
+      "id": "collision_exclusions",
+      "pass": false,
+      "measured": 1,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "1 of 4 excluded pair(s) are neither parent/child nor separated only by zero-length links, so contacts between them are never checked: base / joint1_link (parent/child; MuJoCo does not filter a world-fixed parent); base / joint2_link (only zero-length links between them (origins coincide with the end of 'base')); joint2_link / joint4_link (geoms overlap around the short link 'joint3_link' in all 32 sampled configurations, 37.5 mm deep at home); joint4_link / joint6_link (only zero-length links between them (origins coincide with the end of 'joint4_link'))",
+      "fix_hint": "Review the exclusions of 'joint2_link' / 'joint4_link': they hide any collision between those links. If they are there because the primitives overlap, make the geometry fit (joints[1].link.geometry, joints[3].link.geometry: smaller radius, explicit fromto/pos) so the exclusion is no longer needed; if the MJCF was hand-edited, remove the <exclude> or explain it in the spec's `notes`.",
+      "details": {
+        "excluded": [
+          {
+            "body1": "base",
+            "body2": "joint1_link",
+            "spec1": "base.link",
+            "spec2": "joints[0].link",
+            "kind": "parent/child",
+            "reason": "parent/child; MuJoCo does not filter a world-fixed parent"
+          },
+          {
+            "body1": "base",
+            "body2": "joint2_link",
+            "spec1": "base.link",
+            "spec2": "joints[1].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'base')"
+          },
+          {
+            "body1": "joint2_link",
+            "body2": "joint4_link",
+            "spec1": "joints[1].link",
+            "spec2": "joints[3].link",
+            "kind": "other",
+            "reason": "geoms overlap around the short link 'joint3_link' in all 32 sampled configurations, 37.5 mm deep at home"
+          },
+          {
+            "body1": "joint4_link",
+            "body2": "joint6_link",
+            "spec1": "joints[3].link",
+            "spec2": "joints[5].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'joint4_link')"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stable_hold",
+      "pass": true,
+      "measured": 0.010543355966941528,
+      "expected": 0.0,
+      "tolerance": {
+        "drift_hinge_rad": 0.05,
+        "drift_slide_m": 0.005,
+        "final_speed": 0.1
+      },
+      "severity": "error",
+      "message": "holds home for 2 s: max drift 0.0105, final speed 0.0000",
+      "fix_hint": null,
+      "details": {
+        "seconds": 2.0,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'",
+        "warnings": {},
+        "actuator_kinds": [
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position"
+        ],
+        "max_drift": {
+          "joint1": 2.1494983461580205e-19,
+          "joint2": 0.010050227156335387,
+          "joint3": 2.0974137887459834e-19,
+          "joint4": 0.009299578446736945,
+          "joint5": 4.0225974052395544e-19,
+          "joint6": 0.010543355966941528,
+          "joint7": 2.0539885151410813e-20
+        },
+        "final_speed": {
+          "joint1": 5.890555304211289e-28,
+          "joint2": 1.7955194735118499e-16,
+          "joint3": 6.0976334181786105e-28,
+          "joint4": 2.374004088361449e-16,
+          "joint5": 7.951054066377169e-28,
+          "joint6": 7.053481937699841e-17,
+          "joint7": 2.246325703718417e-29
+        },
+        "tolerance": {
+          "drift_hinge_rad": 0.05,
+          "drift_slide_m": 0.005,
+          "speed": 0.1
+        },
+        "saturated_joints": []
+      }
+    },
+    {
+      "id": "actuators",
+      "pass": true,
+      "measured": 7,
+      "expected": 7,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every spec joint is driven by exactly one actuator",
+      "fix_hint": null,
+      "details": {
+        "actuators_by_joint": {
+          "joint1": [
+            "joint1_act"
+          ],
+          "joint2": [
+            "joint2_act"
+          ],
+          "joint3": [
+            "joint3_act"
+          ],
+          "joint4": [
+            "joint4_act"
+          ],
+          "joint5": [
+            "joint5_act"
+          ],
+          "joint6": [
+            "joint6_act"
+          ],
+          "joint7": [
+            "joint7_act"
+          ]
+        },
+        "nu": 7
+      }
+    },
+    {
+      "id": "sources_complete",
+      "pass": true,
+      "measured": 0,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every number in the spec has a source or is listed as an estimate (8 of 46 estimated)",
+      "fix_hint": null,
+      "details": {
+        "uncovered": [],
+        "bad_sources": {},
+        "unmatched_keys": [],
+        "n_numbers": 46,
+        "n_estimated": 8,
+        "estimate_fraction": 0.17391304347826086
+      }
+    }
+  ],
+  "mujoco_version": "3.3.0"
+}

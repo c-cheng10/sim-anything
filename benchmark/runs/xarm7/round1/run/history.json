@@ -1,0 +1,18 @@
+{
+  "robot": "xarm7",
+  "spec": "benchmark/runs/xarm7/round1/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T08:33:10+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 2,
+      "failed_ids": [],
+      "note": "initial spec: UFACTORY modified DH table, manual joint ranges, reach definition assumed shoulder->flange",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
