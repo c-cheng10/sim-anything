@@ -96,12 +96,12 @@ fix_hints: [{id, fix_hint}]}`.
   "model": "runs/ur5e/model.xml",
   "spec": "runs/ur5e/spec.yaml",
   "passed": false,
-  "n_checks": 11, "n_failed": 1, "n_errors": 1,
+  "n_checks": 14, "n_failed": 1, "n_errors": 1,
   "mujoco_version": "3.3.0",
   "checks": [
     {"id": "reach", "pass": false, "measured": 0.951, "expected": 0.85, "tolerance": 0.05,
      "severity": "error", "message": "max reach 0.951 m is 11.9% above rated 0.850 m",
-     "fix_hint": "Reach is too long: check link lengths a2/a3 (joints[1].dh.a, joints[2].dh.a) against the datasheet, and whether rated reach is measured to the wrist centre or the flange (reach.measured_to).",
+     "fix_hint": "Reach is too long: re-check the lengths that set the measured reach (joints[1].dh.a, joints[2].dh.a, joints[3].dh.d; largest effect first) against the datasheet. Also check `units.length` (mm vs m). Confirm the source's reach definition: reach.measured_to = ee_site (vs wrist_center), reach.measured_from = shoulder. If the source does not state the reach definition, list reach.measured_from/measured_to in `estimates` instead of switching endpoints until it passes.",
      "details": {"samples": 5000, "measured_from": "shoulder"}}
   ]
 }
@@ -111,7 +111,11 @@ fix_hints: [{id, fix_hint}]}`.
 and `info` checks never block. Every failed check MUST carry a concrete
 `fix_hint` naming spec field paths where possible.
 
-### Check ids (in this order)
+### Check ids (in this order; 14 checks, `simanything.check.CHECK_IDS`)
+
+Spec-dependent checks (`joint_structure`, `ee_site`, `kinematics_match`, `joint_limits`, `reach`,
+`total_mass`, `actuators`, `sources_complete`) pass as `info` without `--spec`. `mass_plausibility`
+and `collision_exclusions` are model checks (the mass-per-reach part needs the spec).
 
 | id | What | Pass condition | Severity |
 |---|---|---|---|
