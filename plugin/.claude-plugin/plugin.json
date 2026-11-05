@@ -1,0 +1,7 @@
+{
+  "name": "sim-anything",
+  "version": "0.1.0",
+  "description": "Reverse-engineer a robot arm into a verified MuJoCo simulation from public datasheets.",
+  "author": {"name": "c-cheng10"},
+  "license": "MIT"
+}
