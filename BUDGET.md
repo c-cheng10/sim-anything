@@ -12,11 +12,11 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 3 | 2 | C: evaluator | done: evaluate.py + 40 tests, merged |
 | 4 | 2 | D: render + report | done: render.py, report.py + 11 tests, merged |
 | 5 | 2 | E: plugin, loop, benchmark inputs | done: SKILL.md, command, marketplace, loop.py + tests, inputs for 8 robots (search excerpts only; manufacturer hosts blocked), merged |
-| 6 | 4 | blind round0: ur5e | running |
+| 6 | 4 | blind round0: ur5e | done: all pass in 2 iterations (reach definition changed to wrist center) |
 | 7 | 4 | blind round0: franka_panda | done: all checks pass in 1 iteration (modified DH from FCI docs) |
-| 8 | 4 | blind round0: kinova_gen3 | running |
-| 9 | 4 | blind round0: xarm7 | running |
-| 10 | 4 | blind round0: kuka_iiwa14 | running |
-| 11 | 4 | blind round0: viperx_300s | running |
+| 8 | 4 | blind round0: kinova_gen3 | done: all pass in 1 iteration (DH from third-party quote of Kinova table) |
+| 9 | 4 | blind round0: xarm7 | done: reach fails (unstated definition), refused to alter sourced numbers |
+| 10 | 4 | blind round0: kuka_iiwa14 | done: all pass in 1 iteration (offset chain from dimension table) |
+| 11 | 4 | blind round0: viperx_300s | done: all pass in 1 iteration (Trossen docs screw-axis table) |
 
 ## Refinement rounds used: 0 / 3
