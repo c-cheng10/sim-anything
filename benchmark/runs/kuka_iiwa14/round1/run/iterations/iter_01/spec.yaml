@@ -1,0 +1,125 @@
+name: kuka_iiwa14
+manufacturer: KUKA
+model: LBR iiwa 14 R820
+description: 7-DOF lightweight arm, arm only (no tool), EE site on the mechanical (tool) flange face.
+dof: 7
+units: {length: mm, angle: deg}
+convention: offset
+base:
+  link:
+    geometry:
+      - {shape: cylinder, radius: 80, half_length: 25, pos: [0, 0, 25]}
+joints:
+  # q = 0: arm stretched vertically (the pose of the work-envelope drawing; height A = 1306 mm to the flange).
+  - name: A1
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 85
+    effort_limit: 320
+    link:
+      geometry: [{shape: capsule, radius: 65, fromto: [0, 0, 80, 0, 0, 360]}]
+  - name: A2
+    origin: {xyz: [0, 0, 360]}
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 85
+    effort_limit: 320
+    link:
+      geometry: [{shape: sphere, radius: 65}]
+  - name: A3
+    origin: {xyz: [0, 0, 210]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 100
+    effort_limit: 176
+    link:
+      geometry: [{shape: capsule, radius: 60}]
+  - name: A4
+    origin: {xyz: [0, 0, 210]}
+    axis: [0, -1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 75
+    effort_limit: 176
+    link:
+      geometry: [{shape: capsule, radius: 55}]
+  - name: A5
+    origin: {xyz: [0, 0, 200]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 130
+    effort_limit: 110
+    link:
+      geometry: [{shape: capsule, radius: 50}]
+  - name: A6
+    origin: {xyz: [0, 0, 200]}
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 135
+    effort_limit: 40
+    link:
+      geometry: [{shape: sphere, radius: 50}]
+  - name: A7
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -175, upper: 175}
+    velocity_limit: 135
+    effort_limit: 40
+    link:
+      geometry: [{shape: cylinder, radius: 40, fromto: [0, 0, 60, 0, 0, 126]}]
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 126]}
+total_mass: 29.9
+payload: 14
+reach: {value: 820, measured_from: shoulder, measured_to: wrist_center}
+repeatability: 0.15
+sources:
+  joints[*].limits: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[0].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[1].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[2].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[3].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[4].velocity_limit: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[5].velocity_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[6].velocity_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[0].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[1].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[3].effort_limit: https://storage.googleapis.com/bucket-two-leobotics/product/datasheet-fiche-technique-robot-axe-industriel-collaboratif-7-axes-kuka-lbr-iiwa-7-r800-2-14-r820-2.pdf
+  joints[4].effort_limit: https://storage.googleapis.com/bucket-two-leobotics/product/datasheet-fiche-technique-robot-axe-industriel-collaboratif-7-axes-kuka-lbr-iiwa-7-r800-2-14-r820-2.pdf
+  joints[5].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[6].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  total_mass: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  payload: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  reach.value: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  repeatability: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+estimates:
+  - joints[*].origin
+  - joints[*].axis
+  - joints[2].effort_limit
+  - ee.origin
+  - reach.measured_from
+  - reach.measured_to
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  Kinematic source: dimension drawing (KUKA work-envelope figure/table, letters A-G, read from web-search
+  extracts of a third-party mirror of the KUKA LBR iiwa document; the PDF itself could not be opened), so
+  convention offset with the stretched-up pose as q = 0. The letters are not labelled in the extracts; mapping
+  is inferred and therefore every joint origin is listed as an estimate: C = 360 = base mounting face to A2 axis
+  (joints[1].origin z), D = 420 = A2 to A4, E = 400 = A4 to A6, G = 820 = D + E = reach, B = 1180 = C + G (top of
+  the wrist-centre envelope), A = 1306 = total height to the flange, so A6 axis to flange face = A - B = 126 mm
+  (ee.origin z). The same arithmetic holds for the iiwa 7 R800 row of the same table (1266/1140/340/400/400/800,
+  1266 - 1140 = 126), which supports the mapping. The LBR Med 14 R820 brochure gives the same A = 1306 and B = 1180.
+  Where the roll joints A3, A5, A7 sit along their own axes does not change the kinematics; A3 and A5 are put at the
+  midpoints of D and E (210, 200) and A7 at the A6 centre (estimates). A2/A4/A6 are pitch axes and A1/A3/A5/A7 are
+  roll axes along the arm (the iiwa's alternating roll/pitch layout; no source read gives axis vectors); the axis signs (A4 reversed relative to A2 and A6) are an
+  estimate: no source states the positive directions. Reach 820 mm is not defined in the sources; it equals D + E,
+  so it is taken as shoulder (A2) to wrist centre (A6), listed as an estimate. Joint ranges are the product-page
+  ranges (A1/A3/A5 +-170, A2/A4/A6 +-120, A7 +-175). Speeds A1-A5 from the product page; A6/A7 135 deg/s from the
+  search extract of the spec axis-data table (also on the iiwa 14 R820 CR page). Torques: A1/A2 320, A6/A7 40 Nm
+  from the spec axis-data table extract; A4 176 and A5 110 from a garbled distributor-brochure extract
+  (second-hand); A3 176 is the unlabelled value in that extract, so it is an estimate. Total mass 29.9 kg ("approx.")
+  distributed by volume; no link masses published. Housing radii are estimates from product photos (no diameters
+  published). Second-hand sources: the mirrored KUKA PDF (git.phschoen.de) and the distributor brochure, both read
+  only as search extracts.
