@@ -64,10 +64,18 @@ Build, check, render and report a (fictional) 6-DOF arm described by a DH table:
 sim-anything loop examples/toy_6dof_dh.yaml --run-dir runs/toy --note "first run"
 ```
 
-That prints the check results and writes `runs/toy/model.xml`,
-`runs/toy/check.json`, `runs/toy/renders/{front,side,top}.png` and
-`runs/toy/report.html`. Open the model in MuJoCo's viewer with
-`python -m mujoco.viewer --mjcf runs/toy/model.xml`. The individual steps:
+On a pass `loop` prints a one-line summary (`iteration 1/8: PASSED (N checks,
+0 errors)`, plus any non-blocking warnings) followed by the paths it wrote:
+`runs/toy/model.xml`, `runs/toy/renders/{front,side,top}.png`,
+`runs/toy/report.html` (and `report.md`) and `runs/toy/check.json`. The
+per-check details (measured vs expected, tolerance, messages) are in
+`check.json` and in the report's checks table; on a failure the summary lists
+each failed check with its fix hint. `loop` rewrites the renders and the report
+after every iteration, so they always show the latest one. Running it again
+with an unchanged spec starts no new iteration; to start over, delete the run
+directory (`rm -rf runs/toy`) or pass a new `--run-dir`. Open the model in
+MuJoCo's viewer with `python -m mujoco.viewer --mjcf runs/toy/model.xml`. The
+individual steps:
 
 ```bash
 sim-anything validate examples/toy_6dof_dh.yaml
@@ -83,6 +91,14 @@ fixture arm against a variant with flipped joint conventions and a rotated tool)
 ```bash
 sim-anything eval tests/fixtures/eval/arm_cand.xml --reference tests/fixtures/eval/arm_ref.xml --map tests/fixtures/eval/arm_map.yaml
 ```
+
+It prints `score 85.0/100` with 0.0 mm position error: the kinematics match
+exactly once the evaluator has fitted the joint conventions, but the fixture's
+joint ranges deliberately differ from the reference's (e.g. the candidate's
+first joint keeps ±3 rad around a zero shifted by 90 deg), so the limits score
+low (joint-limit MAE about 34 deg, limits term 0.03), and the reference has an
+extra 0.05 kg finger (mass term 0.95). Add `--json` to see the fitted
+conventions, the per-joint limit differences and the score breakdown.
 
 Run the tests with `python -m pytest`.
 
@@ -105,8 +121,11 @@ Then inside Claude Code:
 ```
 
 The agent gathers sources into `runs/<robot>/sources.md`, writes
-`runs/<robot>/spec.yaml`, loops until the checks pass, and reports the paths to
-the model, renders and `report.html`. Details: [plugin/README.md](plugin/README.md).
+`runs/<robot>/spec.yaml`, loops in `runs/<robot>/run/` until the checks pass,
+and reports the paths to the model, renders and `report.html`. The plugin has
+the `/sim-anything` command and the `robot-to-mujoco` skill it follows (the
+skill also triggers on its own when you ask for a MuJoCo model of a robot arm).
+Details: [plugin/README.md](plugin/README.md).
 
 ## Results
 
