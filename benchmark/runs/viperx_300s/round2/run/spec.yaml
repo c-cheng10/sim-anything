@@ -1,0 +1,77 @@
+name: viperx_300s
+manufacturer: Trossen Robotics
+model: ViperX 300 Robot Arm 6DOF (ViperX 300 S), arm joints only, no gripper
+description: Interbotix/Trossen ViperX 300 S, offset convention from the Interbotix reach and offsets tables (inferred mapping).
+dof: 6
+units: {length: mm, angle: deg}
+convention: offset                 # no DH table published; q = 0 = all-zero "home" pose (upper arm up, forearm forward)
+base:
+  link:
+    geometry:
+      - {shape: box, size: [60, 60, 25], pos: [0, 0, 25]}
+joints:
+  - name: waist
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -180, upper: 180}
+    link: {geometry: [{shape: cylinder, radius: 35, fromto: [0, 0, 50, 0, 0, 100]}]}
+  - name: shoulder
+    origin: {xyz: [0, 0, 120]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 101}
+    link: {geometry: [{shape: capsule, radius: 25, fromto: [5, 0, 25, 55, 0, 275]}]}
+  - name: elbow
+    origin: {xyz: [60, 0, 300]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 92}
+    link: {geometry: [{shape: sphere, radius: 28}]}
+  - name: forearm_roll
+    origin: {xyz: [0, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link: {geometry: [{shape: capsule, radius: 22, fromto: [40, 0, 0, 265, 0, 0]}]}
+  - name: wrist_angle
+    origin: {xyz: [300, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -107, upper: 130}
+    link: {geometry: [{shape: capsule, radius: 22, fromto: [0, 0, 0, 45, 0, 0]}]}
+  - name: wrist_rotate
+    origin: {xyz: [70, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link: {geometry: [{shape: cylinder, radius: 22, fromto: [-15, 0, 0, 0, 0, 0]}]}
+ee: {name: ee_site}               # at point D of the reach table ("wrist rotate"), on the wrist_rotate axis
+payload: 0.75
+reach: {value: 750, measured_from: shoulder, measured_to: ee_site}
+repeatability: 1
+sources:
+  joints[*].limits: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  payload: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  reach.value: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  repeatability: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+estimates:
+  - joints[*].origin
+  - joints[*].axis
+  - joints[*].link.geometry
+  - base.link.geometry
+  - reach.measured_from
+  - reach.measured_to
+notes: >
+  Kinematic source: inferred from the Interbotix "Reach" and "Offsets & True Upper Arm Length" tables
+  (docs.trossenrobotics.com, read through search extracts; the column/letter mapping is a best reading), so all
+  origins are estimates. Sourced lengths used: upper arm offsets 300 mm and 60 mm with true length 306 mm and
+  angle 11.3 deg (sqrt(300^2+60^2) = 305.9, atan(60/300) = 11.3 deg, so they are the two legs of shoulder->elbow
+  at the zero pose: elbow 300 mm above and 60 mm forward of the shoulder axis), forearm elbow -> wrist tilt 300 mm
+  (assumed horizontal, on the elbow height, at q = 0), wrist tilt -> wrist rotate 70 mm. Cumulative values in the
+  table (306 elbow, 606 wrist tilt, 676 wrist rotate) are consistent with this chain. Shoulder height above the
+  base plate is not published in anything reachable: 120 mm is an estimate from product photos (base housing plus
+  waist bracket roughly 0.4 times the 300 mm upper-arm leg); the shoulder axis is assumed to lie on the waist axis.
+  Forearm_roll is placed at the elbow point (any point on its axis gives the same model). Axis directions are not
+  published: waist +z, shoulder/elbow/wrist_angle +y (positive pitches the arm down/forward; elbow +92 then folds
+  the forearm down toward the upper arm, matching its smaller positive range), forearm_roll and wrist_rotate +x,
+  all estimates. EE site: the docs do not give the distance to the gripper-mount face, so ee_site is at point D of
+  the reach table ("wrist rotate", 70 mm past the wrist_angle axis, on the wrist_rotate axis), with no offset; the
+  gripper (69 mm to the gripper rail, 68 mm more to the fingertip) is not modelled. Joint limits are the
+  firmware default limits listed on the vx300s page. Reach 750 mm has no stated definition; shoulder -> ee_site is
+  assumed (estimate); the table's cumulative 745 mm to the gripper rail suggests the 750 mm figure includes the
+  gripper, so the arm-only model is expected to fall short. Total mass, speeds, torques not found: omitted.

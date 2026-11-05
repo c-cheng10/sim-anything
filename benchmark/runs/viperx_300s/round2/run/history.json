@@ -1,0 +1,18 @@
+{
+  "robot": "viperx_300s",
+  "spec": "benchmark/runs/viperx_300s/round2/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T10:57:06+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 2,
+      "failed_ids": [],
+      "note": "initial spec: offset chain from Interbotix reach/offset tables, shoulder height estimated, EE at wrist-rotate point D",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
