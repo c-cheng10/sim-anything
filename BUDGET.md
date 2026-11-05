@@ -13,9 +13,10 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 4 | 2 | D: render + report | done: render.py, report.py + 11 tests, merged |
 | 5 | 2 | E: plugin, loop, benchmark inputs | done: SKILL.md, command, marketplace, loop.py + tests, inputs for 8 robots (search excerpts only; manufacturer hosts blocked), merged |
 | 6 | 4 | blind round0: ur5e | running |
-| 7 | 4 | blind round0: franka_panda | running |
+| 7 | 4 | blind round0: franka_panda | done: all checks pass in 1 iteration (modified DH from FCI docs) |
 | 8 | 4 | blind round0: kinova_gen3 | running |
 | 9 | 4 | blind round0: xarm7 | running |
 | 10 | 4 | blind round0: kuka_iiwa14 | running |
+| 11 | 4 | blind round0: viperx_300s | running |
 
 ## Refinement rounds used: 0 / 3

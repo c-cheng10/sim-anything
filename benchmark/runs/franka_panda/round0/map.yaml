@@ -1,0 +1,24 @@
+robot: franka_panda
+candidate:
+  joints:
+  - A1
+  - A2
+  - A3
+  - A4
+  - A5
+  - A6
+  - A7
+  ee:
+    site: ee_site
+reference:
+  joints:
+  - joint1
+  - joint2
+  - joint3
+  - joint4
+  - joint5
+  - joint6
+  - joint7
+  ee:
+    site: attachment_site
+fit_conventions: true
