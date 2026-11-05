@@ -1,4 +1,4 @@
-"""Kinematic check: reach (see docs/CONTRACTS.md section 4, reach metric)."""
+"""Kinematic checks: kinematics_match and reach (see docs/CONTRACTS.md section 4)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import mujoco
 import numpy as np
 
 from ..schemas import CheckResult
-from .context import HINGE, CheckContext, result, skipped_no_spec
+from .context import HINGE, JOINT_TYPE_NAMES, CheckContext, result, skipped_no_spec
 
 REACH_TOL = 0.05  # relative
 REFINE_TOP = 8  # best samples refined by local search
@@ -200,3 +200,120 @@ def _reach_hint(ctx: CheckContext, too_long: bool) -> str:
              f"prevent stretching out (joints[*].limits), and the reach definition (reach.measured_from = "
              f"{r.measured_from}, reach.measured_to = {r.measured_to}). Also check `units.length` (mm vs m).")
     return s
+
+
+# --------------------------------------------------------------------------- #
+# kinematics_match: the model's kinematics vs Spec.chain()
+# --------------------------------------------------------------------------- #
+
+KIN_POS_TOL = 1e-6  # m
+KIN_ROT_TOL = 1e-6  # rad
+KIN_SAMPLES = 20  # home + 19 seeded random configurations
+
+
+def _rot_angle(Ra: np.ndarray, Rb: np.ndarray) -> float:
+    """Geodesic angle between two rotation matrices (accurate for small angles)."""
+    s = float(np.linalg.norm(Ra - Rb)) / (2.0 * math.sqrt(2.0))
+    return 2.0 * math.asin(min(1.0, s))
+
+
+def _vec_angle(a: np.ndarray, b: np.ndarray) -> float:
+    a = a / np.linalg.norm(a)
+    b = b / np.linalg.norm(b)
+    return 2.0 * math.asin(min(1.0, float(np.linalg.norm(a - b)) / 2.0))
+
+
+def kinematic_configs(spec, n: int, seed: int) -> np.ndarray:
+    """Home plus ``n - 1`` seeded uniform configurations within the spec limits (SI).
+    Unlimited hinges use [-pi, pi], unlimited slides [-0.1, 0.1] m."""
+    rng = np.random.default_rng(seed)
+    lo = np.array([j.limits.lower if j.limits else (-math.pi if j.type == "hinge" else -0.1) for j in spec.joints])
+    hi = np.array([j.limits.upper if j.limits else (math.pi if j.type == "hinge" else 0.1) for j in spec.joints])
+    home = np.array([j.home for j in spec.joints], dtype=float)
+    return np.vstack([home[None, :], rng.uniform(lo, hi, size=(max(n - 1, 0), len(lo)))])
+
+
+def check_kinematics_match(ctx: CheckContext, *, seed: int = 0, n_samples: int = KIN_SAMPLES) -> CheckResult:
+    """EE site pose and every joint axis (direction and, for hinges, its line) of the model vs
+    ``spec.chain()`` on ``n_samples`` configurations."""
+    cid = "kinematics_match"
+    if not ctx.has_spec:
+        return skipped_no_spec(cid)
+    m, d, spec = ctx.model, ctx.data, ctx.spec
+    assert m is not None and d is not None and spec is not None
+    blocked = (any(jid is None for jid in ctx.joint_ids) or m.njnt != spec.dof
+               or any(JOINT_TYPE_NAMES.get(int(m.jnt_type[jid]), "?") != j.type
+                      for j, jid in zip(spec.joints, ctx.joint_ids) if jid is not None))
+    if blocked:
+        return result(cid, False, severity="info", message="skipped: the model's joints do not match the spec",
+                      fix_hint="Fix the joint_structure failure first; this check runs once every spec joint is in "
+                               "the model with the right type and no other joints exist.")
+    sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, spec.ee.name)
+    if sid < 0:
+        return result(cid, False, severity="info", message=f"skipped: no site '{spec.ee.name}' (see ee_site)",
+                      fix_hint="Fix the ee_site failure first.")
+    chain = spec.chain()
+    jids = [int(j) for j in ctx.joint_ids]  # type: ignore[arg-type]
+    qadr = np.array([m.jnt_qposadr[j] for j in jids], dtype=int)
+    Q = kinematic_configs(spec, n_samples, seed)
+    ee_pos = ee_rot = 0.0
+    axis_err = np.zeros(len(jids))   # rad, joint axis direction (sign included)
+    line_err = np.zeros(len(jids))   # m, hinge anchor distance from the spec axis line
+    worst_q = Q[0]
+    for q in Q:
+        mujoco.mj_resetData(m, d)
+        d.qpos[:] = ctx.home_qpos
+        d.qpos[qadr] = q
+        mujoco.mj_kinematics(m, d)
+        T = chain.fk(q)
+        pe = float(np.linalg.norm(d.site_xpos[sid] - T[:3, 3]))
+        re = _rot_angle(d.site_xmat[sid].reshape(3, 3), T[:3, :3])
+        if pe > ee_pos:
+            worst_q = q
+        ee_pos, ee_rot = max(ee_pos, pe), max(ee_rot, re)
+        for i, (jid, cj) in enumerate(zip(jids, chain.joints)):
+            Ti = chain.fk(q, upto=i)
+            a_spec = Ti[:3, :3] @ np.asarray(cj.axis, dtype=float)
+            a_spec /= np.linalg.norm(a_spec)
+            axis_err[i] = max(axis_err[i], _vec_angle(np.array(d.xaxis[jid]), a_spec))
+            if cj.type == "hinge":
+                v = d.xanchor[jid] - Ti[:3, 3]
+                line_err[i] = max(line_err[i], float(np.linalg.norm(v - np.dot(v, a_spec) * a_spec)))
+    measured = {"ee_position_m": ee_pos, "ee_orientation_rad": ee_rot,
+                "joint_axis_rad": float(np.max(axis_err)), "joint_position_m": float(np.max(line_err))}
+    tol = {"position_m": KIN_POS_TOL, "orientation_rad": KIN_ROT_TOL}
+    details = {
+        "samples": len(Q), "seed": seed,
+        "joints": [{"joint": spec.joints[i].name, "axis_error_rad": float(axis_err[i]),
+                    "axis_line_offset_m": float(line_err[i])} for i in range(len(jids))],
+    }
+    ok = (ee_pos <= KIN_POS_TOL and ee_rot <= KIN_ROT_TOL and bool(np.all(axis_err <= KIN_ROT_TOL))
+          and bool(np.all(line_err <= KIN_POS_TOL)))
+    if ok:
+        return result(cid, True, measured=measured, expected=0.0, tolerance=tol,
+                      message=f"model kinematics match the spec on {len(Q)} configurations (max EE error "
+                              f"{ee_pos:.1e} m, {ee_rot:.1e} rad)", details=details)
+    details["worst_q"] = {spec.joints[i].name: float(x) for i, x in enumerate(worst_q)}
+    parts = [f"model kinematics differ from the spec: max EE error {ee_pos * 1000:.3f} mm / "
+             f"{math.degrees(ee_rot):.3f} deg over {len(Q)} configurations"]
+    hints = []
+    bad_j = [i for i in range(len(jids)) if axis_err[i] > KIN_ROT_TOL or line_err[i] > KIN_POS_TOL]
+    if bad_j:
+        i = bad_j[0]
+        what = []
+        if axis_err[i] > KIN_ROT_TOL:
+            what.append(f"its axis is {math.degrees(axis_err[i]):.2f} deg off")
+        if line_err[i] > KIN_POS_TOL:
+            what.append(f"it sits {line_err[i] * 1000:.2f} mm off the spec's axis line")
+        parts.append(f"first mismatching joint '{spec.joints[i].name}' (joints[{i}]): {' and '.join(what)}")
+        hints.append(f"The first joint whose placement or axis differs from the spec is joints[{i}] "
+                     f"'{spec.joints[i].name}': compare its body pos/quat and joint axis in the MJCF with the "
+                     "spec offsets / DH rows leading to it.")
+    else:
+        hints.append(f"All joint axes match; the pose of site '{spec.ee.name}' differs (compare the site pos/quat "
+                     "in the MJCF with ee.origin).")
+    hints.append("The MJCF was edited by hand or built from a different spec: rebuild it from this spec "
+                 "(`sim-anything build`). If the hand edit is intentional (an exotic mechanism the spec cannot "
+                 "express), explain it in the spec's `notes`.")
+    return result(cid, False, measured=measured, expected=0.0, tolerance=tol, message="; ".join(parts),
+                  fix_hint=" ".join(hints), details=details)

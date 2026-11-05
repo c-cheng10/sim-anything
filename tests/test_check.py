@@ -18,8 +18,10 @@ import yaml
 from simanything.check import CHECK_IDS, inertia_problems, run_checks
 from simanything.spec import load_spec
 
-CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "joint_limits", "reach", "total_mass", "inertia_valid",
-                "self_collision_home", "stable_hold", "actuators", "sources_complete"]
+CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
+                "inertia_valid", "self_collision_home", "stable_hold", "actuators", "sources_complete"]
+SPEC_CHECKS = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass", "actuators",
+               "sources_complete"}
 
 R150 = 2.6179939  # 150 deg in rad
 
@@ -137,7 +139,7 @@ def test_good_model_passes_everything(tmp_path):
     assert [c.id for c in report.checks] == CONTRACT_IDS == CHECK_IDS
     failed = [(c.id, c.message) for c in report.checks if not c.passed]
     assert failed == []
-    assert report.passed and report.n_checks == 11 and report.n_failed == 0 and report.n_errors == 0
+    assert report.passed and report.n_checks == len(CONTRACT_IDS) and report.n_failed == 0 and report.n_errors == 0
     reach = by_id(report)["reach"]
     assert reach.measured == pytest.approx(0.55, rel=1e-3)
     assert reach.expected == pytest.approx(0.55)
@@ -152,7 +154,7 @@ def test_report_json_keys(tmp_path):
     d = run_checks(model, spec).to_json_dict()
     json.dumps(d)  # serialisable
     assert set(d) >= {"model", "spec", "passed", "n_checks", "n_failed", "n_errors", "mujoco_version", "checks"}
-    assert d["n_checks"] == 11 and d["passed"] is False and d["n_errors"] >= 1
+    assert d["n_checks"] == len(CONTRACT_IDS) and d["passed"] is False and d["n_errors"] >= 1
     for c in d["checks"]:
         assert set(c) >= {"id", "pass", "measured", "expected", "tolerance", "severity", "message", "fix_hint",
                           "details"}
@@ -166,8 +168,7 @@ def test_no_spec_skips_spec_checks(tmp_path):
     report = run_checks(model)
     assert report.passed and report.spec is None
     for c in report.checks:
-        if c.id in {"joint_structure", "ee_site", "joint_limits", "reach", "total_mass", "actuators",
-                    "sources_complete"}:
+        if c.id in SPEC_CHECKS:
             assert c.passed and c.severity == "info" and c.message == "skipped: no spec"
         else:
             assert c.passed and c.severity == "error", c
@@ -261,6 +262,37 @@ def test_wrong_joint_order(tmp_path):
     model, spec = write_case(tmp_path, mjcf(), s)
     c = assert_fails(run_checks(model, spec), "joint_structure")
     assert "chain order" in c.fix_hint
+
+
+def test_kinematics_match_hand_edited_axis(tmp_path):
+    # flipping the elbow axis keeps the reach, limits and everything else intact
+    xml = mjcf(elbow_joint=f'<joint name="elbow" type="hinge" axis="0 -1 0" range="-{R150} {R150}" damping="0.5"/>')
+    model, spec = write_case(tmp_path, xml, SPEC)
+    report = run_checks(model, spec)
+    c = assert_fails(report, "kinematics_match")
+    assert "'elbow' (joints[1])" in c.message and "axis" in c.message
+    assert "rebuild" in c.fix_hint and "notes" in c.fix_hint
+    assert c.measured["ee_position_m"] > 1e-3
+    assert error_failures(report) == {"kinematics_match"}
+
+
+def test_kinematics_match_swapped_link_lengths(tmp_path):
+    # 0.25 then 0.3 instead of 0.3 then 0.25: same max reach, wrong kinematics
+    xml = (mjcf(site='<site name="ee_site" pos="0.3 0 0"/>')
+           .replace('<body name="elbow_link" pos="0.3 0 0">', '<body name="elbow_link" pos="0.25 0 0">'))
+    model, spec = write_case(tmp_path, xml, SPEC)
+    report = run_checks(model, spec)
+    c = assert_fails(report, "kinematics_match")
+    assert "'elbow' (joints[1])" in c.message and "mm off" in c.message
+    assert c.measured["joint_position_m"] == pytest.approx(0.05, rel=1e-6)
+    assert by_id(report)["reach"].passed
+
+
+def test_kinematics_match_ee_offset_only(tmp_path):
+    model, spec = write_case(tmp_path, mjcf(site='<site name="ee_site" pos="0.25 0 0" euler="0 0 0.1"/>'), SPEC)
+    c = assert_fails(run_checks(model, spec), "kinematics_match")
+    assert c.measured["ee_orientation_rad"] == pytest.approx(0.1, rel=1e-6)
+    assert "ee.origin" in c.fix_hint
 
 
 def test_wrong_limits(tmp_path):
@@ -476,4 +508,4 @@ def test_dh_6dof_example(tmp_path, examples_dir):
     assert measured >= best - 1e-6  # the refined max is at least the sampled max
     assert measured <= best * 1.03
     # deterministic for a fixed seed
-    assert run_checks(model, spec_path, seed=0).checks[4].measured == pytest.approx(measured)
+    assert by_id(run_checks(model, spec_path, seed=0))["reach"].measured == pytest.approx(measured)

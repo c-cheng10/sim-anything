@@ -118,6 +118,7 @@ and `info` checks never block. Every failed check MUST carry a concrete
 | `compiles` | MJCF loads with the pinned MuJoCo | loads, `mj_forward` finite | error |
 | `joint_structure` | joint count, types (hinge/slide) and order vs spec | exact match by name and type, in chain order | error |
 | `ee_site` | site named `spec.ee.name` exists on the last body | exists | error |
+| `kinematics_match` | model vs `spec.chain().fk(q)` on 20 seeded configurations (home + 19 uniform within the spec limits): EE site position and orientation, every joint's world axis direction and (hinges) the distance of its anchor from the spec axis line | all within 1e-6 m / 1e-6 rad (measured: the max of each) | error (info + fail, non-blocking, while `joint_structure`/`ee_site` problems prevent it from running) |
 | `joint_limits` | MJCF `range` vs spec limits (SI) | all limited joints match within 1e-3 rad / 1e-4 m; a joint without spec limits -> warning | error |
 | `reach` | max of the reach metric over 5,000 uniform random configurations within limits, the best 8 polished by a short local search, vs `spec.reach` | within ±5% (relative) | error (info + pass if spec has no reach) |
 | `total_mass` | sum of body masses vs `spec.total_mass` | within ±5% | error (info + pass if absent) |
