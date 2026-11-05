@@ -1,0 +1,62 @@
+# Benchmark robots. `reference` paths point into third_party/mujoco_menagerie
+# (gitignored, cloned with:
+#   git clone --depth 1 https://github.com/google-deepmind/mujoco_menagerie third_party/mujoco_menagerie
+# ). Paths confirmed against Menagerie commit 98a70c569c4c1b6da467a20012f766ee1f8dc521.
+#
+# Agents that generate specs may read only `id`, `name`, `manufacturer` and
+# `product` from this file. They must never open the `reference` files.
+#
+# `publishes_dh`: whether the manufacturer publicly publishes a DH / kinematic
+# parameter table (set from benchmark/inputs/<id>/facts.yaml; null = unknown).
+
+dev:
+  - id: ur5e
+    name: UR5e
+    manufacturer: Universal Robots
+    product: UR5e collaborative robot arm (e-Series)
+    reference: third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml
+    publishes_dh: null
+  - id: franka_panda
+    name: Franka Emika Panda
+    manufacturer: Franka Emika
+    product: Panda arm (7-DOF), without hand
+    reference: third_party/mujoco_menagerie/franka_emika_panda/panda_nohand.xml
+    publishes_dh: null
+  - id: kinova_gen3
+    name: Kinova Gen3 (7-DOF)
+    manufacturer: Kinova
+    product: Gen3 ultra lightweight robot, 7-DOF, no gripper
+    reference: third_party/mujoco_menagerie/kinova_gen3/gen3.xml
+    publishes_dh: null
+  - id: xarm7
+    name: UFactory xArm 7
+    manufacturer: UFactory
+    product: xArm 7 (7-DOF), without gripper
+    reference: third_party/mujoco_menagerie/ufactory_xarm7/xarm7_nohand.xml
+    publishes_dh: null
+  - id: kuka_iiwa14
+    name: KUKA LBR iiwa 14 R820
+    manufacturer: KUKA
+    product: LBR iiwa 14 R820 (7-DOF)
+    reference: third_party/mujoco_menagerie/kuka_iiwa_14/iiwa14.xml
+    publishes_dh: null
+  - id: viperx_300s
+    name: Trossen ViperX 300 S
+    manufacturer: Trossen Robotics
+    product: ViperX 300 Robot Arm 6DOF (ViperX 300 S), arm joints only
+    reference: third_party/mujoco_menagerie/trossen_vx300s/vx300s.xml
+    publishes_dh: null
+
+holdout:
+  - id: ur10e
+    name: UR10e
+    manufacturer: Universal Robots
+    product: UR10e collaborative robot arm (e-Series)
+    reference: third_party/mujoco_menagerie/universal_robots_ur10e/ur10e.xml
+    publishes_dh: null
+  - id: ufactory_lite6
+    name: UFactory Lite 6
+    manufacturer: UFactory
+    product: Lite 6 (6-DOF), without gripper
+    reference: third_party/mujoco_menagerie/ufactory_lite6/lite6.xml
+    publishes_dh: null
