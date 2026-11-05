@@ -1,0 +1,30 @@
+{
+  "robot": "franka_panda",
+  "spec": "benchmark/runs/franka_panda/round1/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T08:30:57+00:00",
+      "passed": false,
+      "n_errors": 1,
+      "n_failed": 2,
+      "failed_ids": [
+        "self_collision_home"
+      ],
+      "note": "initial spec: FCI modified DH + flange row, datasheet ranges/speeds, FCI torques, estimated ready-pose home",
+      "build_error": null
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-11-05T08:31:16+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 1,
+      "failed_ids": [],
+      "note": "home to the Panda ready pose (A2 -45, A7 45 added; flange points down), A7 flange-link radius 40->35 mm (estimate) to clear the A4/A5 overlap",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

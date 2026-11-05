@@ -1,0 +1,95 @@
+name: franka_panda
+manufacturer: Franka Emika
+model: Panda (FER) arm, 7-DOF, without hand
+description: Franka Emika Panda arm only (no hand); EE site at the flange face.
+dof: 7
+units: {length: mm, angle: deg}     # DH table published in m / rad: written as mm (x1000) / deg
+convention: dh_modified             # FCI: "following Craig's convention"; row i = a_{i-1}, alpha_{i-1}, d_i, theta_i
+joints:
+  - name: A1
+    dh: {a: 0, alpha: 0, d: 333}
+    limits: {lower: -166, upper: 166}
+    velocity_limit: 150
+    effort_limit: 87
+    link: {geometry: [{shape: sphere, radius: 60}]}
+  - name: A2
+    dh: {a: 0, alpha: -90, d: 0}
+    limits: {lower: -101, upper: 101}
+    velocity_limit: 150
+    effort_limit: 87
+    link: {geometry: [{shape: capsule, radius: 55}]}
+  - name: A3
+    dh: {a: 0, alpha: 90, d: 316}
+    limits: {lower: -166, upper: 166}
+    velocity_limit: 150
+    effort_limit: 87
+    link: {geometry: [{shape: capsule, radius: 55}]}
+  - name: A4
+    dh: {a: 82.5, alpha: 90, d: 0}
+    limits: {lower: -176, upper: -4}
+    velocity_limit: 150
+    effort_limit: 87
+    home: -135
+    link: {geometry: [{shape: capsule, radius: 50}]}
+  - name: A5
+    dh: {a: -82.5, alpha: -90, d: 384}
+    limits: {lower: -166, upper: 166}
+    velocity_limit: 180
+    effort_limit: 12
+    link: {geometry: [{shape: sphere, radius: 50}]}
+  - name: A6
+    dh: {a: 0, alpha: 90, d: 0}
+    limits: {lower: -1, upper: 215}
+    velocity_limit: 180
+    effort_limit: 12
+    home: 90
+    link: {geometry: [{shape: capsule, radius: 45}]}
+  - name: A7
+    dh: {a: 88, alpha: 90, d: 0}
+    limits: {lower: -166, upper: 166}
+    velocity_limit: 180
+    effort_limit: 12
+    link: {geometry: [{shape: cylinder, radius: 40}]}
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 107]}        # DH "Flange" row: a = 0, d = 0.107 m, alpha = 0, theta = 0
+total_mass: 17.8
+payload: 3
+reach: {value: 855, measured_from: shoulder, measured_to: ee_site}
+repeatability: 0.1
+sources:
+  joints[*].dh: https://frankarobotics.github.io/docs/robot_specifications.html
+  joints[6].dh.alpha: https://www.diag.uniroma1.it/~labrob/pub/papers/RAL_2019_PandaDynamicModel_PreprintXplore.pdf
+  ee.origin: https://frankarobotics.github.io/docs/robot_specifications.html
+  joints[*].limits: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  joints[*].velocity_limit: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  joints[*].effort_limit: https://frankarobotics.github.io/docs/robot_specifications.html
+  total_mass: https://centers.ulbsibiu.ro/incon/wp-content/uploads/Datasheet-Franka-Emika-Panda-Research-collaborative-robot.pdf
+  payload: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  reach.value: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  repeatability: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+estimates:
+  - joints[*].link.geometry
+  - joints[3].home
+  - joints[5].home
+  - reach.measured_from
+  - reach.measured_to
+notes: >
+  Kinematic source: published DH table (Franka Control Interface docs, "Craig's convention", primary;
+  joint 7 alpha from the Gaz et al. RA-L 2019 Panda identification paper, peer-reviewed, which gives
+  the same modified-DH table). All values from web-search extracts (Franka doc hosts blocked here).
+  Rows copied as published; metres written in mm (x1000) and pi/2 rad as 90 deg; theta_i = q_i. The
+  "Flange" row (a 0, d 0.107 m, alpha 0, theta 0) is not a joint and goes into ee.origin, so the EE
+  site is the flange face centre. The current FCI page heads the table for FR3/FER; the older Panda
+  page and the paper give the same table for the Panda. Joint ranges and speeds are the Panda datasheet
+  (May 2019) degree values (second-hand: reseller copy at generationrobots.com of the Franka datasheet);
+  the FCI FER table gives 2.1750 / 2.6100 rad/s (124.6 / 149.5 deg/s), lower than the datasheet's
+  150 / 180 deg/s, and the A5-A7 180 deg/s appears in one datasheet version only. Torques 87 Nm (A1-A4)
+  and 12 Nm (A5-A7) from FCI. Total mass ~17.8 kg (second-hand datasheet copy on a university site;
+  handbook says approx. 18 kg); no per-link masses published, so the builder distributes the total.
+  Home: A4's range (-176..-4 deg) excludes 0, so the zero pose is not allowed; home is estimated as
+  A4 = -135, A6 = 90 (others 0): elbow bent and flange pointing down, the usual Panda ready posture as
+  seen in product photos. Reach 855 mm: the datasheet does not say from where to where; the
+  shoulder (A2 axis) to flange distance with the arm stretched is about 858 mm from the DH lengths, so
+  measured_from shoulder / measured_to ee_site, both listed as estimates. Link radii are estimates from
+  product photos (shoulder 60, upper links 55, forearm 50, wrist 50/45, flange 40 mm).
