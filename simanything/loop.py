@@ -223,16 +223,31 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
     # --- no new iteration: spec unchanged since the latest iteration -------- #
     last_spec = _iter_dir(run_dir, n_done) / "spec.yaml" if n_done else None
     if last_spec is not None and last_spec.exists() and last_spec.read_bytes() == spec_bytes:
+        old_status = history.status
+        if latest_report is not None:
+            # recompute against this call's --max-iter: a cap reached earlier no longer applies when
+            # the limit was raised, and a spec reverted to the latest checked one has that result
+            history.status = ("passed" if latest_report.passed
+                              else "max_iter_reached" if n_done >= max_iter else "running")
         head = (f"spec unchanged since iteration {n_done}; no new iteration "
                 f"(status: {history.status}).")
         if latest_report is not None:
             head += "\n" + _head(n_done, max_iter, latest_report, history.status)
         _save_history(run_dir, history)
-        return _outcome(history, latest_report, run_dir, head, [])
+        extra: list[str] = []
+        if history.status != old_status:  # the report shows the status: keep it current
+            try:
+                from .report import write_report
+
+                html, md = write_report(run_dir)
+                extra.append(f"report: {html} (also {md})")
+            except Exception as e:  # noqa: BLE001
+                extra.append(f"report failed: {type(e).__name__}: {e}")
+        return _outcome(history, latest_report, run_dir, head, extra)
 
     # --- no new iteration: cap reached -------------------------------------- #
     if n_done >= max_iter:
-        extra: list[str] = []
+        extra = []
         if history.status != "max_iter_reached" and not (latest_report and latest_report.passed):
             history.status = "max_iter_reached"
             _save_history(run_dir, history)

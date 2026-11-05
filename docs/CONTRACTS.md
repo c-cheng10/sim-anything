@@ -79,6 +79,10 @@ latest iteration. To start over, delete the run directory (or pass a new
 Iteration numbering starts at 1. Calling `loop` again after `status` is
 `passed` or `max_iter_reached` starts no new iteration unless the spec
 changed (then it continues numbering, still capped by `--max-iter`).
+Rerunning an unchanged spec recomputes the status against the `--max-iter`
+of that call: `passed` (exit 0) if the latest iteration passed, otherwise
+`max_iter_reached` (exit 2) only while the iterations run reach the cap, and
+`running` (exit 1, fix needed) after the cap was raised.
 A changed spec is never reported as passed without being checked: if the cap
 keeps it from being built, `loop` returns status `max_iter_reached`, exit 2,
 and a summary saying the changed spec was NOT built or checked (even when the

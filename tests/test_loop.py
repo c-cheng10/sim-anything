@@ -202,6 +202,33 @@ def test_max_iter(tmp_path, fakes):
     assert _history(run).max_iter == 5
 
 
+def test_raising_max_iter_on_unchanged_spec_recomputes_status(tmp_path, fakes):
+    spec = tmp_path / "spec.yaml"
+    run = tmp_path / "run"
+    spec.write_text(SPEC_BAD_REACH)
+    out = loop_step(spec, run, max_iter=1)
+    assert (out.status, out.exit_code) == ("max_iter_reached", 2)
+    assert loop_step(spec, run, max_iter=1).exit_code == 2  # same cap: still stop
+
+    # a higher cap, same failing spec: no new iteration, but the cap no longer applies -> fix needed
+    n_report = fakes["report"]
+    out = loop_step(spec, run, max_iter=3)
+    assert (out.iteration, out.status, out.passed, out.exit_code) == (1, "running", False, 1)
+    assert "next: edit" in out.summary and out.failed_ids == ["reach"]
+    assert _history(run).status == "running" and fakes["build"] == 1
+    assert fakes["report"] == n_report + 1  # the report shows the status, so it is rewritten
+
+    # a passing spec capped by a changed spec, then reverted with a higher cap: passed
+    run2 = tmp_path / "run2"
+    spec.write_text(SPEC_OK)
+    loop_step(spec, run2, max_iter=1)
+    spec.write_text(SPEC_OK + "# edit\n")
+    assert loop_step(spec, run2, max_iter=1).exit_code == 2
+    spec.write_text(SPEC_OK)
+    out = loop_step(spec, run2, max_iter=4)
+    assert (out.status, out.exit_code) == ("passed", 0)
+
+
 def test_changed_spec_after_pass_at_cap_is_not_success(tmp_path, fakes):
     """A pass followed by an edit the cap keeps from being checked must not exit 0."""
     spec = tmp_path / "robot.yaml"
