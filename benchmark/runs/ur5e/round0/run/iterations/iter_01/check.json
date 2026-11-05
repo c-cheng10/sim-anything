@@ -1,0 +1,428 @@
+{
+  "model": "run/iterations/iter_01/model.xml",
+  "spec": "run/iterations/iter_01/spec.yaml",
+  "passed": false,
+  "n_checks": 11,
+  "n_failed": 1,
+  "n_errors": 1,
+  "checks": [
+    {
+      "id": "compiles",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "loads with MuJoCo 3.3.0, mj_forward finite",
+      "fix_hint": null,
+      "details": {
+        "nq": 6,
+        "nv": 6,
+        "nbody": 8,
+        "njnt": 6,
+        "nu": 6,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'"
+      }
+    },
+    {
+      "id": "joint_structure",
+      "pass": true,
+      "measured": [
+        [
+          "shoulder_pan",
+          "hinge"
+        ],
+        [
+          "shoulder_lift",
+          "hinge"
+        ],
+        [
+          "elbow",
+          "hinge"
+        ],
+        [
+          "wrist_1",
+          "hinge"
+        ],
+        [
+          "wrist_2",
+          "hinge"
+        ],
+        [
+          "wrist_3",
+          "hinge"
+        ]
+      ],
+      "expected": [
+        [
+          "shoulder_pan",
+          "hinge"
+        ],
+        [
+          "shoulder_lift",
+          "hinge"
+        ],
+        [
+          "elbow",
+          "hinge"
+        ],
+        [
+          "wrist_1",
+          "hinge"
+        ],
+        [
+          "wrist_2",
+          "hinge"
+        ],
+        [
+          "wrist_3",
+          "hinge"
+        ]
+      ],
+      "tolerance": null,
+      "severity": "error",
+      "message": "6 joints match by name, type and chain order",
+      "fix_hint": null,
+      "details": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "id": "ee_site",
+      "pass": true,
+      "measured": "ee_site",
+      "expected": "ee_site",
+      "tolerance": null,
+      "severity": "error",
+      "message": "site 'ee_site' on last body 'wrist_3_link'",
+      "fix_hint": null,
+      "details": {
+        "site": "ee_site",
+        "last_body": "wrist_3_link",
+        "site_body": "wrist_3_link"
+      }
+    },
+    {
+      "id": "joint_limits",
+      "pass": true,
+      "measured": {
+        "shoulder_pan": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "shoulder_lift": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "elbow": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "wrist_1": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "wrist_2": [
+          -6.28318530718,
+          6.28318530718
+        ],
+        "wrist_3": [
+          -6.28318530718,
+          6.28318530718
+        ]
+      },
+      "expected": {
+        "shoulder_pan": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "shoulder_lift": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "elbow": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "wrist_1": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "wrist_2": [
+          -6.283185307179586,
+          6.283185307179586
+        ],
+        "wrist_3": [
+          -6.283185307179586,
+          6.283185307179586
+        ]
+      },
+      "tolerance": {
+        "hinge_rad": 0.001,
+        "slide_m": 0.0001
+      },
+      "severity": "error",
+      "message": "all joint ranges match the spec (max diff 4.14e-13)",
+      "fix_hint": null,
+      "details": {
+        "joints": [
+          {
+            "joint": "shoulder_pan",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "shoulder_lift",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "elbow",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "wrist_1",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "wrist_2",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "wrist_3",
+            "model": [
+              -6.28318530718,
+              6.28318530718
+            ],
+            "spec": [
+              -6.283185307179586,
+              6.283185307179586
+            ],
+            "max_abs_diff": 4.1389114358025836e-13,
+            "unit": "rad"
+          }
+        ],
+        "missing_spec_limits": []
+      }
+    },
+    {
+      "id": "reach",
+      "pass": false,
+      "measured": 0.9688172849470492,
+      "expected": 0.85,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "max reach 0.969 m is 14.0% above rated 0.850 m",
+      "fix_hint": "Reach is too long: re-check the link lengths (joints[1].dh.a, joints[2].dh.a, joints[0].dh.d, joints[3].dh.d) against the datasheet, the EE offset (ee.origin.xyz), and whether the rated reach is measured to the wrist center rather than the ee site (reach.measured_to) or from a different point (reach.measured_from = base_axis_horizontal). Also check `units.length` (mm vs m).",
+      "details": {
+        "samples": 5000,
+        "seed": 0,
+        "sample_max": 0.963483726806933,
+        "refined_max": 0.9688172849470492,
+        "relative_error": 0.13978504111417558,
+        "measured_from": "base_axis_horizontal",
+        "measured_to": "ee_site",
+        "origin": "axis of joint 'shoulder_pan'",
+        "point": "site 'ee_site'",
+        "home_source": "keyframe 'home'",
+        "argmax_q": {
+          "shoulder_pan": -1.6047144387713732,
+          "shoulder_lift": -3.1351845137104455,
+          "elbow": -6.28318530718,
+          "wrist_1": 3.900299520422841,
+          "wrist_2": -1.327335871091148,
+          "wrist_3": 5.286004844322872
+        }
+      }
+    },
+    {
+      "id": "total_mass",
+      "pass": true,
+      "measured": 20.6,
+      "expected": 20.6,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "model mass 20.600 kg within 0.0% of 20.600 kg",
+      "fix_hint": null,
+      "details": {
+        "relative_error": 0.0,
+        "body_masses": {
+          "base": 2.9,
+          "shoulder_pan_link": 3.761,
+          "shoulder_lift_link": 8.058,
+          "elbow_link": 2.846,
+          "wrist_1_link": 1.37,
+          "wrist_2_link": 1.3,
+          "wrist_3_link": 0.365
+        }
+      }
+    },
+    {
+      "id": "inertia_valid",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "7 bodies have positive mass and valid inertia",
+      "fix_hint": null,
+      "details": {
+        "bodies_checked": 7
+      }
+    },
+    {
+      "id": "self_collision_home",
+      "pass": true,
+      "measured": 0.0,
+      "expected": 0.0,
+      "tolerance": 0.001,
+      "severity": "error",
+      "message": "no self-collision deeper than 1 mm at home (0 touching pairs)",
+      "fix_hint": null,
+      "details": {
+        "home_source": "keyframe 'home'",
+        "contacts": []
+      }
+    },
+    {
+      "id": "stable_hold",
+      "pass": true,
+      "measured": 0.010827389361977307,
+      "expected": 0.0,
+      "tolerance": {
+        "drift_hinge_rad": 0.05,
+        "drift_slide_m": 0.005,
+        "final_speed": 0.1
+      },
+      "severity": "error",
+      "message": "holds home for 2 s: max drift 0.0108, final speed 0.0000",
+      "fix_hint": null,
+      "details": {
+        "seconds": 2.0,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'",
+        "warnings": {},
+        "actuator_kinds": [
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position"
+        ],
+        "max_drift": {
+          "shoulder_pan": 3.0417858857782497e-05,
+          "shoulder_lift": 0.010146794112412285,
+          "elbow": 0.010827389361977307,
+          "wrist_1": 0.002830920926389316,
+          "wrist_2": 0.0014277272059900576,
+          "wrist_3": 4.273797889592121e-05
+        },
+        "final_speed": {
+          "shoulder_pan": 4.255691418025002e-18,
+          "shoulder_lift": 4.1967745790882796e-16,
+          "elbow": 4.088588712188172e-16,
+          "wrist_1": 6.119906691659538e-15,
+          "wrist_2": 1.597633557464e-14,
+          "wrist_3": 4.3289058263689677e-16
+        },
+        "tolerance": {
+          "drift_hinge_rad": 0.05,
+          "drift_slide_m": 0.005,
+          "speed": 0.1
+        },
+        "saturated_joints": []
+      }
+    },
+    {
+      "id": "actuators",
+      "pass": true,
+      "measured": 6,
+      "expected": 6,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every spec joint is driven by exactly one actuator",
+      "fix_hint": null,
+      "details": {
+        "actuators_by_joint": {
+          "shoulder_pan": [
+            "shoulder_pan_act"
+          ],
+          "shoulder_lift": [
+            "shoulder_lift_act"
+          ],
+          "elbow": [
+            "elbow_act"
+          ],
+          "wrist_1": [
+            "wrist_1_act"
+          ],
+          "wrist_2": [
+            "wrist_2_act"
+          ],
+          "wrist_3": [
+            "wrist_3_act"
+          ]
+        },
+        "nu": 6
+      }
+    },
+    {
+      "id": "sources_complete",
+      "pass": true,
+      "measured": 0,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every number in the spec has a source or is listed as an estimate",
+      "fix_hint": null,
+      "details": {}
+    }
+  ],
+  "mujoco_version": "3.3.0"
+}

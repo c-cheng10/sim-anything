@@ -1,0 +1,84 @@
+name: ur5e
+manufacturer: Universal Robots
+model: UR5e
+description: UR5e collaborative robot arm (e-Series), arm only (no gripper), EE site at the tool flange (DH frame 6).
+dof: 6
+units: {length: m, angle: deg}      # DH lengths copied in metres as published; alpha pi/2 written as 90 deg
+convention: dh_standard             # UR article: a_i, d_i, alpha_i per joint, theta_i = q_i
+joints:
+  - name: shoulder_pan              # UR "base" joint
+    dh: {a: 0, d: 0.1625, alpha: 90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 3.761, com: [0, -0.02561, 0.00193]}
+  - name: shoulder_lift             # UR "shoulder"
+    dh: {a: -0.425, d: 0, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 8.058, com: [0.2125, 0, 0.11336]}
+  - name: elbow
+    dh: {a: -0.3922, d: 0, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 2.846, com: [0.15, 0.0, 0.0265]}
+  - name: wrist_1
+    dh: {a: 0, d: 0.1333, alpha: 90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 1.37, com: [0, -0.0018, 0.01634]}
+  - name: wrist_2
+    dh: {a: 0, d: 0.0997, alpha: -90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 1.3, com: [0, 0.0018, 0.01634]}
+  - name: wrist_3
+    dh: {a: 0, d: 0.0996, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 0.365, com: [0, 0, -0.001159]}
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 0.0745}]   # footprint diameter 149 mm
+ee: {name: ee_site}                 # frame 6 is the tool flange (d6 = 0.0996 m)
+total_mass: 20.6
+payload: 5
+reach: {value: 0.850, measured_from: base_axis_horizontal, measured_to: wrist_center}
+repeatability: 0.00003
+sources:
+  joints[*].dh: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].link.mass: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].link.com: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].limits: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  joints[*].velocity_limit: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  joints[*].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  base.link.geometry: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  total_mass: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  payload: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  reach: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  repeatability: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+estimates: []
+notes: >
+  DH table copied from UR's "DH parameters for calculations of kinematics and dynamics" article (standard DH,
+  theta_i = q_i, no offsets); alpha pi/2 written as 90 deg, -pi/2 as -90 deg. Frame 6 is the tool flange, so ee
+  has no extra offset. Link masses and CoMs (expressed in DH frame i) from the same article, retrieved via
+  web-search extracts because universal-robots.com could not be fetched directly; the link 4 and link 5 CoMs as
+  extracted differ only in the sign of y, so they are worth re-checking against the live page. Link masses sum to
+  17.7 kg; the base mass is not published and is left to the builder, which gives the base the remainder of the
+  20.6 kg total (datasheet, includes cable; user manual says 20.7 kg). Joint ranges are the techsheet working
+  range of +-360 deg for all six joints; speeds +-180 deg/s. Effort limits: official UR torque article gives
+  size ratings (Size 1 = 28 Nm, Size 3 = 150 Nm) and lists wrist 2 and wrist 3 as Size 1; the full per-joint
+  mapping (150, 150, 150, 28, 28, 28 Nm) is from a UR forum post (secondary source); these are damage-limit
+  ratings, not continuous output torques. Reach 850 mm is the R850 working-area radius on the datasheet
+  drawing; the manual says the working area extends 850 mm from the base joint, so it is measured horizontally
+  from the J1 axis. Neither source says to which point. With the sourced DH table the flange can get 0.93-0.97 m
+  from the J1 axis (9-14% over 850 mm, iteration 1 failed this way), while the wrist (wrist 2 joint origin, DH
+  frame 4) gets at most sqrt(0.8172^2 + 0.1333^2) = 0.828 m (2.6% under). The endpoint is therefore set to the
+  wrist centre; this is an interpretation, not a sourced definition, and no endpoint reproduces 850 mm exactly. Footprint 149 mm per datasheet (techsheet says 151 mm).
+  Link radii are not published; no radius is given and the builder derives them from the sourced link masses.
+  Repeatability +-0.03 mm (ISO 9283) written in metres.
