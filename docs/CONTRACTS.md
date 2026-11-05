@@ -178,12 +178,16 @@ searched; no continuous parameters are fitted.
 
 `n_samples` configurations are drawn uniformly (seeded) from the intersection
 of the candidate's limits and the reference's limits mapped into candidate
-coordinates. An unlimited joint imposes no constraint; [-π, π] is used only
-when both sides are unlimited. If an intersection is empty the candidate range
+coordinates. An unlimited joint imposes no constraint; a default range is used
+only when both sides are unlimited: [-π, π] rad for a hinge, [-0.1, 0.1] m for
+a slide (`simanything.evaluate.UNLIMITED_SLIDE_RANGE_M`; ±π *metres* would be
+meaningless for a linear axis). The same defaults are the candidate bounds of
+the convention-fit samples. If an intersection is empty the candidate range
 is used and a note is added. Convention-fit ties (joints that don't move the
 EE point, e.g. a final roll) are broken by aligned orientation error. Slide
-joints are never convention-fitted and don't count toward the limit MAE; an
-unlimited joint is compared as [-π, π] in limit diffs.
+joints are never convention-fitted and don't count toward the limit MAE; in
+limit diffs an unlimited joint is compared as its default range ([-π, π] rad
+hinge, [-0.1, 0.1] m slide), with a note.
 
 ### Metrics (`simanything.schemas.EvalResult`)
 

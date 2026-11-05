@@ -5,7 +5,9 @@ See docs/CONTRACTS.md section 5. Public API: :func:`load_mapping`, :func:`evalua
 Interpretation notes (where the contract leaves room):
 
 * Sampling: a side whose joint is unlimited imposes no constraint on the
-  intersection; only when *both* sides are unlimited is [-pi, pi] used. This
+  intersection; only when *both* sides are unlimited is a default range used:
+  [-pi, pi] rad for a hinge, [-0.1, 0.1] m for a slide
+  (``UNLIMITED_SLIDE_RANGE_M``; +-pi metres would be meaningless). This
   avoids an unlimited reference joint with an offset of pi halving the sampled
   range of the candidate joint.
 * Convention fitting: the primary objective is the mean EE position error.
@@ -15,8 +17,9 @@ Interpretation notes (where the contract leaves room):
   fitted (sign 1, offset 0).
 * Base yaw: the candidate may be rotated about world z by a fitted (or given)
   multiple of 90 deg before comparison, reported as ``base_yaw_deg``.
-* Joint-limit diffs: an unlimited joint is reported as [-pi, pi] in its own
-  coordinates; if both joints of a pair are unlimited the diff is 0.
+* Joint-limit diffs: an unlimited joint is reported as its default range
+  ([-pi, pi] hinge, [-0.1, 0.1] m slide) in its own coordinates; if both
+  joints of a pair are unlimited the diff is 0.
 """
 
 from __future__ import annotations
@@ -32,13 +35,14 @@ import yaml
 
 from .schemas import EESpec, ErrorStats, EvalResult, JointConvention, JointLimitDiff, Mapping
 
-__all__ = ["load_mapping", "evaluate", "compute_score", "sampling_interval", "fit_conventions",
+__all__ = ["load_mapping", "evaluate", "compute_score", "sampling_interval", "default_range", "fit_conventions",
            "N_FIT_CONFIGS", "OFFSET_CHOICES"]
 
 N_FIT_CONFIGS = 256
 FIT_SWEEPS = 6
 FIT_RESTARTS = 4
 OFFSET_CHOICES = (0.0, math.pi / 2, -math.pi / 2, math.pi)
+UNLIMITED_SLIDE_RANGE_M = 0.1  # an unlimited slide joint is sampled/compared over +-this many metres
 _HINGE = int(mujoco.mjtJoint.mjJNT_HINGE)
 _SLIDE = int(mujoco.mjtJoint.mjJNT_SLIDE)
 _FREE = int(mujoco.mjtJoint.mjJNT_FREE)
@@ -229,16 +233,18 @@ def _apply(conv: list[JointConvention], Q: np.ndarray) -> np.ndarray:
 
 
 def sampling_interval(cand_range: Optional[tuple[float, float]], ref_range: Optional[tuple[float, float]],
-                      conv: JointConvention) -> tuple[float, float, bool]:
+                      conv: JointConvention,
+                      unlimited: tuple[float, float] = (-math.pi, math.pi)) -> tuple[float, float, bool]:
     """Interval (candidate coordinates) to sample one joint from.
 
     Intersection of the candidate range and the reference range mapped into
     candidate coordinates (q_cand = sign * (q_ref - offset)); ``None`` means
     unlimited. Returns ``(lo, hi, empty)``; on an empty intersection the
-    candidate range is returned with ``empty=True``.
+    candidate range is returned with ``empty=True``. ``unlimited`` is used when
+    both sides are unlimited (see :func:`default_range`).
     """
     if cand_range is None and ref_range is None:
-        return -math.pi, math.pi, False
+        return float(unlimited[0]), float(unlimited[1]), False
     if ref_range is None:
         return float(cand_range[0]), float(cand_range[1]), False
     a, b = (conv.sign * (ref_range[0] - conv.offset), conv.sign * (ref_range[1] - conv.offset))
@@ -251,8 +257,15 @@ def sampling_interval(cand_range: Optional[tuple[float, float]], ref_range: Opti
     return float(lo), float(hi), False
 
 
-def _own_range(r: Optional[tuple[float, float]]) -> tuple[float, float]:
-    return (-math.pi, math.pi) if r is None else (float(r[0]), float(r[1]))
+def default_range(jtype: int) -> tuple[float, float]:
+    """Range assumed for an unlimited joint: [-pi, pi] rad (hinge), +-0.1 m (slide)."""
+    if int(jtype) == _SLIDE:
+        return -UNLIMITED_SLIDE_RANGE_M, UNLIMITED_SLIDE_RANGE_M
+    return -math.pi, math.pi
+
+
+def _own_range(r: Optional[tuple[float, float]], jtype: int = _HINGE) -> tuple[float, float]:
+    return default_range(jtype) if r is None else (float(r[0]), float(r[1]))
 
 
 def _limit_diffs(cand: _Side, ref: _Side, mapping: Mapping, conv: list[JointConvention],
@@ -261,11 +274,11 @@ def _limit_diffs(cand: _Side, ref: _Side, mapping: Mapping, conv: list[JointConv
     unlimited = []
     for i, (cn, rn) in enumerate(zip(mapping.candidate.joints, mapping.reference.joints)):
         cr, rr, c = cand.ranges[i], ref.ranges[i], conv[i]
-        rref = _own_range(rr)
+        rref = _own_range(rr, ref.jtypes[i])
         if cr is None and rr is None:
             cref = rref
         else:
-            lo, hi = _own_range(cr)
+            lo, hi = _own_range(cr, cand.jtypes[i])
             a, b = c.sign * lo + c.offset, c.sign * hi + c.offset
             cref = (min(a, b), max(a, b))
             if cr is None:
@@ -279,8 +292,9 @@ def _limit_diffs(cand: _Side, ref: _Side, mapping: Mapping, conv: list[JointConv
         if cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE:
             hinge_abs += [abs(d.lower_diff), abs(d.upper_diff)]
     if unlimited:
-        notes.append("unlimited joints compared as [-pi, pi] against a limited counterpart: "
-                     + ", ".join(unlimited))
+        notes.append("unlimited joints compared as [-pi, pi] (hinge) or "
+                     f"[-{UNLIMITED_SLIDE_RANGE_M:g}, {UNLIMITED_SLIDE_RANGE_M:g}] m (slide) against a limited "
+                     "counterpart: " + ", ".join(unlimited))
     mae = float(np.degrees(np.mean(hinge_abs))) if hinge_abs else 0.0
     return diffs, mae
 
@@ -475,7 +489,7 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
         conv = list(mapping.joint_conventions)
         fitted = False
     elif mapping.fit_conventions:
-        fit_bounds = [_own_range(r) for r in cand.ranges]
+        fit_bounds = [_own_range(r, t) for r, t in zip(cand.ranges, cand.jtypes)]
         Qfit = _uniform(rng, fit_bounds, N_FIT_CONFIGS)
         conv = fit_conventions(cand, ref, Qfit, fit_yaw=mapping.base_yaw is None, seed=seed)
         fitted = True
@@ -494,7 +508,8 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
     # -- sampling ---------------------------------------------------------------
     bounds = []
     for i in range(n):
-        lo, hi, empty = sampling_interval(cand.ranges[i], ref.ranges[i], conv[i])
+        lo, hi, empty = sampling_interval(cand.ranges[i], ref.ranges[i], conv[i],
+                                          unlimited=default_range(cand.jtypes[i]))
         if empty:
             notes.append(f"joint {mapping.candidate.joints[i]}: candidate range and mapped reference range "
                          "do not intersect; sampling the candidate range")

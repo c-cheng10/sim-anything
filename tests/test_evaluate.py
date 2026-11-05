@@ -356,3 +356,30 @@ def test_base_body_frames_remove_mounting_offset(tmp_path):
     assert res2.ee_position_error_mm.max < 1e-6
     with pytest.raises(ValueError):
         evaluate(REF, raised, {"candidate": {**side, "base_body": "link2"}, "reference": side}, n_samples=10)
+
+
+def test_unlimited_slide_uses_a_sane_default_range(tmp_path):
+    """An unlimited slide is sampled over +-0.1 m, not +-pi metres."""
+    from simanything.evaluate import UNLIMITED_SLIDE_RANGE_M, default_range
+
+    assert UNLIMITED_SLIDE_RANGE_M == 0.1
+    assert default_range(3) == (-PI, PI)  # mjJNT_HINGE
+    assert default_range(2) == (-0.1, 0.1)  # mjJNT_SLIDE
+    assert sampling_interval(None, None, JointConvention(), unlimited=(-0.1, 0.1)) == (-0.1, 0.1, False)
+
+    free = _variant(tmp_path, REF, "free_ref.xml", (' range="0 0.04"', ""))
+    # same slide, but moving along x instead of z: EE error = sqrt(2) |q|
+    tilted = _variant(tmp_path, free, "free_cand.xml", ('type="slide" axis="0 0 1"', 'type="slide" axis="1 0 0"'))
+    m = _self_mapping(REF_JOINTS + ["finger"], ee={"body": "finger"}, fit_conventions=False)
+    m.reference.ee = m.candidate.ee
+    res = evaluate(tilted, free, m, n_samples=400)
+    assert res.ee_position_error_mm.max <= math.sqrt(2) * 100 + 1e-6
+    assert res.ee_position_error_mm.max > 100  # the default range is actually used
+    fd = res.joint_limits[-1]
+    assert fd.candidate_range == pytest.approx([-0.1, 0.1]) and fd.reference_range == pytest.approx([-0.1, 0.1])
+
+    # unlimited candidate slide vs limited reference slide: compared as [-0.1, 0.1] m
+    res = evaluate(free, REF, m, n_samples=50)
+    fd = res.joint_limits[-1]
+    assert (fd.lower_diff, fd.upper_diff) == pytest.approx((-0.1, 0.06))
+    assert any("[-0.1, 0.1] m (slide)" in n for n in res.notes)
