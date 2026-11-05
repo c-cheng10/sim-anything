@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ name }} – sim-anything report</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff; --fg: #1d2129; --muted: #5d6573; --card: #f5f6f8; --border: #dcdfe5;
+  --pass: #1a7f37; --pass-bg: #dafbe1; --fail: #cf222e; --fail-bg: #ffebe9;
+  --warn: #9a6700; --warn-bg: #fff8c5; --unk: #57606a; --unk-bg: #eaeef2; --link: #0969da;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --card: #161b22; --border: #30363d;
+    --pass: #3fb950; --pass-bg: #12261e; --fail: #f85149; --fail-bg: #2d1214;
+    --warn: #d29922; --warn-bg: #2b2111; --unk: #9198a1; --unk-bg: #21262d; --link: #58a6ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.7rem; margin: 0 0 4px; }
+h2 { font-size: 1.2rem; margin: 32px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.sub { color: var(--muted); margin: 0; }
+a { color: var(--link); overflow-wrap: anywhere; }
+code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+.badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.9rem; }
+.badge.passed, .pill.pass { color: var(--pass); background: var(--pass-bg); }
+.badge.failed, .pill.fail { color: var(--fail); background: var(--fail-bg); }
+.badge.unknown { color: var(--unk); background: var(--unk-bg); }
+.pill { display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
+.pill.warn { color: var(--warn); background: var(--warn-bg); }
+.views { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+figure { margin: 0; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+figure img { display: block; width: 100%; height: auto; }
+figcaption { padding: 4px 10px; color: var(--muted); font-size: 0.85rem; text-transform: capitalize; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+th { background: var(--card); font-weight: 600; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.hint { color: var(--muted); min-width: 260px; }
+tr.fail td:first-child { box-shadow: inset 3px 0 var(--fail); }
+tr.warn td:first-child { box-shadow: inset 3px 0 var(--warn); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.kv div { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.kv b { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+ul.est { columns: 2 260px; margin: 0; padding-left: 20px; }
+.notes { background: var(--warn-bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; }
+.notes ul { margin: 4px 0; padding-left: 18px; }
+footer { margin-top: 40px; color: var(--muted); font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<main>
+<div class="head">
+  <div>
+    <h1>{{ name }}</h1>
+    <p class="sub">
+      {%- if spec and spec.manufacturer %}{{ spec.manufacturer }}{% endif %}
+      {%- if spec and spec.model %} · {{ spec.model }}{% endif %}
+      {%- if spec and spec.description %} · {{ spec.description }}{% endif %}
+    </p>
+  </div>
+  <span class="badge {{ status }}">{{ {"passed": "✔ passed", "failed": "✘ failed"}.get(status, "? unknown") }}</span>
+</div>
+{% if check %}
+<p class="sub">{{ check.n_checks - check.n_failed }}/{{ check.n_checks }} checks passed · {{ check.n_errors }} blocking error(s)
+{%- if history %} · {{ history.iterations | length }} iteration(s), status <code>{{ history.status }}</code>{% endif %}
+{%- if check.mujoco_version %} · MuJoCo {{ check.mujoco_version }}{% endif %}</p>
+{% endif %}
+
+{% if notes %}
+<div class="notes"><b>Notes</b><ul>{% for n in notes %}<li>{{ n }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<h2>Views (home pose)</h2>
+{% if images %}
+<div class="views">
+{% for im in images %}
+  <figure><img alt="{{ im.view }} view" src="data:image/png;base64,{{ im.b64 }}"><figcaption>{{ im.view }}</figcaption></figure>
+{% endfor %}
+</div>
+{% else %}
+<p class="sub">No renders available.</p>
+{% endif %}
+
+<h2>Verification checks</h2>
+{% if check %}
+<div class="scroll"><table>
+<thead><tr><th>Check</th><th>Result</th><th>Measured</th><th>Expected</th><th>Tolerance</th><th>Severity</th><th>Message / fix hint</th></tr></thead>
+<tbody>
+{% for c in check.rows %}
+<tr class="{{ c.status }}">
+  <td><code>{{ c.id }}</code></td>
+  <td><span class="pill {{ c.status }}">{{ "pass" if c.passed else "fail" }}</span></td>
+  <td class="num">{{ c.measured }}</td><td class="num">{{ c.expected }}</td><td class="num">{{ c.tolerance }}</td>
+  <td>{{ c.severity }}</td>
+  <td class="hint">{{ c.message }}{% if c.fix_hint %}{% if c.message %}<br>{% endif %}<b>Fix:</b> {{ c.fix_hint }}{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="sub">No check report (check.json) in this run directory.</p>
+{% endif %}
+
+{% if spec %}
+<h2>Key specifications</h2>
+<div class="kv">
+{% for k, v in spec.key_numbers %}<div><b>{{ k }}</b>{{ v }}</div>{% endfor %}
+</div>
+{% if spec.joints %}
+<h2>Joints</h2>
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>Joint</th><th>Type</th><th>Lower</th><th>Upper</th><th>Effort limit</th><th>Velocity limit</th><th>Home</th></tr></thead>
+<tbody>
+{% for j in spec.joints %}
+<tr><td>{{ loop.index }}</td><td><code>{{ j.name }}</code></td><td>{{ j.type }}</td><td class="num">{{ j.lower }}</td><td class="num">{{ j.upper }}</td><td class="num">{{ j.effort }}</td><td class="num">{{ j.velocity }}</td><td class="num">{{ j.home }}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endif %}
+
+<h2>Sources</h2>
+{% if spec.sources %}
+<div class="scroll"><table>
+<thead><tr><th>Field path</th><th>Source</th></tr></thead>
+<tbody>
+{% for s in spec.sources %}
+<tr><td><code>{{ s.path }}</code></td><td>{% if s.is_url %}<a href="{{ s.url }}" rel="noopener noreferrer">{{ s.url }}</a>{% else %}{{ s.url }}{% endif %}</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+<p class="sub">No sources listed.</p>
+{% endif %}
+
+<h2>Estimates</h2>
+{% if spec.estimates %}
+<p class="sub">Fields whose values were estimated rather than read from a source:</p>
+<ul class="est">{% for e in spec.estimates %}<li><code>{{ e }}</code></li>{% endfor %}</ul>
+{% else %}
+<p class="sub">None: every number is backed by a source.</p>
+{% endif %}
+{% if spec.notes %}
+<h2>Spec notes</h2>
+<p>{{ spec.notes }}</p>
+{% endif %}
+{% endif %}
+
+<h2>Iteration history</h2>
+{% if history and history.iterations %}
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>Time</th><th>Result</th><th>Errors</th><th>Failed</th><th>Failed checks</th><th>Note</th></tr></thead>
+<tbody>
+{% for it in history.iterations %}
+<tr class="{{ 'pass' if it.passed else 'fail' }}">
+  <td>{{ it.iteration }}</td><td class="num">{{ it.timestamp }}</td>
+  <td><span class="pill {{ 'pass' if it.passed else 'fail' }}">{{ "pass" if it.passed else "fail" }}</span></td>
+  <td class="num">{{ it.n_errors }}</td><td class="num">{{ it.n_failed }}</td>
+  <td>{% for f in it.failed_ids %}<code>{{ f }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td>
+  <td>{{ it.note or "" }}{% if it.build_error %}<br><b>Build error:</b> {{ it.build_error }}{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+<p class="sub">Status: <code>{{ history.status }}</code> · max iterations {{ history.max_iter }}</p>
+{% else %}
+<p class="sub">No iteration history (history.json).</p>
+{% endif %}
+
+{% if evaluation %}
+<h2>Evaluation against reference</h2>
+<div class="scroll"><table><tbody>
+{% for k, v in evaluation.rows %}<tr><th>{{ k }}</th><td>{{ v }}</td></tr>{% endfor %}
+</tbody></table></div>
+{% if evaluation.notes %}<ul>{% for n in evaluation.notes %}<li>{{ n }}</li>{% endfor %}</ul>{% endif %}
+{% endif %}
+
+<footer>Generated by sim-anything on {{ generated }}{% if render_backend %} · views rendered with {{ render_backend }}{% endif %}.</footer>
+</main>
+</body>
+</html>

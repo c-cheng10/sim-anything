@@ -1,0 +1,12 @@
+{
+  "robot": "fixture_arm",
+  "spec": "spec.yaml",
+  "max_iter": 8,
+  "status": "running",
+  "iterations": [
+    {"iteration": 1, "timestamp": "2026-11-05T10:00:00Z", "passed": false, "n_errors": 1, "n_failed": 1,
+     "failed_ids": ["compiles"], "note": "first draft", "build_error": "joints[2]: convention 'offset' requires 'origin'"},
+    {"iteration": 2, "timestamp": "2026-11-05T10:05:00Z", "passed": false, "n_errors": 1, "n_failed": 2,
+     "failed_ids": ["joint_limits", "reach"], "note": "added origin for j3", "build_error": null}
+  ]
+}

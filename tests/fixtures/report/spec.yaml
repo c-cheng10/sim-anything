@@ -1,0 +1,48 @@
+# Fictional 3-DOF arm matching model.xml in this folder (render/report test fixture).
+name: fixture_arm
+manufacturer: Example Robotics (fictional)
+model: FA-3
+description: Hand-written 3-DOF test arm
+dof: 3
+units: {length: m, angle: deg}
+convention: offset
+base:
+  link:
+    mass: 2.0
+    geometry: [{shape: cylinder, radius: 0.08, half_length: 0.04, pos: [0, 0, 0.04]}]
+joints:
+  - name: j1
+    origin: {xyz: [0, 0, 0.08]}
+    axis: [0, 0, 1]
+    limits: {lower: -180, upper: 180}
+    effort_limit: 30
+    velocity_limit: 180
+    home: 34.4
+    link: {mass: 1.5, geometry: [{shape: capsule, radius: 0.05}]}
+  - name: j2
+    origin: {xyz: [0, 0, 0.15]}
+    axis: [0, 1, 0]
+    limits: {lower: -115, upper: 115}
+    effort_limit: 30
+    home: -28.6
+    link: {mass: 1.7, geometry: [{shape: box, size: [0.15, 0.035, 0.035]}]}
+  - name: j3
+    origin: {xyz: [0.3, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -143, upper: 143}
+    effort_limit: 15
+    home: 63.0
+    link: {mass: 1.2, geometry: [{shape: capsule, radius: 0.03}]}
+ee:
+  name: ee_site
+  origin: {xyz: [0.29, 0, 0]}
+total_mass: 6.4
+payload: 1.0
+reach: {value: 0.6, measured_from: shoulder, measured_to: ee_site}
+sources:
+  total_mass: https://example.com/fa3/datasheet.pdf#page=2
+  payload: https://example.com/fa3/datasheet.pdf#page=2
+  reach: https://example.com/fa3/datasheet.pdf#page=3
+  joints[*].limits: https://example.com/fa3/manual.html?section=limits&lang=en
+estimates: [base, "joints[*].origin", "joints[*].link", "joints[*].effort_limit", "joints[0].velocity_limit",
+            "joints[*].home", ee]

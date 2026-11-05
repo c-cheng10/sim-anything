@@ -1,0 +1,21 @@
+{
+  "model": "model.xml",
+  "spec": "spec.yaml",
+  "passed": false,
+  "n_checks": 4,
+  "n_failed": 2,
+  "n_errors": 1,
+  "mujoco_version": "3.3.0",
+  "checks": [
+    {"id": "compiles", "pass": true, "measured": null, "expected": null, "tolerance": null,
+     "severity": "error", "message": "model loads and mj_forward is finite", "fix_hint": null, "details": {}},
+    {"id": "joint_limits", "pass": false, "measured": [-3.14, 3.14], "expected": [-3.1416, 3.1416], "tolerance": 0.001,
+     "severity": "warning", "message": "j1 range differs by 0.0016 rad", "fix_hint": "Check joints[0].limits | units", "details": {}},
+    {"id": "reach", "pass": false, "measured": 0.6512, "expected": 0.6, "tolerance": 0.05,
+     "severity": "error", "message": "max reach 0.651 m is 8.5% above rated 0.600 m",
+     "fix_hint": "Reach is too long: check joints[2].origin.xyz and ee.origin.xyz against the datasheet (reach.measured_to).",
+     "details": {"samples": 5000}},
+    {"id": "total_mass", "pass": true, "measured": 6.4, "expected": 6.4, "tolerance": 0.05,
+     "severity": "error", "message": "total mass 6.400 kg", "fix_hint": null, "details": {}}
+  ]
+}
