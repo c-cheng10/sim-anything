@@ -59,7 +59,7 @@ Contact exclusions
     only by zero-length links). The only other automatic exclusion is a
     grandparent/grandchild pair (k, k+2) whose geoms overlap in *every* one of
     32 sampled configurations (home + 31 seeded random ones) and, at home, by
-    at most 5 mm and within the thicker geom's radius of the middle link's
+    at most twice the thinner geom's thickness and within the thicker geom's radius of the middle link's
     segment: the end caps of two links meeting around a short link. Any
     other overlap (an oversized primitive, geometry reaching back over a
     joint, a deep overlap at home, bodies further apart) is not excluded, so
@@ -542,6 +542,12 @@ def _geom_thickness(model, g: int) -> float:
     return float(model.geom_size[g][0])
 
 
+def _is_capsule_like(model, g: int) -> bool:
+    import mujoco
+
+    return int(model.geom_type[g]) in (int(mujoco.mjtGeom.mjGEOM_CAPSULE), int(mujoco.mjtGeom.mjGEOM_CYLINDER))
+
+
 def _seg_dist(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
     d = b - a
     L2 = float(d @ d)
@@ -553,7 +559,9 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
                             ) -> list[tuple[str, str, str]]:
     """Grandparent/grandchild pairs (k, k+2) whose geoms overlap in *every* sampled configuration and,
     at home, only next to the middle link's segment (within the thicker geom's radius) and by no more
-    than SHALLOW_OVERLAP: the end caps of two links meeting around a short link. Anything else that
+    than twice the thinner geom's thickness (at least SHALLOW_OVERLAP): the end caps of two links
+    meeting around a short link. Only capsule/cylinder contacts qualify: any box or sphere contact
+    between the pair disqualifies it (an oversized primitive is a geometry error, not an end cap). Anything else that
     overlaps (deeper at home, away from the shared joints, only in some poses, or between bodies
     further apart) is a real collision, left for the self_collision_home check to report. (MuJoCo
     reports one contact per geom pair, the deepest, so in folded poses the end-cap overlap can be
@@ -569,6 +577,7 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
     if not cand:
         return []
     home_depth = {pr: 0.0 for pr in cand}
+    home_limit = {pr: SHALLOW_OVERLAP for pr in cand}
     data = mujoco.MjData(model)
     for s, q in enumerate(_sample_configs(si, N_CONTACT_SAMPLES)):  # sample 0 is home
         data.qpos[:] = q
@@ -582,15 +591,22 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
                             model.body(model.geom_bodyid[c.geom2]).name))
             if pr not in cand:
                 continue
+            if not (_is_capsule_like(model, c.geom1) and _is_capsule_like(model, c.geom2)):
+                far.add(pr)  # only rounded/flat end caps of link segments qualify; never boxes/spheres
+                continue
             touched.add(pr)
             if s == 0:  # at home the overlap must be shallow and right around the middle link
                 home_depth[pr] = max(home_depth[pr], -float(c.dist))
+                t1, t2 = _geom_thickness(model, c.geom1), _geom_thickness(model, c.geom2)
+                # two end caps meeting around a short link can overlap by up to twice the thinner
+                # geom's thickness; deeper than that (e.g. an oversized primitive) is not an end-cap
+                # artifact
+                home_limit[pr] = max(home_limit[pr], 2.0 * min(t1, t2))
                 mid, child = cand[pr]
-                if _seg_dist(np.array(c.pos), data.xpos[mid], data.xpos[child]) > max(
-                        _geom_thickness(model, c.geom1), _geom_thickness(model, c.geom2)):
+                if _seg_dist(np.array(c.pos), data.xpos[mid], data.xpos[child]) > max(t1, t2):
                     far.add(pr)
         for pr in list(cand):
-            if pr not in touched or pr in far or home_depth[pr] > SHALLOW_OVERLAP:
+            if pr not in touched or pr in far or home_depth[pr] > home_limit[pr]:
                 del cand[pr]
         if not cand:
             return []

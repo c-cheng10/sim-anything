@@ -306,14 +306,31 @@ def test_shallow_overlap_around_short_link_excluded(tmp_path):
     assert "short link" in ce.message and "joints[0].link.geometry" in ce.fix_hint
 
 
-def test_deep_overlap_not_excluded(tmp_path):
-    # a 5 cm middle link with 5 cm radii: the caps overlap by 5 cm, which is a geometry error, not structure
+def test_end_caps_around_short_link_excluded_and_reported(tmp_path):
+    # a 5 cm middle link with 5 cm capsule radii: the end caps of links a and c overlap by ~5 cm around
+    # the short link in every pose. That is an artifact of primitive geometry, so the pair is excluded,
+    # but the exclusion is surfaced as a collision_exclusions warning.
     root = ET.fromstring(build_mjcf(_three_link(0.05)))
-    assert {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")} == {
-        frozenset(("base", "a_link"))}
+    pairs = {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")}
+    assert frozenset(("a_link", "c_link")) in pairs
     checks = _check_built(tmp_path, _three_link(0.05))
-    c = checks["self_collision_home"]
-    assert not c.passed and c.severity == "error" and "'a_link'" in c.message and "'c_link'" in c.message
+    assert checks["self_collision_home"].passed
+    ce = checks["collision_exclusions"]
+    assert ce.severity == "warning" and "a_link" in ce.message and "c_link" in ce.message
+
+
+def test_deep_overlap_beyond_end_caps_not_excluded(tmp_path):
+    # a zero-gap stack where the thinner capsule (1 cm) would have to sink 4 cm into the thicker one
+    from simanything.spec import GeometryHint
+
+    spec = _three_link(0.01, None, r=0.05)
+    spec.joints[2].link.geometry = [GeometryHint(shape="capsule", radius=0.01,
+                                                 fromto=[0, 0, -0.06, 0, 0, 0.3])]
+    root = ET.fromstring(build_mjcf(spec))
+    pairs = {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")}
+    assert frozenset(("a_link", "c_link")) not in pairs
+    checks = _check_built(tmp_path, spec)
+    assert not checks["self_collision_home"].passed
 
 
 @pytest.mark.parametrize("c_geom", [
