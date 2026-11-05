@@ -1,0 +1,92 @@
+# UFactory xArm 7 (7-DOF), arm only, no gripper.
+# Kinematics: UFACTORY "Modified D-H parameters" table for xArm 7, copied row by row.
+# The table is in rad (pi/2); converted exactly to deg (pi/2 -> 90) so the whole file uses deg.
+name: ufactory_xarm7
+manufacturer: UFactory
+model: xArm 7
+dof: 7
+units: {length: mm, angle: deg}
+convention: dh_modified
+base:
+  link:
+    geometry:
+      - {shape: cylinder, radius: 63, fromto: [0, 0, 0, 0, 0, 120]}
+joints:
+  - name: joint1
+    dh: {a: 0, alpha: 0, d: 267}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 50, fromto: [0, 0, -147, 0, 0, -20]}
+  - name: joint2
+    dh: {a: 0, alpha: -90, d: 0}
+    limits: {lower: -117, upper: 116}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 50}
+  - name: joint3
+    dh: {a: 0, alpha: 90, d: 293}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 45}
+  - name: joint4
+    dh: {a: 52.5, alpha: 90, d: 0}
+    limits: {lower: -6, upper: 225}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 45}
+  - name: joint5
+    dh: {a: 77.5, alpha: 90, d: 342.5}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 40}
+  - name: joint6
+    dh: {a: 0, alpha: 90, d: 0}
+    limits: {lower: -97, upper: 180}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: capsule, radius: 40}
+  - name: joint7
+    dh: {a: 76, alpha: -90, d: 97}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link:
+      geometry:
+        - {shape: cylinder, radius: 38, fromto: [0, 0, -40, 0, 0, 0]}
+ee: {name: ee_site}          # frame 7 (d7 = 97 mm) is the tool flange face per the table
+total_mass: 13.7
+payload: 3.5
+reach: {value: 700, measured_from: base_axis_horizontal, measured_to: ee_site}
+sources:
+  joints[*].dh: https://docs.supportarticle.ufactory.cc/zhHans/support_articles/developer/kinematic-and-dynamic-parameters/xArm_Series/xarm-7.html
+  joints[*].limits: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  joints[*].velocity_limit: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  base.link.geometry[0].radius: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  total_mass: https://www.ufactory.us/product/ufactory-xarm-7
+  payload: https://www.ufactory.us/product/ufactory-xarm-7
+  reach.value: https://www.ufactory.us/product/ufactory-xarm-7
+estimates:
+  - base.link.geometry[0].fromto
+  - joints[*].link.geometry
+  - reach.measured_from
+notes: >
+  Modified DH table (UFACTORY support article, xArm 7) copied verbatim; alpha given there in rad
+  (0, -pi/2, pi/2, pi/2, pi/2, pi/2, -pi/2) written here as exact degrees. All theta offsets are 0
+  in the table. No separate flange row; d7 = 97 mm is taken as the flange face (ee_site at frame 7,
+  no extra offset). Joint ranges from the user-manual technical specifications (J2 -117~116,
+  J4 -6~225); the "difference between xArm5/6/7" support article gives J2 -118~120 and J4 -11~225
+  (conflict noted, manual working range used). Joint speed: single "180 deg/s" for all joints.
+  Total mass 13.7 kg (product page and difference article); the tech-spec chapter says 14.3 kg.
+  Base radius 63 mm from the published footprint diameter 126 mm. Base cylinder height (120 mm) and all
+  link radii (38-50 mm) are estimates from product photos relative to the 126 mm base. Reach 700 mm
+  is published without a definition; the tech spec gives a Cartesian range X/Y +-700 mm in the base
+  frame, so it is interpreted as horizontal distance from the J1 axis to the flange (estimate).
+  Joint torques: only an ambiguous forum thread found (42/19/7 Nm groupings disputed), omitted.

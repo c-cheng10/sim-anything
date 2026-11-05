@@ -1,0 +1,20 @@
+{
+  "robot": "ufactory_xarm7",
+  "spec": "benchmark/runs/xarm7/round0/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T07:45:41+00:00",
+      "passed": false,
+      "n_errors": 1,
+      "n_failed": 1,
+      "failed_ids": [
+        "reach"
+      ],
+      "note": "initial spec: UFACTORY modified DH table, manual joint ranges, 126 mm footprint",
+      "build_error": null
+    }
+  ],
+  "status": "running"
+}
