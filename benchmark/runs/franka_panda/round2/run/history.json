@@ -1,0 +1,30 @@
+{
+  "robot": "franka_panda",
+  "spec": "benchmark/runs/franka_panda/round2/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T10:54:36+00:00",
+      "passed": false,
+      "n_errors": 1,
+      "n_failed": 2,
+      "failed_ids": [
+        "self_collision_home"
+      ],
+      "note": "initial spec from FCI modified DH table + flange row, datasheet limits/speeds, FCI torques, estimated ready-pose home",
+      "build_error": null
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-11-05T10:54:53+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 1,
+      "failed_ids": [],
+      "note": "estimated radii: A4 capsule 0.055->0.05, flange cylinder 0.04->0.032 (overlapped at ready-pose home)",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
