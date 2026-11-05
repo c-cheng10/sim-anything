@@ -1,0 +1,18 @@
+{
+  "robot": "kinova_gen3",
+  "spec": "benchmark/runs/kinova_gen3/round0/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T07:47:17+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 1,
+      "failed_ids": [],
+      "note": "initial spec: classic DH table (secondary source, cross-checked with User Guide Table 9), R07 limits/speeds/torques",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
