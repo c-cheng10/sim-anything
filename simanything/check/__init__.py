@@ -13,7 +13,8 @@ from typing import Callable, Optional
 import mujoco
 
 from ..schemas import CheckReport, CheckResult
-from ..spec import bad_source_values, estimate_counts, uncovered_fields, unmatched_keys
+from ..spec import (bad_source_values, describe_key, duplicate_keys, estimate_counts, uncovered_fields,
+                    unmatched_keys)
 from .context import CheckContext, result, skipped_no_spec
 from .kinematics import check_kinematics_match, check_reach
 from .physics import (check_collision_exclusions, check_inertia_valid, check_mass_plausibility,
@@ -37,8 +38,12 @@ def check_sources_complete(ctx: CheckContext) -> CheckResult:
     unmatched = unmatched_keys(spec)
     n_est, n_num = estimate_counts(spec)
     frac = n_est / n_num if n_num else 0.0
+    dup = duplicate_keys(spec)
     details = {"uncovered": missing, "bad_sources": {k: v for k, v in bad}, "unmatched_keys": unmatched,
-               "n_numbers": n_num, "n_estimated": n_est, "estimate_fraction": frac}
+               "duplicate_keys": dup, "n_numbers": n_num, "n_estimated": n_est, "estimate_fraction": frac}
+    dup_msg = (f"{len(dup)} key(s) are in both `sources` and `estimates`: " + ", ".join(dup[:8])) if dup else ""
+    dup_hint = ("Remove " + ", ".join(f"`{k}`" for k in dup[:8]) + " from `estimates` if the source states the "
+                "number, or from `sources` if you inferred it (the source wins while both are listed).") if dup else ""
     msgs, hints = [], []
     if missing:
         shown = missing[:8]
@@ -48,27 +53,36 @@ def check_sources_complete(ctx: CheckContext) -> CheckResult:
                      + (". Same for: " + ", ".join(shown[3:]) if len(shown) > 3 else "") + more
                      + ". A parent path covers its children (e.g. `joints[*].limits`).")
     if bad:
-        msgs.append(f"{len(bad)} source value(s) are not URLs: "
+        msgs.append(f"{len(bad)} source value(s) are not URLs or relative doc: paths: "
                     + ", ".join(f"sources[{k!r}] = {v!r}" for k, v in bad[:5]))
         hints.append("Each `sources` value must be an http(s) URL of the document that states the number, or "
-                     "`doc:<relative path>` for a local file quoting it; put page numbers or quotes in `notes`, and "
+                     "`doc:<relative path>` (forward slashes, no `..`) for a local file quoting it; put page numbers or quotes in `notes`, and "
                      "move numbers you inferred rather than read to `estimates`.")
     if unmatched:
+        described = [describe_key(spec, k) for k in unmatched[:8]]
         msgs.append(f"{len(unmatched)} sources/estimates key(s) match no field of the spec (typo?): "
-                    + ", ".join(unmatched[:8]))
-        hints.append("Fix or remove " + ", ".join(f"`{k}`" for k in unmatched[:8]) + ": keys are field paths such "
+                    + ", ".join(described))
+        hints.append("Fix or remove " + ", ".join(described) + ": keys are field paths such "
                      "as `joints[2].dh.a`, `joints[*].limits` or `reach.value`, with indices inside the joint list "
-                     "and field names of this spec's convention.")
+                     "and field names of this spec's convention; a vector (`origin.xyz`) is sourced as a whole.")
     if msgs:
+        if dup_msg:
+            msgs.append(dup_msg)
+            hints.append(dup_hint)
         return result("sources_complete", False, measured=len(missing) + len(bad) + len(unmatched), expected=0,
                       message="; ".join(msgs), fix_hint=" ".join(hints), details=details)
+    warn_msgs, warn_hints = [], []
+    if dup_msg:
+        warn_msgs.append(dup_msg)
+        warn_hints.append(dup_hint)
     if frac > MAX_ESTIMATE_FRACTION:
+        warn_msgs.append(f"every number is covered, but {n_est} of {n_num} ({frac * 100:.0f}%) are estimates")
+        warn_hints.append("More than half of the numbers are estimates: look for sources (datasheet, manual, "
+                          "DH table) for the ones that matter most, i.e. link lengths / DH rows, joint limits, "
+                          "total_mass and reach, and move them from `estimates` to `sources`.")
+    if warn_msgs:
         return result("sources_complete", False, severity="warning", measured=frac, expected=0,
-                      tolerance=MAX_ESTIMATE_FRACTION,
-                      message=f"every number is covered, but {n_est} of {n_num} ({frac * 100:.0f}%) are estimates",
-                      fix_hint="More than half of the numbers are estimates: look for sources (datasheet, manual, "
-                               "DH table) for the ones that matter most, i.e. link lengths / DH rows, joint limits, "
-                               "total_mass and reach, and move them from `estimates` to `sources`.",
+                      tolerance=MAX_ESTIMATE_FRACTION, message="; ".join(warn_msgs), fix_hint=" ".join(warn_hints),
                       details=details)
     return result("sources_complete", True, measured=0, expected=0,
                   message=f"every number in the spec has a source or is listed as an estimate ({n_est} of {n_num} "

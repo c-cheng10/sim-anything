@@ -82,6 +82,29 @@ def test_source_hygiene_helpers():
     assert not is_estimate(s2, "reach.value") and is_estimate(s2, "reach.measured_to")
     assert is_estimate(s2, "joints[3].dh.d") and not is_estimate(s2, "joints[1].dh.d")
     assert not is_estimate(s2, "total_mass")
+    # equally specific keys in both: the source wins (an estimate must be strictly more specific)
+    s3 = s.model_copy(update={"sources": {"joints[*].dh": "https://x.org/a.pdf", "reach": "https://x.org/a.pdf"},
+                              "estimates": ["joints[*].dh", "reach"]})
+    assert not is_estimate(s3, "joints[2].dh.a") and not is_estimate(s3, "reach.value")
+
+
+def test_key_suggestions_element_keys_and_doc_paths():
+    from simanything.spec import bad_source_values, describe_key, duplicate_keys, suggest_key, unmatched_keys
+
+    s = load_spec(ROOT / "examples/toy_2link.yaml")  # offset convention: origin.xyz vectors exist
+    s2 = s.model_copy(update={
+        "sources": {"joints[0].origin.xyz[2]": "https://x.org/a.pdf", "joints[1].limits.lower": "https://x.org/b",
+                    "total_mass": "doc:inputs/../secret.md", "reach.value": "doc:inputs\\x\\sources.md",
+                    "base.link.mass": "doc:inputs/x/sources.md"},
+        "estimates": ["joints[1].limits.lowr", "reach.valeu", "joints[1].limits.lower"]})
+    assert unmatched_keys(s2) == ["joints[0].origin.xyz[2]", "joints[1].limits.lowr", "reach.valeu"]
+    assert suggest_key(s2, "joints[0].origin.xyz[2]") == "joints[0].origin.xyz"
+    assert "source the whole vector path `joints[0].origin.xyz`" in describe_key(s2, "joints[0].origin.xyz[2]")
+    assert suggest_key(s2, "joints[1].limits.lowr") == "joints[1].limits.lower"
+    assert describe_key(s2, "reach.valeu") == "`reach.valeu` (did you mean `reach.value`?)"
+    assert suggest_key(s2, "zzzz") is None
+    assert [k for k, _ in bad_source_values(s2)] == ["total_mass", "reach.value"]
+    assert duplicate_keys(s2) == ["joints[1].limits.lower"]
 
 
 def test_validation_errors():

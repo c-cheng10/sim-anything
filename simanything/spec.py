@@ -44,6 +44,7 @@ Conventions
 
 from __future__ import annotations
 
+import difflib
 import json
 import math
 import re
@@ -655,10 +656,26 @@ def uncovered_fields(spec: Spec) -> list[str]:
 _SOURCE_VALUE = re.compile(r"^(https?://[^\s/?#]+[^\s]*|doc:(?![/\\~])(?![A-Za-z]:)[^\s]+)$")
 
 
+def _bad_source_value(v: str) -> bool:
+    v = str(v).strip()
+    if not _SOURCE_VALUE.match(v):
+        return True
+    if v.startswith("doc:"):  # a relative path inside the repository: no `..` segments, no backslashes
+        rel = v[4:]
+        return "\\" in rel or ".." in rel.split("/")
+    return False
+
+
 def bad_source_values(spec: Spec) -> list[tuple[str, str]]:
     """(key, value) for every ``sources`` value that is neither an http(s) URL nor a
-    ``doc:<relative path>`` reference (e.g. ``doc:benchmark/inputs/x/sources.md``)."""
-    return [(k, v) for k, v in spec.sources.items() if not _SOURCE_VALUE.match(str(v).strip())]
+    ``doc:<relative path>`` reference (e.g. ``doc:benchmark/inputs/x/sources.md``; no ``..`` segment,
+    no backslash)."""
+    return [(k, v) for k, v in spec.sources.items() if _bad_source_value(v)]
+
+
+def _is_vector(x: Any) -> bool:
+    return isinstance(x, list) and bool(x) and all(isinstance(e, (int, float)) and not isinstance(e, bool)
+                                                   for e in x)
 
 
 def _path_exists(data: Any, tokens: list[str]) -> bool:
@@ -667,26 +684,113 @@ def _path_exists(data: Any, tokens: list[str]) -> bool:
     t, rest = tokens[0], tokens[1:]
     if isinstance(data, dict):
         return t in data and _path_exists(data[t], rest)
-    if isinstance(data, list):
+    if isinstance(data, list) and not _is_vector(data):  # vectors are sourced as a whole, not per element
         if t == "*":
             return any(_path_exists(x, rest) for x in data)
         return t.isdigit() and int(t) < len(data) and _path_exists(data[int(t)], rest)
     return False
 
 
-def unmatched_keys(spec: Spec) -> list[str]:
-    """``sources``/``estimates`` keys that name no field of this spec at all (a typo, a wrong index or a
-    field of another convention). A key naming an existing field is fine even if its value is zero, a
-    default or null."""
+def _key_data(spec: Spec) -> dict:
     data = spec.model_dump(mode="python")
     forbidden = "dh" if spec.convention == "offset" else "origin"  # cannot hold a value in this convention
     for j in data["joints"]:
         j.pop(forbidden, None)
+    return data
+
+
+def unmatched_keys(spec: Spec) -> list[str]:
+    """``sources``/``estimates`` keys that name no field of this spec at all (a typo, a wrong index, a
+    field of another convention, or one element of a vector such as ``joints[0].origin.xyz[2]``). A key
+    naming an existing field is fine even if its value is zero, a default or null."""
+    data = _key_data(spec)
     out = []
     for k in list(spec.sources) + list(spec.estimates):
-        if not _path_exists(data, _parse_path(k)) and k not in out:
+        try:
+            ok = _path_exists(data, _parse_path(k))
+        except ValueError:
+            ok = False
+        if not ok and k not in out:
             out.append(k)
     return out
+
+
+def _vector_prefix(data: Any, tokens: list[str]) -> Optional[int]:
+    """Number of leading tokens that name a numeric vector, if ``tokens`` index into one."""
+    for n in range(len(tokens)):
+        if _is_vector(_get_path(data, tokens[:n])) and n < len(tokens):
+            return n
+    return None
+
+
+def _get_path(data: Any, tokens: list[str]) -> Any:
+    for t in tokens:
+        if isinstance(data, dict) and t in data:
+            data = data[t]
+        elif isinstance(data, list) and t.isdigit() and int(t) < len(data):
+            data = data[int(t)]
+        else:
+            return None
+    return data
+
+
+def _all_key_paths(data: Any, path: str = "") -> Iterator[str]:
+    if path:
+        yield path
+    if isinstance(data, dict):
+        for k, v in data.items():
+            yield from _all_key_paths(v, f"{path}.{k}" if path else k)
+    elif isinstance(data, list) and not _is_vector(data):
+        for i, v in enumerate(data):
+            yield from _all_key_paths(v, f"{path}[{i}]")
+
+
+def suggest_key(spec: Spec, key: str) -> Optional[str]:
+    """The field path meant by an unmatched ``sources``/``estimates`` key: the whole vector for a key
+    naming one element of it, else the closest existing field path (difflib), or None."""
+    data = _key_data(spec)
+    try:
+        toks = _parse_path(key)
+    except ValueError:
+        toks = None
+    if toks:
+        n = _vector_prefix(data, [t if t != "*" else "0" for t in toks])
+        if n:
+            out = ""
+            for t in toks[:n]:
+                out += f"[{t}]" if (t.isdigit() or t == "*") else (f".{t}" if out else t)
+            return out
+    paths = {p for p in _all_key_paths(data) if _parse_path(p)[0] not in _IGNORED_TOP}
+    paths |= {re.sub(r"\[\d+\]", "[*]", p) for p in paths}
+    m = difflib.get_close_matches(key, sorted(paths), n=1, cutoff=0.6)
+    return m[0] if m else None
+
+
+def describe_key(spec: Spec, key: str) -> str:
+    """``key`` with a suggestion, e.g. ```joints[2].dh.aa` (did you mean `joints[2].dh.a`?)``."""
+    sug = suggest_key(spec, key)
+    if sug is None:
+        return f"`{key}`"
+    try:
+        element = _vector_prefix(_key_data(spec), [t if t != "*" else "0" for t in _parse_path(key)]) is not None
+    except ValueError:
+        element = False
+    if element:
+        return f"`{key}` (one element of a vector: source the whole vector path `{sug}`)"
+    return f"`{key}` (did you mean `{sug}`?)"
+
+
+def duplicate_keys(spec: Spec) -> list[str]:
+    """Keys listed in both ``sources`` and ``estimates`` (the source wins; the estimate entry is noise)."""
+    est = {tuple(_safe_parse(k)) for k in spec.estimates}
+    return [k for k in spec.sources if tuple(_safe_parse(k)) in est]
+
+
+def _safe_parse(key: str) -> list[str]:
+    try:
+        return _parse_path(key)
+    except ValueError:
+        return [key]
 
 
 def estimate_counts(spec: Spec) -> tuple[int, int]:
@@ -720,6 +824,6 @@ __all__ = [
     "Spec", "Joint", "Link", "GeometryHint", "DH", "Limits", "Pose", "Units", "EndEffector", "Base",
     "Reach", "Chain", "ChainJoint", "load_spec", "dump_spec", "json_schema", "write_json_schema",
     "build_chain", "dh_to_offset", "dh_fk", "iter_numeric_fields", "uncovered_fields", "path_covers",
-    "is_estimate", "bad_source_values", "unmatched_keys", "estimate_counts", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
+    "is_estimate", "bad_source_values", "unmatched_keys", "suggest_key", "describe_key", "duplicate_keys", "estimate_counts", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
     "rot_x", "rot_y", "rot_z", "SCHEMA_VERSION",
 ]

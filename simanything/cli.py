@@ -174,20 +174,37 @@ def schema(output: Optional[Path] = typer.Option(None, "-o", "--output")) -> Non
 
 @app.command()
 def validate(spec: Path = typer.Argument(..., exists=True, dir_okay=False)) -> None:
-    """Validate a spec against the schema and list numbers lacking a source or estimate."""
-    from .spec import load_spec, uncovered_fields
+    """Validate a spec: schema, numbers lacking a source/estimate, bad source values and unmatched keys."""
+    from .spec import (bad_source_values, describe_key, duplicate_keys, load_spec, uncovered_fields,
+                       unmatched_keys)
 
     try:
         s = load_spec(spec)
     except Exception as e:  # noqa: BLE001
         typer.echo(f"FAILED: {spec}: {describe_exception(e)}", err=True)
         raise typer.Exit(1)
+    # the same source hygiene as the sources_complete check
     missing = uncovered_fields(s)
+    bad = bad_source_values(s)
+    unmatched = unmatched_keys(s)
     for m in missing:
         typer.echo(f"no source/estimate: {m}")
+    for k, v in bad:
+        typer.echo(f"source is not a URL or relative doc: path: sources[{k!r}] = {v!r}")
+    for k in unmatched:
+        typer.echo(f"key matches no field: {describe_key(s, k)}")
+    for k in duplicate_keys(s):
+        typer.echo(f"warning: `{k}` is in both `sources` and `estimates`")
+    problems = []
     if missing:
-        typer.echo(f"FAILED: {s.name}, {s.dof} DOF, {len(missing)} number(s) without a source or estimate "
-                   "(add each path to `sources` with a URL, or to `estimates` with the reasoning in `notes`)")
+        problems.append(f"{len(missing)} number(s) without a source or estimate (add each path to `sources` "
+                        "with a URL, or to `estimates` with the reasoning in `notes`)")
+    if bad:
+        problems.append(f"{len(bad)} source value(s) that are not an http(s) URL or `doc:<relative path>`")
+    if unmatched:
+        problems.append(f"{len(unmatched)} sources/estimates key(s) naming no field of the spec")
+    if problems:
+        typer.echo(f"FAILED: {s.name}, {s.dof} DOF, " + "; ".join(problems))
         raise typer.Exit(1)
     typer.echo(f"ok: {s.name}, {s.dof} DOF, every number has a source or estimate")
 

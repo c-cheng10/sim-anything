@@ -633,6 +633,27 @@ def test_source_keys_must_match_spec_fields(tmp_path):
     assert "typo?" in c.message and "`joints[2].limits`" in c.fix_hint
 
 
+def test_source_key_hygiene_details(tmp_path):
+    # an element of a vector, a typo with a suggestion and a doc: path escaping the repository are errors
+    s = spec_with(sources={"total_mass": "doc:inputs/../../etc/passwd", "joints": URL,
+                           "joints[1].origin.xyz[0]": URL},
+                  estimates=["base", "ee", "reach", "reach.valeu"])
+    model, spec = write_case(tmp_path, mjcf(), s)
+    report = run_checks(model, spec)
+    c = assert_fails(report, "sources_complete")
+    assert c.details["unmatched_keys"] == ["joints[1].origin.xyz[0]", "reach.valeu"]
+    assert "source the whole vector path `joints[1].origin.xyz`" in c.message
+    assert "(did you mean `reach.value`?)" in c.fix_hint
+    assert set(c.details["bad_sources"]) == {"total_mass"}
+    # the same key in sources and estimates: a warning only
+    s = spec_with(sources={"total_mass": URL, "joints": URL, "reach": URL}, estimates=["base", "ee", "reach"])
+    model, spec = write_case(tmp_path, mjcf(), s)
+    report = run_checks(model, spec)
+    c = by_id(report)["sources_complete"]
+    assert not c.passed and c.severity == "warning" and report.passed
+    assert "in both `sources` and `estimates`: reach" in c.message and c.details["duplicate_keys"] == ["reach"]
+
+
 def test_estimate_fraction_reported(tmp_path):
     model, spec = write_case(tmp_path, mjcf(), SPEC)
     c = by_id(run_checks(model, spec))["sources_complete"]

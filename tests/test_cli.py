@@ -77,6 +77,28 @@ def test_validate_failed_prefix(tmp_path):
     assert res.exit_code == 0 and res.stdout.strip().splitlines()[-1].startswith("ok:")
 
 
+def test_validate_reports_source_hygiene_like_sources_complete(tmp_path):
+    data = yaml.safe_load((ROOT / "examples" / "toy_2link.yaml").read_text())
+    data["sources"] = {"total_mass": "the datasheet", "joints[0].origin.xyz[2]": "https://x.org/a.pdf"}
+    data["estimates"] = data["estimates"] + ["reach.valeu"]
+    spec = tmp_path / "s.yaml"
+    spec.write_text(yaml.safe_dump(data))
+    res = _runner().invoke(app, ["validate", str(spec)])
+    assert res.exit_code == 1, res.stdout
+    out = res.stdout
+    assert "sources['total_mass'] = 'the datasheet'" in out
+    assert "`reach.valeu` (did you mean `reach.value`?)" in out
+    assert "source the whole vector path `joints[0].origin.xyz`" in out
+    assert out.strip().splitlines()[-1].startswith("FAILED:") and "not an http(s) URL" in out
+
+    # a key in both sources and estimates is only a warning
+    data = yaml.safe_load((ROOT / "examples" / "toy_2link.yaml").read_text())
+    data["sources"] = {"total_mass": "https://x.org/a.pdf"}
+    spec.write_text(yaml.safe_dump(data))
+    res = _runner().invoke(app, ["validate", str(spec)])
+    assert res.exit_code == 0 and "warning: `total_mass` is in both" in res.stdout
+
+
 @pytest.mark.parametrize("cmd", ["validate", "build"])
 def test_schema_errors_are_friendly(tmp_path, cmd):
     spec = _bad_spec(tmp_path)
