@@ -202,6 +202,42 @@ def test_max_iter(tmp_path, fakes):
     assert _history(run).max_iter == 5
 
 
+def test_changed_spec_after_pass_at_cap_is_not_success(tmp_path, fakes):
+    """A pass followed by an edit the cap keeps from being checked must not exit 0."""
+    spec = tmp_path / "robot.yaml"
+    run = tmp_path / "run"
+    spec.write_text(SPEC_OK)
+    assert loop_step(spec, run, max_iter=1).exit_code == 0
+
+    spec.write_text(SPEC_OK + "# total_mass changed\n")
+    out = loop_step(spec, run, max_iter=1)
+    assert (out.iteration, out.status, out.passed, out.exit_code) == (1, "max_iter_reached", False, 2)
+    assert "NOT built or checked" in out.summary and str(spec) in out.summary
+    assert "next: stop; the changed spec is unchecked" in out.summary
+    assert fakes["build"] == 1 and not (run / "iterations/iter_02").exists()
+    # the history still records the passing iteration of the old spec
+    assert _history(run).status == "passed"
+
+    # reverting to the checked spec reports its pass again
+    spec.write_text(SPEC_OK)
+    out = loop_step(spec, run, max_iter=1)
+    assert (out.status, out.exit_code) == ("passed", 0) and "unchanged" in out.summary
+
+
+def test_max_iter_must_be_positive(tmp_path, fakes):
+    spec = tmp_path / "spec.yaml"
+    spec.write_text(SPEC_OK)
+    with pytest.raises(ValueError):
+        loop_step(spec, tmp_path / "run", max_iter=0)
+
+
+def test_failing_summary_names_the_spec_file(tmp_path, fakes):
+    spec = tmp_path / "my_robot.yaml"
+    spec.write_text(SPEC_BAD_REACH)
+    out = loop_step(spec, tmp_path / "run")
+    assert f"next: edit {spec} per the fix hints" in out.summary
+
+
 def test_unchanged_spec_starts_no_new_iteration(tmp_path, fakes):
     spec = tmp_path / "spec.yaml"
     spec.write_text(SPEC_OK)

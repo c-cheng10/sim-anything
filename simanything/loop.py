@@ -138,8 +138,11 @@ def _finalize(run_dir: Path) -> list[str]:
 
 
 def _outcome(history: History, report: Optional[CheckReport], run_dir: Path,
-             head: str, extra: list[str]) -> LoopOutcome:
-    status: Status = history.status
+             head: str, extra: list[str], status: Optional[Status] = None,
+             next_step: Optional[str] = None) -> LoopOutcome:
+    """Build the outcome; ``status`` overrides ``history.status`` for this call only."""
+    status = status or history.status
+    spec_name = history.spec or "the spec"
     n = len(history.iterations)
     blocking = _blocking(report) if report is not None else []
     hints = [FixHint(id=c.id, fix_hint=c.fix_hint or c.message or "(no hint)") for c in blocking]
@@ -155,8 +158,10 @@ def _outcome(history: History, report: Optional[CheckReport], run_dir: Path,
     lines.extend(extra)
     if report is not None:
         lines.append(f"check report: {run_dir / 'check.json'}")
-    if status == "running":
-        lines.append("next: edit spec.yaml per the fix hints, then run `sim-anything loop` again with --note.")
+    if next_step is not None:
+        lines.append(f"next: {next_step}")
+    elif status == "running":
+        lines.append(f"next: edit {spec_name} per the fix hints, then run `sim-anything loop` again with --note.")
     elif status == "max_iter_reached" and not (report is not None and report.passed):
         lines.append("next: stop; report the remaining failures (max iterations reached).")
     return LoopOutcome(
@@ -192,8 +197,12 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
 
     No new iteration starts when the spec is byte-identical to the one used by
     the latest iteration (the result would be the same), or when ``max_iter``
-    iterations have already run; the latest result is returned instead.
+    iterations have already run; the latest result is returned instead. A
+    changed spec that the cap keeps from being checked always returns status
+    ``max_iter_reached`` (exit 2), even if the previous spec passed.
     """
+    if max_iter < 1:
+        raise ValueError(f"max_iter must be >= 1, got {max_iter}")
     spec_path = Path(spec_path)
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -230,11 +239,16 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
             extra = _finalize(run_dir)
         else:
             _save_history(run_dir, history)
-        head = (f"max iterations ({max_iter}) already used; the changed spec was NOT built or checked "
-                f"(raise --max-iter to continue).")
+        # The spec differs from the one last checked, so whatever that iteration
+        # found does not apply to it: never report success for an unchecked spec.
+        head = (f"max iterations ({max_iter}) already used; the changed spec {spec_path} was NOT built "
+                f"or checked (raise --max-iter to continue, or revert the spec).")
         if latest_report is not None:
-            head += "\nlatest checked " + _head(n_done, max_iter, latest_report, history.status)
-        return _outcome(history, latest_report, run_dir, head, extra)
+            head += ("\nlatest checked (a different spec) " +
+                     _head(n_done, max_iter, latest_report, history.status))
+        return _outcome(history, latest_report, run_dir, head, extra, status="max_iter_reached",
+                        next_step="stop; the changed spec is unchecked. Raise --max-iter to check it, or "
+                                  "report the latest checked result together with what changed since.")
 
     # --- new iteration ------------------------------------------------------ #
     n = n_done + 1

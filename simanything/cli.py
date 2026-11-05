@@ -96,7 +96,7 @@ def eval_cmd(candidate: Path = typer.Argument(..., exists=True, dir_okay=False),
 @app.command()
 def loop(spec: Path = typer.Argument(..., exists=True, dir_okay=False),
          run_dir: Path = typer.Option(..., "--run-dir"),
-         max_iter: int = typer.Option(8, "--max-iter"),
+         max_iter: int = typer.Option(8, "--max-iter", min=1),
          note: Optional[str] = typer.Option(None, "--note", help="what changed since the last iteration"),
          as_json: bool = typer.Option(False, "--json")) -> None:
     """One build+check iteration recorded in RUN_DIR. Exit 0 passed, 1 fix needed, 2 max iterations reached."""
