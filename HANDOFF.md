@@ -36,4 +36,27 @@ Resume from this file and BUDGET.md alone. Updated at every phase boundary and r
 - Agents that run `pip install -e .` inside their worktree hijack the shared editable install. After merging, run `pip install -e .` in the main checkout again. Benchmark agents should use `PYTHONPATH=.` instead.
 
 ## Fix list (Phase 5 triage)
-(empty)
+
+### Round 1 (from new-user tester, code reviewer, benchmark auditor + round0 eval)
+Ranked by impact on the gates (4: checks pass on dev robots; 2/3: quickstart + plugin; honest reporting).
+
+Fixer A (checker/builder/spec):
+1. HIGH: no check compares model kinematics with the spec chain (wrong axis / swapped link passes). Add `kinematics_match` check (model body/EE poses vs spec.chain().fk on ~20 configs).
+2. HIGH: builder silently auto-excludes any pair overlapping in all sampled poses; real interpenetration passes. Restrict to shared-joint neighbours with bounded depth; report every exclusion in a `collision_exclusions` warning check.
+3. MED: reach definition unknown -> reach check can't be meaningful. When `reach.measured_from/measured_to` are listed in `estimates` (definition not stated by the source), reach failure is a warning, not an error (2/6 dev robots: one changed the endpoint after failing, one failed honestly). Reach fix hint: mention `reach.value` when it is an estimate; don't name vertical offsets for horizontal reach.
+4. MED: mass plausibility warnings (density / per-link share); missing reach -> warning.
+5. MED: sources accept any string and unmatched paths; require http(s) URLs (or `doc:` local file refs), reject paths matching no field, warn on high estimate fraction.
+6. LOW: GeometryHint.size validation; home within limits; builder 1% mass comment; wrist_center for dof<3.
+7. Tests: inertia vs MuJoCo, DH-standard link-frame COM/geometry, wrist_center + parallel-axis shoulder rule, new checks.
+
+Fixer B (loop/CLI/report/eval/plugin/docs):
+8. MED: stale report.html says PASSED after a later failure -> render+report every iteration.
+9. MED: loop at cap after a pass with a changed spec returns 0 -> must not return 0 for an unchecked spec.
+10. MED: skill and slash command share the name `sim-anything` -> rename skill.
+11. LOW: validate prints "ok" on failure; raw pydantic errors (dotted paths, first error only); loop hint names `spec.yaml` not the actual file; CLI eval/render tracebacks -> stderr + exit 1 (update CONTRACTS section 2).
+12. LOW: evaluator samples unlimited slide joints over +-pi metres.
+13. SKILL/doc: classify kinematic source (DH / PoE screw table / dimension drawing); only set reach definition from the source, else list it in `estimates`; inferred mappings (e.g. unlabelled drawing letters, axis directions) go in `estimates`; record attribution quality; README doc gaps (starting over, eval example score, loop output).
+
+Orchestrator (me):
+14. RESULTS/README: replace "DH published" with kinematic-source type (DH / PoE / dimension table); note UR5e reach-endpoint change; add weak-source caveats (Kinova placeholder attribution, KUKA letter mapping, forum torques, reseller datasheets); explain score terms that compare sourced datasheet values against reference choices (UR5e elbow limit, Panda/xArm mass); soften README wording ("any", "every number cites").
+15. Blindness hardening for re-runs: move third_party/ out of the repo tree while generation agents run.
