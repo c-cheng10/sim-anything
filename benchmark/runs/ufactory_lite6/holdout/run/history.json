@@ -1,0 +1,30 @@
+{
+  "robot": "ufactory_lite6",
+  "spec": "benchmark/runs/ufactory_lite6/holdout/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T11:01:59+00:00",
+      "passed": false,
+      "n_errors": 1,
+      "n_failed": 1,
+      "failed_ids": [
+        "self_collision_home"
+      ],
+      "note": "initial spec from UFACTORY modified DH table, hardware-manual limits, docs mass",
+      "build_error": null
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-11-05T11:02:44+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 0,
+      "failed_ids": [],
+      "note": "explicit geometry following the real link shape (J1 column, L-shaped forearm, flange disk) to remove home self-collision from auto capsules",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

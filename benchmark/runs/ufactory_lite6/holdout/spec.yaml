@@ -1,0 +1,85 @@
+name: ufactory_lite6
+manufacturer: UFactory
+model: Lite 6
+description: UFactory Lite 6 (6-DOF), arm only without gripper, EE site at the tool flange (modified-DH frame 6).
+dof: 6
+units: {length: mm, angle: deg}
+convention: dh_modified              # table labelled "Modified D-H parameters"; row i = (a_{i-1}, alpha_{i-1}, d_i, theta_i)
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 65, fromto: [0, 0, 0, 0, 0, 60]}]
+joints:
+  - name: J1
+    dh: {a: 0, alpha: 0, d: 243.3, theta_offset: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link: {mass: 1.411, geometry: [{shape: capsule, radius: 45, fromto: [0, 0, -183.3, 0, 0, 0]}]}   # column from base top to shoulder
+  - name: J2
+    dh: {a: 0, alpha: -90, d: 0, theta_offset: -90}
+    limits: {lower: -150, upper: 150}
+    velocity_limit: 180
+    link: {mass: 1.34, geometry: [{shape: capsule, radius: 38}]}
+  - name: J3
+    dh: {a: 200, alpha: 180, d: 0, theta_offset: -90}
+    limits: {lower: -3.5, upper: 300}
+    velocity_limit: 180
+    link: {mass: 0.953, geometry: [{shape: capsule, radius: 35, fromto: [0, 0, 0, 87, 0, 0]},          # elbow stub along x3
+                                    {shape: capsule, radius: 35, fromto: [87, 0, 0, 87, -227.6, 0]}]}   # forearm along z4
+  - name: J4
+    dh: {a: 87, alpha: 90, d: 227.6, theta_offset: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link: {mass: 1.284, geometry: [{shape: capsule, radius: 33}]}
+  - name: J5
+    dh: {a: 0, alpha: 90, d: 0, theta_offset: 0}
+    limits: {lower: -124, upper: 124}
+    velocity_limit: 180
+    link: {mass: 0.804, geometry: [{shape: capsule, radius: 32}]}
+  - name: J6
+    dh: {a: 0, alpha: -90, d: 61.5, theta_offset: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    link: {mass: 0.13, geometry: [{shape: cylinder, radius: 30, fromto: [0, 0, -10, 0, 0, 0]}]}   # flange disk behind the flange face
+ee: {name: ee_site}                   # d6 = 61.5 mm already ends at the flange frame
+total_mass: 8
+payload: 0.6
+reach: {value: 440, measured_from: shoulder, measured_to: wrist_center}
+repeatability: 0.5
+sources:
+  joints[*].dh: https://docs.supportarticle.ufactory.cc/support_articles/developer/kinematic-and-dynamic-parameters/lite6.html
+  joints[*].link.mass: https://docs.supportarticle.ufactory.cc/support_articles/developer/kinematic-and-dynamic-parameters/lite6.html
+  joints[*].limits: https://www.ufactory.cc/wp-content/uploads/2025/05/Lite6_Hardware_Manual_V2.6.0.pdf
+  joints[*].velocity_limit: https://www.ufactory.cc/wp-content/uploads/2023/04/Lite-6-Developer-Manual-V1.11.0.pdf
+  total_mass: https://docs.lite6.ufactory.cc/8.technical_specifications.html
+  payload: https://docs.lite6.ufactory.cc/8.technical_specifications.html
+  reach.value: https://docs.lite6.ufactory.cc/8.technical_specifications.html
+  repeatability: https://docs.lite6.ufactory.cc/8.technical_specifications.html
+estimates:
+  - joints[*].link.geometry
+  - base.link.geometry
+  - reach.measured_from
+  - reach.measured_to
+notes: >
+  Kinematic source: published DH table (UFACTORY support article "Kinematic and dynamic parameters - Lite6", first
+  table labelled "Modified D-H parameters", primary; values from web-search extracts because the ufactory hosts could
+  not be fetched from this environment). Convention dh_modified: each published row (theta offset, d, alpha, a) is
+  stored verbatim on its joint (row 1 has a = 0, alpha = 0 as expected for a modified table; there is no separate
+  flange row). Theta offsets -90 deg on J2 and J3 copied as published.
+  EE site: modified-DH frame 6 (d6 = 61.5 mm), taken as the tool flange face; no extra ee offset. Arm only, no gripper.
+  Joint limits from the hardware manual V2.6.0: J1 +-360, J2 +-150, J3 -3.5..300, J4 +-360, J5 +-124, J6 +-360 deg.
+  Velocity: developer manual gives one maximum joint speed, 180 deg/s, applied to every joint. Joint torques not
+  published: omitted.
+  Mass: 8 kg ("8KG", robot alone, technical-specifications docs); the product page spec card says 7.2 kg (conflict,
+  documentation value used). Link masses from the support article (sum 5.922 kg); the remainder is the base. Only the
+  link-2 CoM was extracted (frame unstated), so CoMs are omitted. Payload 600 g written as 0.6 kg.
+  Reach 440 mm; the definition is not stated. The Cartesian range "X: +-440mm; Y: +-440mm; Z: -165~683.5mm" has its
+  top at 683.5 = 243.3 (d1, shoulder height) + 440.2, i.e. a sphere of ~440 mm about the shoulder, and 440 mm is
+  shorter than the shoulder-to-flange length (200 + sqrt(87^2 + 227.6^2) + 61.5 = 505 mm) but close to the
+  shoulder-to-wrist-centre length (443.7 mm). So measured_from shoulder and measured_to wrist_center are estimates.
+  Repeatability +-0.5 mm (manufacturer; one reseller page says +-0.2 mm, not used).
+  Collision geometry: radii estimated from product photos scaled by the 130 x 140 mm footprint (base cylinder radius
+  65 mm from the 130 mm footprint width, height 60 mm estimated). Explicit geometry placement (estimate, following
+  the product's shape): J1 column from the base top (60 mm) up to the shoulder frame (-183.3 = 60 - 243.3); forearm as
+  an L (87 mm elbow stub along x3, then 227.6 mm along z4 to the wrist centre, both the DH lengths); a 10 mm flange
+  disk behind the flange face. The q = 0 pose is the compact folded pose (upper arm up, forearm hanging beside it,
+  flange pointing down), as the -3.5..300 deg J3 range implies.
