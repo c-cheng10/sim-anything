@@ -1,0 +1,171 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/xarm7/round1/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/ufactory_xarm7/xarm7_nohand.xml",
+  "robot": "xarm7",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 7,
+  "dof_reference": 7,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 0.0,
+  "ee_position_error_mm": {
+    "mean": 4.8178475098303863e-14,
+    "p95": 1.1102230246251565e-13,
+    "max": 4.440892098500626e-13
+  },
+  "ee_orientation_error_deg": {
+    "mean": 0.0,
+    "p95": 0.0,
+    "max": 0.0
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 4.9039857403288564e-14,
+    "p95": 5.073956736919305e-14,
+    "max": 5.2946922192542434e-14
+  },
+  "joint_limits": [
+    {
+      "candidate": "joint1",
+      "reference": "joint1",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "joint2",
+      "reference": "joint2",
+      "candidate_range": [
+        -2.04203522483,
+        2.02458193231
+      ],
+      "reference_range": [
+        -2.059,
+        2.0944
+      ],
+      "lower_diff": 0.016964775169999946,
+      "upper_diff": -0.06981806768999999
+    },
+    {
+      "candidate": "joint3",
+      "reference": "joint3",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "joint4",
+      "reference": "joint4",
+      "candidate_range": [
+        -0.10471975512,
+        3.92699081699
+      ],
+      "reference_range": [
+        -0.19198,
+        3.927
+      ],
+      "lower_diff": 0.08726024488000002,
+      "upper_diff": -9.183009999969016e-06
+    },
+    {
+      "candidate": "joint5",
+      "reference": "joint5",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    },
+    {
+      "candidate": "joint6",
+      "reference": "joint6",
+      "candidate_range": [
+        -1.69296937443,
+        3.14159265359
+      ],
+      "reference_range": [
+        -1.69297,
+        3.14159
+      ],
+      "lower_diff": 6.255700000235009e-07,
+      "upper_diff": 2.6535900001789514e-06
+    },
+    {
+      "candidate": "joint7",
+      "reference": "joint7",
+      "candidate_range": [
+        -6.28318530718,
+        6.28318530718
+      ],
+      "reference_range": [
+        -6.28319,
+        6.28319
+      ],
+      "lower_diff": 4.692820000151698e-06,
+      "upper_diff": -4.692820000151698e-06
+    }
+  ],
+  "joint_limit_mae_deg": 0.7124856743508462,
+  "mass_candidate": 13.69999987,
+  "mass_reference": 11.31706,
+  "mass_diff": 2.3829398699999995,
+  "mass_rel_diff": 0.21056174218392407,
+  "score": 92.4580183885808,
+  "score_breakdown": {
+    "pos": 0.9999999999999956,
+    "orient": 0.9999999999999949,
+    "limits": 0.9312303898073478,
+    "mass": 0.34895625414709047,
+    "dof": 1.0
+  },
+  "notes": []
+}

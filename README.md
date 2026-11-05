@@ -144,16 +144,19 @@ models (an external reference; not redistributed here — clone it into
 [benchmark/RESULTS.md](benchmark/RESULTS.md).
 
 <!-- RESULTS:BEGIN -->
-Dev set, round 0 (first blind run):
+Dev set, latest round (round 1, fresh blind runs):
 
-| Robot | DH published | Checks | Iterations | EE pos p95 (mm) | Limit MAE (deg) | Score |
+| Robot | Public kinematic source | Checks | Iterations | EE pos p95 (mm) | Limit MAE (deg) | Score |
 |---|---|---|---|---|---|---|
-| UR5e | yes | all pass | 2 | 1.4 | 30.0 | 82.2 |
-| Franka Emika Panda | yes | all pass | 1 | 0.0 | 0.0 | 97.2 |
-| Kinova Gen3 (7-DOF) | yes | all pass | 1 | 0.4 | 0.2 | 98.7 |
-| UFactory xArm 7 | yes | fail: reach | 1 | 0.0 | 0.7 | 92.5 |
-| KUKA LBR iiwa 14 R820 | no | all pass | 1 | 0.0 | 0.0 | 98.9 |
-| Trossen ViperX 300 S | no | all pass | 1 | 0.3 | 3.0 | 88.6 |
+| UR5e | DH table | all pass | 2 | 1.4 | 30.0 | 82.2 |
+| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 | 0.0 | 97.2 |
+| Kinova Gen3 (7-DOF) | DH table (third-party quote) | all pass | 2 | 0.4 | 0.2 | 98.7 |
+| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 | 0.7 | 92.5 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 | 0.0 | 98.9 |
+| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 | 3.0 | 91.2 |
+
+6/6 pass all error-severity checks (round 0: 5/6). Median p95 EE error on the
+robots with published DH tables: 0.2 mm (target was < 10 mm).
 
 Holdout set: not run yet.
 <!-- RESULTS:END -->

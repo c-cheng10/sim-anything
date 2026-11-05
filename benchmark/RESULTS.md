@@ -9,6 +9,31 @@ external reference; it is not redistributed. Reproduce with
 Each model was written blind by an agent that saw only `benchmark/inputs/<id>/`,
 the web and the tool's own docs/code; never Menagerie or robot-description files.
 
+## Round-over-round (dev set)
+
+| Robot | R0 checks | R1 checks | R0 / R1 p95 EE error (mm) | R0 / R1 score | R1 warnings |
+|---|---|---|---|---|---|
+| UR5e | pass (11) | pass (14) | 1.4 / 1.4 | 82.2 / 82.2 | reach (definition estimated) |
+| Franka Emika Panda | pass | pass | 0.0 / 0.0 | 97.2 / 97.2 | collision_exclusions |
+| Kinova Gen3 (7-DOF) | pass | pass | 0.4 / 0.4 | 98.7 / 98.7 | joint_limits (4 continuous joints), collision_exclusions |
+| UFactory xArm 7 | **fail: reach** | pass | 0.0 / 0.0 | 92.5 / 92.5 | reach (definition estimated), collision_exclusions |
+| KUKA LBR iiwa 14 R820 | pass | pass | 0.0 / 0.0 | 98.9 / 98.9 | none |
+| Trossen ViperX 300 S | pass | pass | 0.3 / 0.3 | 88.6 / 91.2 | reach (rated reach includes the gripper) |
+| **All checks pass (errors)** | **5/6** | **6/6** | median DH-published p95: 0.2 / 0.2 | | |
+
+What changed between rounds is the tool, not the robots: round 1 ran 14 checks
+(3 new: `kinematics_match`, `mass_plausibility`, `collision_exclusions`), is
+stricter about sources (URLs only, no typo paths) and collision exclusions,
+and treats a reach mismatch as a warning when the source does not define
+reach (but never beyond ±30%). xArm 7 moves from fail to pass because of that
+reach rule, not because its model changed: its kinematics were already exact.
+UR5e's agent this time kept the flange endpoint and listed the definition as an
+estimate instead of switching endpoints until the check passed. Kinematic
+accuracy was already at the noise floor of the references in round 0, so no
+metric improved there; ViperX's score rises only because its estimated mass
+(default density) landed closer to the reference. Round 1 is therefore a
+gain in tool honesty and strictness, not in accuracy.
+
 ## Round 0 (dev set, first blind run)
 
 | Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
@@ -96,3 +121,31 @@ minimum on Kinova, reporting 570 mm for a model that matches to 0.4 mm). The
 round-1 auditor re-ran the final evaluator on all six maps and reproduced every
 number, and confirmed with an independent FK script and sensitivity tests
 (+10 mm on one Panda link gives exactly 10.0 mm).
+
+## Round 1 (dev set, fresh blind runs with the round-1 tool)
+
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
+|---|---|---|---|---|---|---|---|---|---|
+| UR5e | DH table | all pass | 2 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 |
+| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 |
+| Kinova Gen3 (7-DOF) | DH table (via third-party quote) | all pass | 2 | 0.4 / 0.4 / 0.5 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.7 |
+| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.9 |
+| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 / 0.3 / 0.3 | 0.0 | 3.0 | 3.31 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 91.2 |
+
+Median p95 EE position error, robots with published DH: 0.2 mm (n=4)
+
+* Fresh runs: agents could not read earlier rounds; the reference models were
+  moved out of the repository tree while they ran. One agent reported seeing a
+  round-0 agent's downloaded copy of Trossen's public docs page and the
+  orchestrator's rebuild of the round-0 ViperX candidate in a shared scratch
+  folder (no reference model); it says it did not use them.
+* Kinova's DH table is still from the same third-party transcription (Kinova's
+  own guide stayed unreachable); KUKA's letter-to-link mapping and all joint
+  axis directions are now listed as estimates; xArm's and UR5e's reach
+  definitions are listed as estimates.
+* Two agents' first iteration had a units slip (a reach in mm in a metres spec
+  or vice versa); the reach check caught one directly, and the other exposed a
+  loophole (a 1000x reach mismatch only warned because the definition was
+  estimated) that the tool now closes (mismatches beyond ±30% stay errors).
+

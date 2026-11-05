@@ -1,0 +1,23 @@
+robot: viperx_300s
+candidate:
+  joints:
+  - waist
+  - shoulder
+  - elbow
+  - forearm_roll
+  - wrist_angle
+  - wrist_rotate
+  ee:
+    site: ee_site
+reference:
+  joints:
+  - waist
+  - shoulder
+  - elbow
+  - forearm_roll
+  - wrist_angle
+  - wrist_rotate
+  ee:
+    body: gripper_link
+  base_body: base_link
+fit_conventions: true
