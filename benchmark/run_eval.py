@@ -36,7 +36,7 @@ def main() -> int:
     args = ap.parse_args()
 
     robots = yaml.safe_load((ROOT / "benchmark/robots.yaml").read_text())[args.set]
-    header = ("| Robot | DH published | Checks | Iterations | EE pos mean / p95 / max (mm) | "
+    header = ("| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | "
               "Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |")
     print(header)
     print("|" + "---|" * 10)
@@ -55,7 +55,7 @@ def main() -> int:
             hj = json.loads((rd / "run/history.json").read_text())
             iters = str(len(hj.get("iterations", [])))
         if not model.exists() or not mp.exists():
-            print(f"| {r['name']} | {r.get('publishes_dh')} | {checks} | {iters} | no model or map | - | - | - | - | - |")
+            print(f"| {r['name']} | {r.get('kinematic_source', '?')} | {checks} | {iters} | no model or map | - | - | - | - | - |")
             continue
         res = evaluate(model, ROOT / r["reference"], load_mapping(mp), n_samples=args.samples, seed=0)
         (rd / "eval.json").write_text(json.dumps(res.model_dump(mode="json"), indent=2) + "\n")
@@ -65,7 +65,7 @@ def main() -> int:
         conv = f"yaw {res.base_yaw_deg:+.0f}°, {flips} sign flip(s), {offs} offset(s)"
         if r.get("publishes_dh"):
             p95s_dh.append(p.p95)
-        print(f"| {r['name']} | {r.get('publishes_dh')} | {checks} | {iters} | "
+        print(f"| {r['name']} | {r.get('kinematic_source', '?')} | {checks} | {iters} | "
               f"{p.mean:.1f} / {p.p95:.1f} / {p.max:.1f} | {res.ee_orientation_error_aligned_deg.p95:.1f} | "
               f"{res.joint_limit_mae_deg:.1f} | {res.mass_candidate:.2f} / {res.mass_reference:.2f} | "
               f"{conv} | {res.score:.1f} |")

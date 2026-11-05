@@ -6,8 +6,11 @@
 # Agents that generate specs may read only `id`, `name`, `manufacturer` and
 # `product` from this file. They must never open the `reference` files.
 #
-# `publishes_dh`: whether the manufacturer publicly publishes a DH / kinematic
-# parameter table (set from benchmark/inputs/<id>/facts.yaml; null = unknown).
+# `publishes_dh`: whether the manufacturer publicly publishes a DH parameter
+# table (set from benchmark/inputs/<id>/facts.yaml). `kinematic_source`: what
+# kind of public kinematic description the round-0 agent actually used (DH
+# table, screw-axis/PoE table, dimension table); the holdout values are what the
+# input research found and are confirmed when the holdout is run.
 
 dev:
   - id: ur5e
@@ -16,36 +19,42 @@ dev:
     product: UR5e collaborative robot arm (e-Series)
     reference: third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml
     publishes_dh: true
+    kinematic_source: DH table
   - id: franka_panda
     name: Franka Emika Panda
     manufacturer: Franka Emika
     product: Panda arm (7-DOF), without hand
     reference: third_party/mujoco_menagerie/franka_emika_panda/panda_nohand.xml
     publishes_dh: true
+    kinematic_source: DH table (modified)
   - id: kinova_gen3
     name: Kinova Gen3 (7-DOF)
     manufacturer: Kinova
     product: Gen3 ultra lightweight robot, 7-DOF, no gripper
     reference: third_party/mujoco_menagerie/kinova_gen3/gen3.xml
     publishes_dh: true
+    kinematic_source: DH table (via third-party quote)
   - id: xarm7
     name: UFactory xArm 7
     manufacturer: UFactory
     product: xArm 7 (7-DOF), without gripper
     reference: third_party/mujoco_menagerie/ufactory_xarm7/xarm7_nohand.xml
     publishes_dh: true
+    kinematic_source: DH table (modified)
   - id: kuka_iiwa14
     name: KUKA LBR iiwa 14 R820
     manufacturer: KUKA
     product: LBR iiwa 14 R820 (7-DOF)
     reference: third_party/mujoco_menagerie/kuka_iiwa_14/iiwa14.xml
     publishes_dh: false
+    kinematic_source: dimension table
   - id: viperx_300s
     name: Trossen ViperX 300 S
     manufacturer: Trossen Robotics
     product: ViperX 300 Robot Arm 6DOF (ViperX 300 S), arm joints only
     reference: third_party/mujoco_menagerie/trossen_vx300s/vx300s.xml
     publishes_dh: false
+    kinematic_source: screw-axis (PoE) table
 
 holdout:
   - id: ur10e
@@ -54,9 +63,11 @@ holdout:
     product: UR10e collaborative robot arm (e-Series)
     reference: third_party/mujoco_menagerie/universal_robots_ur10e/ur10e.xml
     publishes_dh: true
+    kinematic_source: DH table
   - id: ufactory_lite6
     name: UFactory Lite 6
     manufacturer: UFactory
     product: Lite 6 (6-DOF), without gripper
     reference: third_party/mujoco_menagerie/ufactory_lite6/lite6.xml
     publishes_dh: true
+    kinematic_source: DH table (modified)
