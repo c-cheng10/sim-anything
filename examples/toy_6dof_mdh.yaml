@@ -1,0 +1,24 @@
+# A fictional 6-DOF arm with a spherical wrist, described with modified (Craig)
+# DH parameters (PUMA-like layout). Joints 1/2 and 4/5/6 have coincident origins.
+# Every number is an estimate: there is no real robot behind it.
+name: toy_6dof_mdh
+manufacturer: none (fictional)
+dof: 6
+units: {length: m, angle: deg}
+convention: dh_modified
+base:
+  link: {mass: 4.0}
+joints:
+  - {name: waist,    dh: {a: 0,    alpha: 0,   d: 0.45}, limits: {lower: -160, upper: 160}, effort_limit: 120,
+     link: {mass: 5.0}}
+  - {name: shoulder, dh: {a: 0,    alpha: -90, d: 0},    limits: {lower: -225, upper: 45},  effort_limit: 180,
+     home: -90, link: {mass: 6.0, com: [0.2, 0, 0.02]}}
+  - {name: elbow,    dh: {a: 0.4,  alpha: 0,   d: 0},    limits: {lower: -45,  upper: 225}, effort_limit: 90,
+     home: 0}
+  - {name: wrist1,   dh: {a: 0.02, alpha: -90, d: 0.4},  limits: {lower: -270, upper: 270}, effort_limit: 20}
+  - {name: wrist2,   dh: {a: 0,    alpha: 90,  d: 0},    limits: {lower: -120, upper: 120}, effort_limit: 20}
+  - {name: wrist3,   dh: {a: 0,    alpha: -90, d: 0},    limits: {lower: -270, upper: 270}, effort_limit: 10}
+ee: {name: flange, origin: {xyz: [0, 0, 0.08]}}
+total_mass: 25
+reach: {value: 0.87, measured_from: shoulder, measured_to: ee_site}
+estimates: [base, joints, ee, total_mass, reach]

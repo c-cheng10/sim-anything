@@ -1,0 +1,40 @@
+# A fictional 4-DOF SCARA with a prismatic (slide) quill, offset convention.
+# Every number is an estimate: there is no real robot behind it.
+name: toy_scara
+manufacturer: none (fictional)
+dof: 4
+units: {length: mm, angle: deg}
+convention: offset
+base:
+  link: {mass: 6.0}
+joints:
+  - name: j1
+    origin: {xyz: [0, 0, 350]}
+    axis: [0, 0, 1]
+    limits: {lower: -130, upper: 130}
+    effort_limit: 40
+    link: {mass: 3.0, geometry: [{shape: box, size: [150, 40, 30], pos: [125, 0, 0]}]}
+  - name: j2
+    origin: {xyz: [250, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -145, upper: 145}
+    effort_limit: 20
+    link: {mass: 2.0}
+  - name: j3
+    type: slide
+    origin: {xyz: [200, 0, 0]}
+    axis: [0, 0, -1]
+    limits: {lower: 0, upper: 150}
+    effort_limit: 200
+    link: {mass: 0.5}
+  - name: j4
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -360, upper: 360}
+    effort_limit: 2
+    home: 30
+    link: {mass: 0.3, geometry: [{shape: cylinder, radius: 10, fromto: [0, 0, 0, 0, 0, -100]}]}
+ee: {name: ee_site, origin: {xyz: [0, 0, -100]}}
+total_mass: 11.8
+reach: {value: 450, measured_from: base_axis_horizontal, measured_to: ee_site}
+estimates: [base, joints, ee, total_mass, reach]
