@@ -1,0 +1,23 @@
+robot: ufactory_lite6
+candidate:
+  joints:
+  - J1
+  - J2
+  - J3
+  - J4
+  - J5
+  - J6
+  ee:
+    site: ee_site
+reference:
+  joints:
+  - joint1
+  - joint2
+  - joint3
+  - joint4
+  - joint5
+  - joint6
+  ee:
+    site: attachment_site
+  base_body: link_base
+fit_conventions: true

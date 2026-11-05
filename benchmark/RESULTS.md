@@ -9,6 +9,41 @@ external reference; it is not redistributed. Reproduce with
 Each model was written blind by an agent that saw only `benchmark/inputs/<id>/`,
 the web and the tool's own docs/code; never Menagerie or robot-description files.
 
+## Holdout set (run once, with the final tool)
+
+The holdout robots were never used during development or refinement. One blind
+agent generated both with the final tool (reference models hidden outside the
+repository while it ran), and they were scored exactly once. These are the
+honest generalisation numbers.
+
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
+|---|---|---|---|---|---|---|---|---|---|
+| UR10e | DH table | all pass | 1 | 16.6 / 17.2 / 17.7 | 0.0 | 30.0 | 33.30 / 32.70 | yaw +180°, 0 sign flip(s), 0 offset(s) | 60.0 |
+| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.0 / 1.3 / 1.4 | 0.0 | 0.0 | 8.00 / 7.58 | yaw +0°, 0 sign flip(s), 0 offset(s) | 94.9 |
+
+Median p95 EE position error, robots with published DH: 9.3 mm (n=2)
+
+* **UR10e, 17.2 mm p95, is almost entirely a reference-model difference.** The
+  agent copied UR's published DH table exactly (d6 = 0.11655 m to the tool
+  flange). The Menagerie UR10e places its `attachment_site` 0.100 m past the
+  wrist-3 frame (the UR5e's flange distance), 16.55 mm shorter than UR's
+  published value, so the flange points differ by ~16.6 mm in every pose.
+  Diagnostic only (not the official number): measuring the reference at UR's
+  published flange distance on the same wrist-3 axis gives 0.7 mean / 1.1 p95 /
+  1.3 max mm, the same rounding-level residual as the UR5e. The official score
+  above is unchanged; the mapping was fixed before the run and was not altered
+  after seeing results.
+* UR10e also loses ~14 score points on joint limits for the same reason as the
+  UR5e (datasheet ±360° on the elbow vs ±180° in the reference). One search
+  extract gave ±160° for the elbow; the agent kept ±360° and noted the conflict.
+* **UFactory Lite 6, 1.3 mm p95:** UFactory's modified DH table copied exactly;
+  passed on iteration 2 after replacing auto-placed capsules (which collided at
+  the folded zero pose) with explicit estimated geometry.
+* Both passed all error checks (UR10e in 1 iteration, Lite 6 in 2).
+* As in the dev set, all values came from web-search excerpts because
+  manufacturer hosts were blocked; torques for three UR10e joints come from a
+  UR forum post (second-hand), the wrist-1 torque is an estimate.
+
 ## Round-over-round (dev set)
 
 All rounds scored with the final evaluator (rounds 0 and 1 were re-scored after
