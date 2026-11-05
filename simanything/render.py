@@ -33,10 +33,12 @@ VIEWS = ("front", "side", "top")
 
 # Camera orientation per view as MuJoCo free-camera (azimuth, elevation) in degrees.
 # Robots conventionally face +x with z up:
-#   front: camera on +x looking toward -x  (image right = +y, up = +z)
+#   front: camera between +x and -y, 3/4 view (an arm reaching along +x would be
+#          fully foreshortened in a straight-on +x view; the matplotlib
+#          fallback keeps the orthographic +x projection)
 #   side : camera on -y looking toward +y  (image right = +x, up = +z)
 #   top  : camera above looking down       (image right = +x, up = +y)
-_MJ_CAMERAS = {"front": (180.0, -15.0), "side": (90.0, -15.0), "top": (90.0, -90.0)}
+_MJ_CAMERAS = {"front": (135.0, -20.0), "side": (90.0, -15.0), "top": (90.0, -90.0)}
 _PERSPECTIVE_FOVY = 30.0  # degrees, front/side MuJoCo views
 _ORTHO_CAMERAS = {"front": (180.0, 0.0), "side": (90.0, 0.0), "top": (90.0, -90.0)}
 _VIEW_LABELS = {
