@@ -1,0 +1,24 @@
+{
+  "name": "sim-anything",
+  "owner": {
+    "name": "c-cheng10"
+  },
+  "metadata": {
+    "description": "Turn a real robot arm's public datasheets into a verified MuJoCo simulation.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "sim-anything",
+      "source": "./plugin",
+      "description": "Reverse-engineer a robot arm into a verified MuJoCo simulation from public datasheets: a skill plus the /sim-anything command.",
+      "version": "0.1.0",
+      "author": {
+        "name": "c-cheng10"
+      },
+      "license": "MIT",
+      "keywords": ["robotics", "mujoco", "simulation", "robot-arm", "mjcf"],
+      "category": "robotics"
+    }
+  ]
+}

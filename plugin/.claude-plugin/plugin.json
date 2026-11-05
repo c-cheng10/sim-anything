@@ -3,5 +3,8 @@
   "version": "0.1.0",
   "description": "Reverse-engineer a robot arm into a verified MuJoCo simulation from public datasheets.",
   "author": {"name": "c-cheng10"},
-  "license": "MIT"
+  "homepage": "https://github.com/c-cheng10/sim-anything",
+  "repository": "https://github.com/c-cheng10/sim-anything",
+  "license": "MIT",
+  "keywords": ["robotics", "mujoco", "simulation", "robot-arm", "mjcf"]
 }
