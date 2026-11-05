@@ -32,7 +32,8 @@ and report).
 
 Claude gathers sources into `runs/ur5e/sources.md`, writes `runs/ur5e/spec.yaml`, runs
 `sim-anything loop` until the checks pass (or 8 iterations), and writes
-`runs/ur5e/run/report.html` with front/side/top renders. You can also just ask
+`runs/ur5e/run/report.html` with front/side/top renders (rewritten after every loop iteration, so
+they always show the latest one; delete `runs/ur5e/run/` to start over). You can also just ask
 "build a MuJoCo model of the Kinova Gen3"; the skill triggers on its own.
 
 ## Layout
