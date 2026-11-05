@@ -253,20 +253,71 @@ def test_build_file(tmp_path):
     assert out.read_text() == _xml("toy_2link")
 
 
-def test_structural_overlap_excluded():
-    # the middle link (5 cm) is shorter than the two neighbouring radii (2 x 5 cm), so links a and c
-    # always overlap at the joint: that pair is excluded, and no contact remains at home.
+def _three_link(mid_len: float, c_geom=None, r: float = 0.05) -> Spec:
     from simanything.spec import EndEffector, GeometryHint, Link, Pose
 
-    g = [GeometryHint(shape="capsule", radius=0.05)]
+    g = [GeometryHint(shape="capsule", radius=r)]
     joints = [Joint(name="a", origin=Pose(xyz=[0, 0, 0.2]), axis=[0, 0, 1], link=Link(geometry=g)),
               Joint(name="b", origin=Pose(xyz=[0, 0, 0.3]), axis=[0, 1, 0], link=Link(geometry=g)),
-              Joint(name="c", origin=Pose(xyz=[0, 0, 0.05]), axis=[0, 1, 0], link=Link(geometry=g))]
-    spec = Spec(name="short", dof=3, units=Units(angle="rad"), joints=joints,
+              Joint(name="c", origin=Pose(xyz=[0, 0, mid_len]), axis=[0, 1, 0],
+                    link=Link(geometry=c_geom or g))]
+    return Spec(name="short", dof=3, units=Units(angle="rad"), joints=joints,
                 ee=EndEffector(origin=Pose(xyz=[0, 0, 0.3])))
-    xml = build_mjcf(spec)
+
+
+def _check_built(tmp_path, spec: Spec):
+    from simanything.check import run_checks
+    from simanything.spec import dump_spec
+
+    sp, mp = tmp_path / "spec.yaml", tmp_path / "model.xml"
+    dump_spec(spec, sp)
+    mp.write_text(build_mjcf(spec))
+    return {c.id: c for c in run_checks(mp, sp, n_reach_samples=200).checks}
+
+
+def test_shallow_overlap_around_short_link_excluded(tmp_path):
+    # the middle link (9.7 cm) is a bit shorter than the two neighbouring radii (2 x 5 cm): the end caps of
+    # links a and c overlap by 3 mm in every pose. That pair is excluded and reported with its reason.
+    xml = build_mjcf(_three_link(0.097))
     assert '<exclude body1="a_link" body2="c_link" />' in xml
+    assert "around the short link 'b_link'" in xml and "3.0 mm deep at home" in xml
     m = mujoco.MjModel.from_xml_string(xml)
     d = mujoco.MjData(m)
     mujoco.mj_forward(m, d)
     assert d.ncon == 0
+    checks = _check_built(tmp_path, _three_link(0.097))
+    assert checks["self_collision_home"].passed
+    ce = checks["collision_exclusions"]
+    assert not ce.passed and ce.severity == "warning" and "a_link / c_link" in ce.message
+    assert "short link" in ce.message and "joints[0].link.geometry" in ce.fix_hint
+
+
+def test_deep_overlap_not_excluded(tmp_path):
+    # a 5 cm middle link with 5 cm radii: the caps overlap by 5 cm, which is a geometry error, not structure
+    root = ET.fromstring(build_mjcf(_three_link(0.05)))
+    assert {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")} == {
+        frozenset(("base", "a_link"))}
+    checks = _check_built(tmp_path, _three_link(0.05))
+    c = checks["self_collision_home"]
+    assert not c.passed and c.severity == "error" and "'a_link'" in c.message and "'c_link'" in c.message
+
+
+@pytest.mark.parametrize("c_geom", [
+    [{"shape": "sphere", "radius": 0.25}],                                   # oversized sphere on link 3
+    [{"shape": "capsule", "radius": 0.03},                                   # box reaching back into link 1
+     {"shape": "box", "size": [0.02, 0.02, 0.15], "pos": [0, 0, -0.1]}],
+])
+def test_interpenetration_not_excluded(tmp_path, c_geom):
+    # link b is 10 cm long, so the auto capsules (3 cm) of links a and c are 4 cm apart; the extra
+    # geometry on link c reaches into link a and must be reported, not excluded
+    from simanything.spec import GeometryHint
+
+    spec = _three_link(0.1, [GeometryHint(**g) for g in c_geom], r=0.03)
+    xml = build_mjcf(spec)
+    root = ET.fromstring(xml)
+    pairs = {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")}
+    assert pairs == {frozenset(("base", "a_link"))}
+    checks = _check_built(tmp_path, spec)
+    c = checks["self_collision_home"]
+    assert not c.passed and "'a_link'" in c.message and "'c_link'" in c.message
+    assert checks["collision_exclusions"].passed and "base / a_link" in checks["collision_exclusions"].message

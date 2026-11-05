@@ -16,12 +16,13 @@ from ..schemas import CheckReport, CheckResult
 from ..spec import uncovered_fields
 from .context import CheckContext, result, skipped_no_spec
 from .kinematics import check_kinematics_match, check_reach
-from .physics import (check_inertia_valid, check_self_collision_home, check_stable_hold, check_total_mass,
-                      inertia_problems)
+from .physics import (check_collision_exclusions, check_inertia_valid, check_self_collision_home, check_stable_hold,
+                      check_total_mass, inertia_problems)
 from .structure import check_actuators, check_compiles, check_ee_site, check_joint_limits, check_joint_structure
 
 CHECK_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
-             "inertia_valid", "self_collision_home", "stable_hold", "actuators", "sources_complete"]
+             "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
+             "sources_complete"]
 SPEC_DEPENDENT = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
                   "actuators", "sources_complete"}
 
@@ -72,6 +73,7 @@ def run_checks(model_path: str | Path, spec_path: str | Path | None = None, *, s
         "total_mass": lambda: check_total_mass(ctx),
         "inertia_valid": lambda: check_inertia_valid(ctx),
         "self_collision_home": lambda: check_self_collision_home(ctx),
+        "collision_exclusions": lambda: check_collision_exclusions(ctx),
         "stable_hold": lambda: check_stable_hold(ctx),
         "actuators": lambda: check_actuators(ctx),
         "sources_complete": lambda: check_sources_complete(ctx),

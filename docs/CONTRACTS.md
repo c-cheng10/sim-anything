@@ -123,7 +123,8 @@ and `info` checks never block. Every failed check MUST carry a concrete
 | `reach` | max of the reach metric over 5,000 uniform random configurations within limits, the best 8 polished by a short local search, vs `spec.reach` | within ±5% (relative) | error (info + pass if spec has no reach) |
 | `total_mass` | sum of body masses vs `spec.total_mass` | within ±5% | error (info + pass if absent) |
 | `inertia_valid` | every non-world body: mass > 0, principal inertias > 0, triangle inequality `A+B >= C` (1e-9 slack) | all bodies | error |
-| `self_collision_home` | contacts at the home pose between bodies that are not parent/child | none with penetration > 1 mm | error |
+| `self_collision_home` | contacts at the home pose between bodies that are not parent/child (and not excluded) | none with penetration > 1 mm | error |
+| `collision_exclusions` | every `<exclude>` pair of the model, with its reason read from the `<!-- body1 / body2: reason -->` comment before it (section 7), listed in the message and `details.excluded` | every pair is parent/child (incl. welded) or separated only by zero-length links (all bodies after the ancestor's child sit at their parent's origin) | warning |
 | `stable_hold` | 2 s simulation at home under gravity, actuators commanded to home | no NaN/instability warning, max joint drift < 0.05 rad (hinge) / 5 mm (slide), final max joint speed < 0.1 | error |
 | `actuators` | each spec joint driven by exactly one actuator | all | error |
 | `sources_complete` | `spec.uncovered_fields()` is empty | empty | error |
@@ -262,8 +263,17 @@ score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
   from `effort_limit` when known; gains chosen so the home pose holds under gravity.
 * A site named `spec.ee.name` on the last body at the EE offset.
 * A `<keyframe name="home">` with the spec `home` values.
-* Parent/child contacts are excluded (MuJoCo default); the builder may also add `<exclude>` for bodies
-  whose origins coincide (zero-length links in spherical wrists) and documents it in an XML comment.
+* Parent/child contacts are excluded (MuJoCo default). The builder adds `<exclude>` only for:
+  1. the base and the first link (parent/child, but MuJoCo does not filter a world-fixed parent);
+  2. bodies whose origins coincide (zero-length links, e.g. a spherical wrist), pairwise, together with the
+     body whose segment ends at the shared origin (bodies separated only by zero-length links);
+  3. a grandparent/grandchild pair (k, k+2) whose geoms overlap in every one of 32 sampled configurations
+     (home + 31 seeded) and, at home, by at most 5 mm and within the thicker geom's radius of the middle
+     link's segment (the end caps of two links meeting around a short link).
+
+  No other overlap is excluded: an oversized primitive, geometry reaching back over a joint or a deep
+  overlap is left for `self_collision_home` to report. Each `<exclude>` is preceded by an XML comment
+  `<!-- body1 / body2: reason -->`; the `collision_exclusions` check reports them all.
 
 ## 8. Benchmark layout
 

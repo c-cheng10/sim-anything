@@ -19,7 +19,8 @@ from simanything.check import CHECK_IDS, inertia_problems, run_checks
 from simanything.spec import load_spec
 
 CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
-                "inertia_valid", "self_collision_home", "stable_hold", "actuators", "sources_complete"]
+                "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
+                "sources_complete"]
 SPEC_CHECKS = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass", "actuators",
                "sources_complete"}
 
@@ -171,7 +172,7 @@ def test_no_spec_skips_spec_checks(tmp_path):
         if c.id in SPEC_CHECKS:
             assert c.passed and c.severity == "info" and c.message == "skipped: no spec"
         else:
-            assert c.passed and c.severity == "error", c
+            assert c.passed and c.severity == ("warning" if c.id == "collision_exclusions" else "error"), c
 
 
 def test_reach_metric_definitions(tmp_path):
@@ -379,6 +380,43 @@ def test_self_collision_at_home(tmp_path):
     assert "joints[1].link.geometry[*].radius" in c.fix_hint and "base.link.geometry[*].radius" in c.fix_hint
     assert c.measured > 1e-3
     assert c.details["contacts"][0]["penetration"] > 1e-3
+
+
+def test_collision_exclusions_reported(tmp_path):
+    # the same folded pose as above, but the colliding pair is hidden by a hand-written <exclude>
+    s = spec_with()
+    s["joints"][1]["home"] = 150
+    tool = '<geom name="tool_ball" type="sphere" size="0.045" pos="0.25 0 0"/>'
+    excl = ('<contact><!-- base / elbow_link: hides the tool ball --><exclude body1="base" body2="elbow_link"/>'
+            '<exclude body1="base" body2="shoulder_link"/></contact>')
+    xml = mjcf(key=f"0 {R150 - 1e-3}", elbow_extra=tool).replace("<actuator>", excl + "<actuator>")
+    model, spec = write_case(tmp_path, xml, s)
+    report = run_checks(model, spec)
+    assert by_id(report)["self_collision_home"].passed
+    c = by_id(report)["collision_exclusions"]
+    assert not c.passed and c.severity == "warning" and c.measured == 1
+    assert "base / elbow_link (hides the tool ball)" in c.message
+    assert "base / shoulder_link (no reason given)" in c.message
+    assert "joints[1].link.geometry" in c.fix_hint
+    kinds = {(r["body1"], r["body2"]): r["kind"] for r in c.details["excluded"]}
+    assert kinds == {("base", "elbow_link"): "other", ("base", "shoulder_link"): "parent/child"}
+    assert report.passed
+
+
+def test_collision_exclusions_zero_length_links_ok(tmp_path):
+    extra = ('<body name="w1" pos="0.25 0 0"><joint name="w1j" axis="1 0 0"/>'
+             '<inertial pos="0 0 0" mass="0.1" diaginertia="1e-4 1e-4 1e-4"/>'
+             '<body name="w2"><joint name="w2j" axis="0 0 1"/>'
+             '<inertial pos="0 0 0" mass="0.1" diaginertia="1e-4 1e-4 1e-4"/></body></body>')
+    excl = '<contact><exclude body1="elbow_link" body2="w2"/><exclude body1="shoulder_link" body2="w2"/></contact>'
+    xml = mjcf(elbow_extra=extra, key="0 0 0 0").replace("<actuator>", excl + "<actuator>")
+    model, spec = write_case(tmp_path, xml, SPEC)
+    c = by_id(run_checks(model, spec))["collision_exclusions"]
+    kinds = {(r["body1"], r["body2"]): r["kind"] for r in c.details["excluded"]}
+    # elbow_link -> w1 (0.25 m) -> w2 (zero offset): separated only by the zero-length link w1
+    assert kinds[("elbow_link", "w2")] == "zero-length links between"
+    assert kinds[("shoulder_link", "w2")] == "other"
+    assert not c.passed and c.measured == 1
 
 
 def test_unstable_weak_actuators(tmp_path):

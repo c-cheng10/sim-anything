@@ -52,11 +52,17 @@ Contact exclusions
     MuJoCo filters parent/child contacts except when the parent is welded to
     the world, so the base / first link pair is excluded explicitly. Bodies
     whose origins coincide (zero-length links) are excluded pairwise together
-    with the body whose segment ends at the shared origin, and so is any pair
-    of bodies whose geoms touch in *every* one of 32 sampled configurations
-    (home + 31 seeded random ones): such overlaps are structural (e.g. a link
-    shorter than its neighbours' radii) rather than collisions. Each
-    exclusion is listed with its reason in an XML comment.
+    with the body whose segment ends at the shared origin (bodies separated
+    only by zero-length links). The only other automatic exclusion is a
+    grandparent/grandchild pair (k, k+2) whose geoms overlap in *every* one of
+    32 sampled configurations (home + 31 seeded random ones) and, at home, by
+    at most 5 mm and within the thicker geom's radius of the middle link's
+    segment: the end caps of two links meeting around a short link. Any
+    other overlap (an oversized primitive, geometry reaching back over a
+    joint, a deep overlap at home, bodies further apart) is not excluded, so
+    self_collision_home reports it. Each exclusion is listed with its reason in an XML comment
+    (``<!-- body1 / body2: reason -->`` right before the ``<exclude>``), which
+    the collision_exclusions check reads.
 """
 
 from __future__ import annotations
@@ -85,6 +91,7 @@ SAT_ERROR = {"hinge": 0.02, "slide": 0.002}        # error at which the effort l
 WN = 25.0                         # rad/s, minimum closed-loop bandwidth (if effort allows)
 WN_MAX = 150.0                    # rad/s, stability cap for the explicit position loop
 N_CONTACT_SAMPLES = 32
+SHALLOW_OVERLAP = 0.005           # m; deepest overlap tolerated around a short link (see _shallow_joint_excludes)
 
 _RGBA = ["0.55 0.6 0.68 1", "0.85 0.55 0.2 1"]
 _BASE_RGBA = "0.3 0.3 0.33 1"
@@ -379,8 +386,11 @@ def _coincident_excludes(bodies: list[BodyPlan]) -> list[tuple[str, str, str]]:
             group = list(range(max(head - 1, 0), end + 1))
             for a in group:
                 for b in group:
-                    if b > a + 1 and not (a == 0 and b == 1):
-                        out.append((bodies[a].name, bodies[b].name, "origins coincide"))
+                    if b > a + 1:
+                        why = ("origins coincide (zero-length links)" if a >= head else
+                               f"only zero-length links between them (origins coincide with the end of "
+                               f"'{bodies[a].name}')")
+                        out.append((bodies[a].name, bodies[b].name, why))
             k = end + 1
         else:
             k += 1
@@ -477,8 +487,9 @@ def _to_xml(spec: Spec, si: Spec, chain: Chain, bodies: list[BodyPlan], dyn: _Dy
         contact.append(ET.Comment(
             " Excluded pairs (besides MuJoCo's parent/child filter): the world-fixed base and its child, "
             "bodies whose origins coincide (zero-length links, e.g. a spherical wrist) and the body whose "
-            "segment ends there, and bodies whose geoms overlap in every sampled configuration (a "
-            "structural overlap at a joint, not a collision). "))
+            "segment ends there, and grandparent/grandchild links whose end caps overlap shallowly around a "
+            "short middle link in every sampled configuration. Each pair is listed with its reason; the "
+            "collision_exclusions check reports them. "))
         for a, b, why in excludes:
             contact.append(ET.Comment(_sanitize_comment(f" {a} / {b}: {why} ")))
             ET.SubElement(contact, "exclude", body1=a, body2=b)
@@ -515,30 +526,74 @@ def _sample_configs(si: Spec, n: int) -> list[np.ndarray]:
     return [home] + [rng.uniform(lo, hi) for _ in range(n - 1)]
 
 
-def _structural_excludes(model, si: Spec, already: set[frozenset]) -> list[tuple[str, str, str]]:
+def _geom_thickness(model, g: int) -> float:
+    """Cross-section half-size of a primitive (radius, or the largest box half-size)."""
     import mujoco
 
+    if int(model.geom_type[g]) == int(mujoco.mjtGeom.mjGEOM_BOX):
+        return float(np.max(model.geom_size[g]))
+    return float(model.geom_size[g][0])
+
+
+def _seg_dist(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
+    d = b - a
+    L2 = float(d @ d)
+    t = 0.0 if L2 < EPS_LEN ** 2 else min(1.0, max(0.0, float((p - a) @ d) / L2))
+    return float(np.linalg.norm(p - (a + t * d)))
+
+
+def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: set[frozenset]
+                            ) -> list[tuple[str, str, str]]:
+    """Grandparent/grandchild pairs (k, k+2) whose geoms overlap in *every* sampled configuration and,
+    at home, only next to the middle link's segment (within the thicker geom's radius) and by no more
+    than SHALLOW_OVERLAP: the end caps of two links meeting around a short link. Anything else that
+    overlaps (deeper at home, away from the shared joints, only in some poses, or between bodies
+    further apart) is a real collision, left for the self_collision_home check to report. (MuJoCo
+    reports one contact per geom pair, the deepest, so in folded poses the end-cap overlap can be
+    masked by a deeper pose-dependent one; hence the location/depth test uses the home pose.)"""
+    import mujoco
+
+    ids = {b.name: model.body(b.name).id for b in bodies}
+    cand: dict[frozenset, tuple[int, int]] = {}  # pair -> (middle body id, grandchild body id)
+    for k in range(len(bodies) - 2):
+        pr = frozenset((bodies[k].name, bodies[k + 2].name))
+        if pr not in already:
+            cand[pr] = (ids[bodies[k + 1].name], ids[bodies[k + 2].name])
+    if not cand:
+        return []
+    home_depth = {pr: 0.0 for pr in cand}
     data = mujoco.MjData(model)
-    common: Optional[set[frozenset]] = None
-    for q in _sample_configs(si, N_CONTACT_SAMPLES):
+    for s, q in enumerate(_sample_configs(si, N_CONTACT_SAMPLES)):  # sample 0 is home
         data.qpos[:] = q
         mujoco.mj_forward(model, data)
-        pairs = set()
+        touched: set[frozenset] = set()
+        far: set[frozenset] = set()
         for c in data.contact[: data.ncon]:
-            if c.dist < 0:
-                b1 = model.body(model.geom_bodyid[c.geom1]).name
-                b2 = model.body(model.geom_bodyid[c.geom2]).name
-                pairs.add(frozenset((b1, b2)))
-        common = pairs if common is None else common & pairs
-        if not common:
+            if c.dist >= 0:
+                continue
+            pr = frozenset((model.body(model.geom_bodyid[c.geom1]).name,
+                            model.body(model.geom_bodyid[c.geom2]).name))
+            if pr not in cand:
+                continue
+            touched.add(pr)
+            if s == 0:  # at home the overlap must be shallow and right around the middle link
+                home_depth[pr] = max(home_depth[pr], -float(c.dist))
+                mid, child = cand[pr]
+                if _seg_dist(np.array(c.pos), data.xpos[mid], data.xpos[child]) > max(
+                        _geom_thickness(model, c.geom1), _geom_thickness(model, c.geom2)):
+                    far.add(pr)
+        for pr in list(cand):
+            if pr not in touched or pr in far or home_depth[pr] > SHALLOW_OVERLAP:
+                del cand[pr]
+        if not cand:
             return []
-    order = {model.body(i).name: i for i in range(model.nbody)}
     out = []
-    for pr in sorted(common or [], key=lambda p: sorted(order[x] for x in p)):
-        if pr in already:
-            continue
-        a, b = sorted(pr, key=lambda x: order[x])
-        out.append((a, b, f"overlap in all {N_CONTACT_SAMPLES} sampled configurations"))
+    for k in range(len(bodies) - 2):
+        pr = frozenset((bodies[k].name, bodies[k + 2].name))
+        if pr in cand:
+            out.append((bodies[k].name, bodies[k + 2].name,
+                        f"geoms overlap around the short link '{bodies[k + 1].name}' in all {N_CONTACT_SAMPLES} "
+                        f"sampled configurations, {home_depth[pr] * 1000:.1f} mm deep at home"))
     return out
 
 
@@ -591,7 +646,7 @@ def build_mjcf(spec: Spec) -> str:
         model = mujoco.MjModel.from_xml_string(provisional)
     except Exception as e:  # noqa: BLE001
         raise ValueError(f"generated MJCF does not compile: {e}") from e
-    excludes = excludes + _structural_excludes(model, si, {frozenset(e[:2]) for e in excludes})
+    excludes = excludes + _shallow_joint_excludes(model, bodies, si, {frozenset(e[:2]) for e in excludes})
     _gains(model, si, dyn)
     return _to_xml(spec, si, chain, bodies, dyn, excludes, notes, final=True)
 

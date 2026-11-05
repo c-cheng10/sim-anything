@@ -1,7 +1,9 @@
-"""Physical checks: total_mass, inertia_valid, self_collision_home, stable_hold."""
+"""Physical checks: total_mass, inertia_valid, self_collision_home, collision_exclusions, stable_hold."""
 
 from __future__ import annotations
 
+import re
+import xml.etree.ElementTree as ET
 from typing import Optional
 
 import mujoco
@@ -13,6 +15,7 @@ from .context import HINGE, SLIDE, CheckContext, result, skipped_no_spec
 MASS_TOL = 0.05  # relative
 INERTIA_SLACK = 1e-9
 PENETRATION_TOL = 1e-3  # m
+ZERO_LEN = 1e-6  # m; body offsets shorter than this count as zero-length links
 HOLD_SECONDS = 2.0
 DRIFT_TOL_HINGE = 0.05  # rad
 DRIFT_TOL_SLIDE = 0.005  # m
@@ -176,6 +179,84 @@ def check_self_collision_home(ctx: CheckContext) -> CheckResult:
                      "(joints[*].home) and link offsets.")
     return result("self_collision_home", False, measured=worst, expected=0.0, tolerance=PENETRATION_TOL,
                   message="; ".join(msgs), fix_hint=" ".join(hints), details=details)
+
+
+# --------------------------------------------------------------------------- #
+_REASON = re.compile(r"^\s*(\S+)\s*/\s*(\S+)\s*:\s*(.+?)\s*$", re.S)
+
+
+def exclusion_reasons(model_path: str) -> dict[frozenset, str]:
+    """Reasons for ``<exclude>`` pairs from ``<!-- body1 / body2: reason -->`` comments (as the builder
+    writes them). Returns {} if the file cannot be parsed."""
+    try:
+        parser = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+        root = ET.parse(model_path, parser=parser).getroot()
+    except Exception:  # noqa: BLE001 - reasons are optional
+        return {}
+    out: dict[frozenset, str] = {}
+    for contact in root.iter("contact"):
+        for el in contact:
+            if el.tag is ET.Comment and el.text:
+                mt = _REASON.match(el.text)
+                if mt:
+                    out[frozenset((mt.group(1), mt.group(2)))] = mt.group(3)
+    return out
+
+
+def _zero_length_between(m: mujoco.MjModel, anc: int, desc: int) -> bool:
+    """True if ``desc`` descends from ``anc`` and every body after ``anc``'s child on the path sits at its
+    parent's origin, i.e. the bodies are separated only by zero-length links."""
+    path = []
+    b = desc
+    while b != anc:
+        if b == 0:
+            return False
+        path.append(b)
+        b = int(m.body_parentid[b])
+    # path = [desc, ..., child of anc]; all but the child of anc must have zero offset
+    return all(float(np.linalg.norm(m.body_pos[x])) < ZERO_LEN for x in path[:-1])
+
+
+def check_collision_exclusions(ctx: CheckContext) -> CheckResult:
+    cid = "collision_exclusions"
+    m = ctx.model
+    assert m is not None
+    if m.nexclude == 0:
+        return result(cid, True, severity="warning", measured=0, expected=0,
+                      message="no contact exclusions besides MuJoCo's parent/child filter")
+    reasons = exclusion_reasons(ctx.model_path)
+    rows, unexplained = [], []
+    for sig in (int(s) for s in m.exclude_signature):
+        b1, b2 = sorted((sig >> 16, sig & 0xFFFF))
+        n1, n2 = ctx.body_name(b1), ctx.body_name(b2)
+        if _related(m, b1, b2):
+            kind = "parent/child"
+        elif _zero_length_between(m, b1, b2):
+            kind = "zero-length links between"
+        else:
+            kind = "other"
+            unexplained.append((b1, b2))
+        why = reasons.get(frozenset((n1, n2)), "no reason given")
+        rows.append({"body1": n1, "body2": n2, "spec1": ctx.body_spec_path(b1), "spec2": ctx.body_spec_path(b2),
+                     "kind": kind, "reason": why})
+    listing = "; ".join(f"{r['body1']} / {r['body2']} ({r['reason']})" for r in rows)
+    details = {"excluded": rows}
+    if not unexplained:
+        return result(cid, True, severity="warning", measured=0, expected=0,
+                      message=f"{len(rows)} excluded pair(s), all parent/child or separated only by zero-length "
+                              f"links: {listing}", details=details)
+    bad = [r for r in rows if r["kind"] == "other"]
+    names = ", ".join(f"'{r['body1']}' / '{r['body2']}'" for r in bad)
+    paths = sorted({p for r in bad for p in (r["spec1"], r["spec2"]) if p})
+    geo = ", ".join(f"{p}.geometry" for p in paths) or "the link geometry"
+    return result(cid, False, severity="warning", measured=len(bad), expected=0,
+                  message=f"{len(bad)} of {len(rows)} excluded pair(s) are neither parent/child nor separated only "
+                          f"by zero-length links, so contacts between them are never checked: {listing}",
+                  fix_hint=f"Review the exclusions of {names}: they hide any collision between those links. If they "
+                           f"are there because the primitives overlap, make the geometry fit ({geo}: smaller radius, "
+                           "explicit fromto/pos) so the exclusion is no longer needed; if the MJCF was hand-edited, "
+                           "remove the <exclude> or explain it in the spec's `notes`.",
+                  details=details)
 
 
 # --------------------------------------------------------------------------- #
