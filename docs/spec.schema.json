@@ -107,6 +107,8 @@
               "items": {
                 "type": "number"
               },
+              "maxItems": 3,
+              "minItems": 3,
               "type": "array"
             },
             {
@@ -114,7 +116,7 @@
             }
           ],
           "default": null,
-          "description": "box half sizes [x, y, z]",
+          "description": "box half sizes [x, y, z], all > 0",
           "title": "Size"
         },
         "fromto": {
@@ -141,6 +143,8 @@
               "items": {
                 "type": "number"
               },
+              "maxItems": 3,
+              "minItems": 3,
               "type": "array"
             },
             {
@@ -156,6 +160,8 @@
               "items": {
                 "type": "number"
               },
+              "maxItems": 3,
+              "minItems": 3,
               "type": "array"
             },
             {
@@ -238,6 +244,7 @@
             }
           ],
           "default": null,
+          "description": "(angle unit)/s for hinges, (length unit)/s for slides",
           "title": "Velocity Limit"
         },
         "effort_limit": {
@@ -251,6 +258,7 @@
             }
           ],
           "default": null,
+          "description": "N*m for hinges, N for slides",
           "title": "Effort Limit"
         },
         "damping": {
@@ -264,6 +272,7 @@
             }
           ],
           "default": null,
+          "description": "always SI, not affected by `units`: N*m*s/rad for hinges, N*s/m for slides",
           "title": "Damping"
         },
         "armature": {
@@ -277,10 +286,12 @@
             }
           ],
           "default": null,
+          "description": "reflected rotor inertia, always SI: kg*m^2 for hinges, kg for slides",
           "title": "Armature"
         },
         "home": {
           "default": 0.0,
+          "description": "home position, within limits when limits are given",
           "title": "Home",
           "type": "number"
         },
@@ -396,6 +407,7 @@
     },
     "Reach": {
       "additionalProperties": false,
+      "description": "Rated reach and how it is measured (docs/CONTRACTS.md section 4). ``wrist_center`` is the\norigin of the body of joint ``dof-2`` (0-based); an arm with fewer than 3 joints has no wrist,\nso it falls back to the EE site.",
       "properties": {
         "value": {
           "exclusiveMinimum": 0,

@@ -37,7 +37,10 @@ Mass and inertia
     primitive moved to the centre of mass (``link.com`` if given, else the
     volume-weighted centroid) with the parallel-axis theorem. Unknown masses
     are volume x 1000 kg/m^3; if ``total_mass`` is given they are scaled so that
-    base + links equals it.
+    base + links equals it. If the known masses already reach ``total_mass``,
+    the unknown links *together* get 1% of ``total_mass``, split by volume (the
+    model is then heavier than ``total_mass`` by that 1% plus the excess, which
+    the total_mass check reports).
 
 Actuators
     One ``<position>`` actuator per joint. Gains come from a provisional model:
@@ -81,6 +84,7 @@ from .spec import (Chain, GeometryHint, Link, Spec, axis_angle_mat, build_chain,
 TIMESTEP = 0.002
 DEFAULT_DENSITY = 1000.0          # kg/m^3, for links of unknown mass (before total_mass scaling)
 APPARENT_DENSITY = 1500.0         # kg/m^3, only for choosing a default radius from a known mass
+UNKNOWN_SHARE_WHEN_FULL = 0.01    # share of total_mass for all unknown links together when known ones reach it
 R_MIN, R_MAX = 0.015, 0.1
 BASE_R_MIN, BASE_R_MAX = 0.03, 0.15
 EPS_LEN = 1e-6                    # m; shorter segments count as zero-length
@@ -342,9 +346,12 @@ def _assign_mass_inertia(si: Spec, bodies: list[BodyPlan]) -> list[str]:
             scale = rest / tot_vol_mass
             how += f", scaled x{_num(scale, 4)} to match total_mass"
         else:
-            scale = 0.01 * si.total_mass / tot_vol_mass / len(unknown)
-            how += " (WARNING: known link masses already reach total_mass; set to 1% of it)"
-            notes.append("known link masses already reach total_mass; unknown links get a token mass")
+            # the unknown links together get 1% of total_mass, split by volume
+            scale = UNKNOWN_SHARE_WHEN_FULL * si.total_mass / tot_vol_mass
+            how += (" (WARNING: known link masses already reach total_mass; the unknown links share "
+                    f"{UNKNOWN_SHARE_WHEN_FULL * 100:g}% of it by volume)")
+            notes.append("known link masses already reach total_mass; the unknown links share "
+                         f"{UNKNOWN_SHARE_WHEN_FULL * 100:g}% of total_mass as a token mass")
     for b in bodies:
         if b.link.mass is not None:
             b.mass, b.mass_note = float(b.link.mass), "mass from spec"

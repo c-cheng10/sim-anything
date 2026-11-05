@@ -8,8 +8,10 @@ Conventions
 * Units are declared once in ``units`` (length: m|mm, angle: deg|rad). Every
   length / angle in the file uses those units. ``Spec.to_si()`` returns a copy in
   metres and radians; all downstream code works on the SI copy.
-* Masses are kg, torques N*m, linear velocities (length unit)/s, angular
-  velocities (angle unit)/s.
+* Masses are kg, torques N*m (forces N), linear velocities (length unit)/s,
+  angular velocities (angle unit)/s. ``damping`` and ``armature`` are always SI
+  and not converted: damping N*m*s/rad (hinge) or N*s/m (slide), armature
+  kg*m^2 (hinge) or kg (slide).
 * Rotations given as ``rpy`` are fixed-axis roll/pitch/yaw (URDF convention):
   R = Rz(yaw) @ Ry(pitch) @ Rx(roll).
 * The kinematic chain is given in exactly one ``convention``:
@@ -108,11 +110,19 @@ class GeometryHint(_Base):
     shape: Literal["capsule", "cylinder", "box", "sphere"] = "capsule"
     radius: Optional[float] = Field(default=None, gt=0, description="capsule/cylinder/sphere radius")
     half_length: Optional[float] = Field(default=None, gt=0, description="capsule/cylinder half length")
-    size: Optional[Vec3] = Field(default=None, description="box half sizes [x, y, z]")
+    size: Optional[Vec3] = Field(default=None, min_length=3, max_length=3,
+                                 description="box half sizes [x, y, z], all > 0")
     fromto: Optional[list[float]] = Field(default=None, min_length=6, max_length=6,
                                           description="explicit endpoints in the link frame")
-    pos: Optional[Vec3] = None
-    rpy: Optional[Vec3] = None
+    pos: Optional[Vec3] = Field(default=None, min_length=3, max_length=3)
+    rpy: Optional[Vec3] = Field(default=None, min_length=3, max_length=3)
+
+    @field_validator("size")
+    @classmethod
+    def _positive_size(cls, v: Optional[Vec3]) -> Optional[Vec3]:
+        if v is not None and not all(float(x) > 0 for x in v):
+            raise ValueError(f"size must be 3 positive half sizes, got {v}")
+        return v
 
 
 class Link(_Base):
@@ -131,11 +141,16 @@ class Joint(_Base):
     # DH conventions
     dh: Optional[DH] = None
     limits: Optional[Limits] = None
-    velocity_limit: Optional[float] = Field(default=None, gt=0)
-    effort_limit: Optional[float] = Field(default=None, gt=0)
-    damping: Optional[float] = Field(default=None, ge=0)
-    armature: Optional[float] = Field(default=None, ge=0)
-    home: float = 0.0
+    velocity_limit: Optional[float] = Field(default=None, gt=0,
+                                            description="(angle unit)/s for hinges, (length unit)/s for slides")
+    effort_limit: Optional[float] = Field(default=None, gt=0, description="N*m for hinges, N for slides")
+    damping: Optional[float] = Field(default=None, ge=0,
+                                     description="always SI, not affected by `units`: N*m*s/rad for hinges, "
+                                                 "N*s/m for slides")
+    armature: Optional[float] = Field(default=None, ge=0,
+                                      description="reflected rotor inertia, always SI: kg*m^2 for hinges, kg for "
+                                                  "slides")
+    home: float = Field(default=0.0, description="home position, within limits when limits are given")
     link: Link = Field(default_factory=Link, description="the child link moved by this joint")
 
     @field_validator("axis")
@@ -144,6 +159,13 @@ class Joint(_Base):
         if float(np.linalg.norm(v)) < 1e-9:
             raise ValueError("axis must be non-zero")
         return v
+
+    @model_validator(mode="after")
+    def _home_within_limits(self) -> "Joint":
+        if self.limits is not None and not self.limits.lower <= self.home <= self.limits.upper:
+            raise ValueError(f"joint '{self.name}': home ({self.home}) must lie within limits "
+                             f"[{self.limits.lower}, {self.limits.upper}]")
+        return self
 
 
 class EndEffector(_Base):
@@ -157,6 +179,10 @@ class Base(_Base):
 
 
 class Reach(_Base):
+    """Rated reach and how it is measured (docs/CONTRACTS.md section 4). ``wrist_center`` is the
+    origin of the body of joint ``dof-2`` (0-based); an arm with fewer than 3 joints has no wrist,
+    so it falls back to the EE site."""
+
     value: float = Field(gt=0)
     measured_from: Literal["shoulder", "base_origin", "base_axis_horizontal"] = "shoulder"
     measured_to: Literal["ee_site", "wrist_center"] = "ee_site"

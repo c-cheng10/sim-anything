@@ -363,6 +363,13 @@ def test_reach_value_estimated_is_warning(tmp_path):
     assert "reach.value is itself an estimate" in c.fix_hint
 
 
+def test_wrist_center_falls_back_to_ee_for_two_joints(tmp_path):
+    model, spec = write_case(tmp_path, mjcf(), spec_with(reach={"value": 0.55, "measured_to": "wrist_center"}))
+    c = by_id(run_checks(model, spec))["reach"]
+    assert c.passed and c.measured == pytest.approx(0.55, rel=1e-3)
+    assert c.details["point"] == "site 'ee_site'" and "EE site is used instead" in c.details["notes"][-1]
+
+
 def test_reach_hint_names_only_lengths_that_matter(tmp_path, examples_dir):
     # base_axis_horizontal: the first joint's d (along the first axis) does not change the measured reach
     data = yaml.safe_load((examples_dir / "toy_6dof_dh.yaml").read_text())

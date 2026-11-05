@@ -15,6 +15,7 @@ from .context import HINGE, JOINT_TYPE_NAMES, CheckContext, result, skipped_no_s
 REACH_TOL = 0.05  # relative
 REFINE_TOP = 8  # best samples refined by local search
 REFINE_ITERS = 60
+WRIST_MIN_DOF = 3  # below this, reach.measured_to = wrist_center falls back to the EE site
 
 
 def _sample_ranges(ctx: CheckContext, jids: list[int]) -> tuple[np.ndarray, np.ndarray, list[str]]:
@@ -100,7 +101,11 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
 
     # ---- measured point ----
     point: Callable[[], np.ndarray]
-    if reach.measured_to == "ee_site":
+    to_ee = reach.measured_to == "ee_site" or spec.dof < WRIST_MIN_DOF
+    if to_ee and reach.measured_to == "wrist_center":
+        notes.append(f"wrist_center needs at least {WRIST_MIN_DOF} joints (the body of joint dof-2 would be at or "
+                     f"before the shoulder); with dof={spec.dof} the EE site is used instead")
+    if to_ee:
         sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, spec.ee.name)
         if sid < 0:
             return result("reach", False, expected=reach.value, tolerance=REACH_TOL,
@@ -109,7 +114,7 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
         point = lambda: d.site_xpos[sid]
         to_desc = f"site '{spec.ee.name}'"
     else:
-        k = max(spec.dof - 2, 0)
+        k = spec.dof - 2
         jid_w = ctx.joint_ids[k]
         if jid_w is None:
             return result("reach", False, expected=reach.value, tolerance=REACH_TOL,
@@ -196,10 +201,10 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
 def _reach_metric_spec(spec, reach, shoulder_i: int, q: np.ndarray, qhome: np.ndarray) -> float:
     """The reach metric of ``spec`` (SI) at configuration ``q``, computed with the spec's own FK."""
     ch = spec.chain()
-    if reach.measured_to == "ee_site":
+    if reach.measured_to == "ee_site" or spec.dof < WRIST_MIN_DOF:
         p = ch.fk(q)[:3, 3]
     else:
-        p = ch.fk(q, upto=max(spec.dof - 2, 0))[:3, 3]
+        p = ch.fk(q, upto=spec.dof - 2)[:3, 3]
     if reach.measured_from == "shoulder":
         return float(np.linalg.norm(p - ch.fk(qhome, upto=shoulder_i)[:3, 3]))
     if reach.measured_from == "base_origin":

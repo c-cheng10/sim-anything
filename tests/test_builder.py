@@ -236,6 +236,20 @@ def test_explicit_geometry_honoured():
     assert np.allclose([float(x) for x in base.get("fromto").split()], [0, 0, 0, 0, 0, 0.06])
 
 
+def test_unknown_links_share_one_percent_when_known_masses_reach_total():
+    from simanything.spec import Link
+
+    joints = [Joint(name="a", dh=DH(a=0.3), link=Link(mass=5.0)), Joint(name="b", dh=DH(a=0.2)),
+              Joint(name="c", dh=DH(a=0.2))]
+    spec = Spec(name="full", dof=3, units=Units(angle="rad"), convention="dh_standard", joints=joints,
+                base={"link": {"mass": 5.0}}, total_mass=10.0)
+    xml = build_mjcf(spec)
+    m = mujoco.MjModel.from_xml_string(xml)
+    unknown = m.body_mass[m.body("b_link").id] + m.body_mass[m.body("c_link").id]
+    assert unknown == pytest.approx(0.01 * 10.0, rel=1e-6)
+    assert "share 1% of total_mass" in xml
+
+
 def test_unlimited_joint_and_defaults():
     spec = Spec(name="free", dof=2, units=Units(angle="rad"), convention="dh_standard",
                 joints=[Joint(name="a", dh=DH(a=0.3)), Joint(name="b", dh=DH(a=0.2), damping=0.5, armature=0.02)])

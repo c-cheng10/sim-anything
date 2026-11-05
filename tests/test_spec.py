@@ -93,6 +93,25 @@ def test_validation_errors():
         Spec(name="x", dof=1, joints=[Joint(name="a", dh=DH())], convention="dh_standard", sources={"joints[": "u"})
 
 
+@pytest.mark.parametrize("size", [[0.1, 0.1], [0.1, 0.1, 0.1, 0.1], [0.1, 0.0, 0.1], [0.1, -0.1, 0.1]])
+def test_box_size_must_be_three_positive_values(size):
+    from simanything.spec import GeometryHint
+
+    with pytest.raises(ValueError):
+        GeometryHint(shape="box", size=size)
+    assert GeometryHint(shape="box", size=[0.1, 0.2, 0.3]).size == [0.1, 0.2, 0.3]
+
+
+def test_home_within_limits():
+    lim = {"lower": -90, "upper": 45}
+    with pytest.raises(ValueError, match="home"):
+        Joint(name="a", dh=DH(), limits=lim, home=60)
+    with pytest.raises(ValueError, match="home"):
+        Joint(name="a", dh=DH(), limits={"lower": 0.1, "upper": 1.0})  # default home 0 is outside
+    assert Joint(name="a", dh=DH(), limits=lim, home=45).home == 45
+    assert Joint(name="a", dh=DH(), home=400).home == 400  # no limits: anything goes
+
+
 def test_schema_file_up_to_date():
     import json
 

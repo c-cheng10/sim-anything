@@ -137,7 +137,9 @@ axes, i.e. planar/SCARA-style arms; the report records the choice); `base_origin
 `base_axis_horizontal` = distance from the 1st joint axis line, measured
 perpendicular to it. `ee_site` = the EE site; `wrist_center` = origin of the
 body of joint `dof-2` (0-based; the 2nd-to-last joint's body, which for a
-spherical wrist lies on the wrist centre).
+spherical wrist lies on the wrist centre); an arm with fewer than 3 joints has
+no wrist, so `wrist_center` falls back to the EE site (recorded in
+`details.notes`).
 
 ## 5. Evaluation
 
