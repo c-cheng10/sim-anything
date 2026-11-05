@@ -290,6 +290,16 @@ def test_kinematics_match_swapped_link_lengths(tmp_path):
     assert by_id(report)["reach"].passed
 
 
+def test_kinematics_match_catches_a_9_mm_hand_edit(tmp_path):
+    # a small hand edit to the MJCF (upper arm 309 mm instead of 300 mm) passes every other check
+    xml = mjcf().replace('<body name="elbow_link" pos="0.3 0 0">', '<body name="elbow_link" pos="0.309 0 0">')
+    model, spec = write_case(tmp_path, xml, SPEC)
+    report = run_checks(model, spec)
+    c = assert_fails(report, "kinematics_match")
+    assert c.measured["joint_position_m"] == pytest.approx(0.009, rel=1e-6)
+    assert error_failures(report) == {"kinematics_match"}
+
+
 def test_kinematics_match_ee_offset_only(tmp_path):
     model, spec = write_case(tmp_path, mjcf(site='<site name="ee_site" pos="0.25 0 0" euler="0 0 0.1"/>'), SPEC)
     c = assert_fails(run_checks(model, spec), "kinematics_match")
@@ -459,6 +469,16 @@ def test_mass_plausibility_density(tmp_path):
     assert not c.passed and c.severity == "warning"
     assert "density" in c.message and "'elbow_link' (joints[1].link)" in c.message
     assert "joints[1].link" in c.fix_hint and c.details["density"]["elbow_link"] > 20000
+
+
+def test_mass_plausibility_density_too_low(tmp_path):
+    # 0.5 kg spread over a 20 cm-radius sphere added to the forearm: ~ 15 kg/m^3, lighter than foam
+    big = mjcf(elbow_extra='<geom name="blob" type="sphere" size="0.2" pos="0.125 0 0" contype="0" conaffinity="0"/>')
+    model, spec = write_case(tmp_path, big, SPEC)
+    c = by_id(run_checks(model, spec))["mass_plausibility"]
+    assert not c.passed and c.severity == "warning"
+    assert "density" in c.message and "'elbow_link' (joints[1].link)" in c.message
+    assert c.details["density"]["elbow_link"] < 100 and "< 0.5%" not in c.message
 
 
 def test_mass_plausibility_light_link_and_light_arm(tmp_path):
