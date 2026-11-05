@@ -21,7 +21,10 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 12 | 5 r1 | review: new-user tester | done: quickstart works (23 s); stale report, name clash, hint/validate issues |
 | 13 | 5 r1 | review: code reviewer | done: 12 findings (no kinematic-consistency check, silent collision exclusions, ...) |
 | 14 | 5 r1 | review: benchmark auditor | done: no leakage found, metrics reproduce; framing + weak sources |
-| 15 | 5 r1 | fixer A: checker/builder/spec | running |
+| 15 | 5 r1 | fixer A: checker/builder/spec | done: 7 fixes merged (kinematics_match, exclusion rules + report, reach warnings, plausibility, source hygiene, validation, math tests); orchestrator relaxed the end-cap exclusion depth afterwards |
 | 16 | 5 r1 | fixer B: loop/CLI/report/eval/plugin/docs | done: 7 fixes merged (report every iteration, cap exit 2, skill renamed robot-to-mujoco, friendly errors, slide range, skill docs) |
+| 17 | 5 r1 | blind round1: ur5e + franka_panda | running |
+| 18 | 5 r1 | blind round1: kinova_gen3 + xarm7 | running |
+| 19 | 5 r1 | blind round1: kuka_iiwa14 + viperx_300s | running |
 
 ## Refinement rounds used: 1 / 3 (in progress)
