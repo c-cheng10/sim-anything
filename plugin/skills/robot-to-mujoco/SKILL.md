@@ -161,7 +161,8 @@ check: `python -c "from simanything.spec import load_spec; import numpy as np; s
   where to where, pick the most likely definition **and list
   `reach.measured_from` and `reach.measured_to` in `estimates`** (with your
   reasoning in `notes`); the reach check then reports a mismatch as a warning
-  instead of an error. **Never switch the reach endpoints just to make the
+  instead of an error. Leaving both fields out of the spec also counts as an
+  assumed definition (`shoulder` -> `ee_site`), and the check says so. **Never switch the reach endpoints just to make the
   check pass**: a reach error with sourced link lengths and a stated definition
   points at a misread table (row shift, units, wrong variant), so look there.
 * **Joint limits** are in the spec's angle unit (deg). "±360°" stays ±360.

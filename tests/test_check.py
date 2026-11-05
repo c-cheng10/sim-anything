@@ -319,7 +319,8 @@ URL = "https://example.com/datasheet.pdf"
 
 
 def sourced_reach(**reach) -> dict:
-    """SPEC with the whole reach (value and definition) sourced rather than estimated."""
+    """SPEC with the whole reach (value and definition, written out) sourced rather than estimated."""
+    reach = {"measured_from": "shoulder", "measured_to": "ee_site", **reach}
     return spec_with(reach=reach, sources={"total_mass": URL, "joints": URL, "reach": URL}, estimates=["base", "ee"])
 
 
@@ -328,8 +329,9 @@ def test_reach_too_long(tmp_path):
     report = run_checks(model, spec)
     c = assert_fails(report, "reach")
     assert "above" in c.message and "too long" in c.fix_hint
-    assert "list reach.measured_from/measured_to in `estimates` instead of switching endpoints" in c.fix_hint
+    assert "list them in `estimates` instead of switching endpoints" in c.fix_hint
     assert "reach.measured_to" in c.fix_hint and "joints[1].origin.xyz" in c.fix_hint
+    assert "not stated" not in c.message and "only a warning" not in c.fix_hint
     assert c.measured == pytest.approx(0.55, rel=1e-3) and c.expected == pytest.approx(0.45)
     assert c.details["relative_error"] == pytest.approx(0.55 / 0.45 - 1, rel=1e-2)
     assert error_failures(report) == {"reach"}
@@ -341,8 +343,41 @@ def test_reach_too_short(tmp_path):
     assert "below" in c.message and "too short" in c.fix_hint and "joints[*].limits" in c.fix_hint
 
 
+def test_reach_definition_left_at_default_is_assumed(tmp_path):
+    # value sourced, definition not written in the spec: the defaults are an assumption, like an estimate
+    s = spec_with(reach={"value": 0.45}, sources={"total_mass": URL, "reach": URL, "joints": URL},
+                  estimates=["base", "ee"])
+    model, spec = write_case(tmp_path, mjcf(), s)
+    report = run_checks(model, spec)
+    c = by_id(report)["reach"]
+    assert not c.passed and c.severity == "warning" and report.passed
+    assert "reach definition not stated in the spec; assumed shoulder -> ee_site" in c.message
+    assert c.details["definition_unstated"] == ["reach.measured_from", "reach.measured_to"]
+    assert "so this is only a warning" in c.fix_hint
+    # only one of them written: the other one is named
+    s["reach"]["measured_from"] = "shoulder"
+    model, spec = write_case(tmp_path, mjcf(), s)
+    c = by_id(run_checks(model, spec))["reach"]
+    assert c.severity == "warning" and "reach.measured_to not stated in the spec; assumed shoulder -> ee_site" in c.message
+    # a passing reach still says what was assumed
+    s["reach"]["value"] = 0.55
+    model, spec = write_case(tmp_path, mjcf(), s)
+    c = by_id(run_checks(model, spec))["reach"]
+    assert c.passed and "assumed shoulder -> ee_site" in c.message
+
+
+def test_gross_reach_mismatch_hint_does_not_say_warning(tmp_path):
+    # 0.55 m measured vs 0.0009 m rated: far beyond 30%, so an error even with an assumed definition
+    s = spec_with(reach={"value": 0.0009}, sources={"total_mass": URL, "reach": URL, "joints": URL},
+                  estimates=["base", "ee"])
+    model, spec = write_case(tmp_path, mjcf(), s)
+    c = assert_fails(run_checks(model, spec), "reach")
+    assert c.severity == "error" and "stays an error" in c.message and "rated 0.0009 m" in c.message
+    assert "only a warning" not in c.fix_hint and "stays an error" in c.fix_hint
+
+
 def test_reach_definition_estimated_is_warning(tmp_path):
-    s = spec_with(reach={"value": 0.45}, sources={"total_mass": URL, "reach.value": URL},
+    s = spec_with(reach={"value": 0.45, "measured_from": "shoulder", "measured_to": "ee_site"}, sources={"total_mass": URL, "reach.value": URL},
                   estimates=["base", "joints", "ee", "reach.measured_from", "reach.measured_to"])
     model, spec = write_case(tmp_path, mjcf(), s)
     report = run_checks(model, spec)

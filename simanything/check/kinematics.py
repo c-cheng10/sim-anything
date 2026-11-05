@@ -172,38 +172,56 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
     if notes:
         details["notes"] = notes
     raw = ctx.spec_raw if ctx.spec_raw is not None else spec
-    def_est = [f for f in ("reach.measured_from", "reach.measured_to") if is_estimate(raw, f)]
+    def_fields = ("reach.measured_from", "reach.measured_to")
+    # a definition field left at its default (not written in the spec) is assumed, like an estimate
+    written = raw.reach.model_fields_set if raw.reach is not None else set()
+    unstated = [f for f in def_fields if f.split(".")[1] not in written]
+    listed = [f for f in def_fields if f not in unstated and is_estimate(raw, f)]
+    def_est = unstated + listed
     value_est = is_estimate(raw, "reach.value")
     details["definition_estimated"] = bool(def_est)
+    details["definition_unstated"] = unstated
     details["value_estimated"] = value_est
+    assumed = (f"{'reach definition' if len(unstated) == 2 else unstated[0] if unstated else ''} not stated in "
+               f"the spec; assumed {reach.measured_from} -> {reach.measured_to}") if unstated else ""
     if abs(rel) <= REACH_TOL:
         return result("reach", True, measured=measured, expected=expected, tolerance=REACH_TOL,
-                      message=f"max reach {measured:.3f} m within {abs(rel) * 100:.1f}% of rated {expected:.3f} m",
+                      message=(f"max reach {_fmt_m(measured)} m within {abs(rel) * 100:.1f}% of rated "
+                               f"{_fmt_m(expected)} m" + (f" ({assumed})" if assumed else "")),
                       details=details)
     too_long = rel > 0
-    msg = (f"max reach {measured:.3f} m is {abs(rel) * 100:.1f}% {'above' if too_long else 'below'} "
-           f"rated {expected:.3f} m")
+    gross = abs(rel) > REACH_GROSS_TOL
+    msg = (f"max reach {_fmt_m(measured)} m is {abs(rel) * 100:.1f}% {'above' if too_long else 'below'} "
+           f"rated {_fmt_m(expected)} m")
     caveats = []
-    if abs(rel) > REACH_GROSS_TOL:
+    if assumed:
+        caveats.append(assumed)
+    if listed:
+        caveats.append(f"the reach definition is assumed ({' and '.join(listed)} listed in estimates)")
+    if value_est:
+        caveats.append("reach.value is an estimate")
+    if gross:
         # no reach definition explains a mismatch this large: units or structure are wrong
         msg += (f"; more than {REACH_GROSS_TOL * 100:.0f}% off, so this stays an error even if the reach "
                 "definition or value is estimated (check `units.length` and the link lengths)")
-    else:
-        if def_est:
-            caveats.append(f"the reach definition is assumed ({' and '.join(def_est)} listed in estimates)")
-        if value_est:
-            caveats.append("reach.value is an estimate")
-    if caveats:
+        if caveats:
+            msg += " (" + "; ".join(caveats) + ")"
+    elif caveats:
         msg += "; warning only: " + "; ".join(caveats)
     try:
         lengths = _reach_sensitivities(spec, reach, shoulder_i, best_q, len(jids))
     except Exception:  # noqa: BLE001 - the hint must not crash the check
         lengths = []
     details["length_sensitivity"] = {p: e for p, e in lengths}
-    return result("reach", False, severity="warning" if caveats else "error", measured=measured,
+    return result("reach", False, severity="warning" if caveats and not gross else "error", measured=measured,
                   expected=expected, tolerance=REACH_TOL, message=msg,
-                  fix_hint=_reach_hint(ctx, too_long, [p for p, _ in lengths[:4]], bool(def_est), value_est),
+                  fix_hint=_reach_hint(ctx, too_long, [p for p, _ in lengths[:4]], def_est, value_est, gross),
                   details=details)
+
+
+def _fmt_m(x: float) -> str:
+    """A length in m: 3 decimals, or 3 significant digits below 0.1 m (0.0009, not 0.001)."""
+    return f"{x:.3f}" if abs(x) >= 0.1 else f"{x:.3g}"
 
 
 def _reach_metric_spec(spec, reach, shoulder_i: int, q: np.ndarray, qhome: np.ndarray) -> float:
@@ -262,7 +280,8 @@ def _reach_sensitivities(spec, reach, shoulder_i: int, best_q: np.ndarray, n_mat
     return out
 
 
-def _reach_hint(ctx: CheckContext, too_long: bool, lengths: list[str], def_est: bool, value_est: bool) -> str:
+def _reach_hint(ctx: CheckContext, too_long: bool, lengths: list[str], def_est: list[str], value_est: bool,
+                gross: bool = False) -> str:
     spec = ctx.spec
     assert spec is not None and spec.reach is not None
     r = spec.reach
@@ -283,12 +302,15 @@ def _reach_hint(ctx: CheckContext, too_long: bool, lengths: list[str], def_est: 
     other_to = "wrist_center" if r.measured_to == "ee_site" else "ee_site"
     if def_est:
         parts.append(f"The reach definition (measured_from = {r.measured_from}, measured_to = {r.measured_to}) is "
-                     "assumed, so this is only a warning.")
+                     f"assumed ({', '.join(def_est)} not stated in the spec or listed in estimates), "
+                     + ("but no reach definition explains a mismatch this large, so this stays an error."
+                        if gross else "so this is only a warning."))
     else:
         parts.append(f"Confirm the source's reach definition: reach.measured_to = {r.measured_to} (vs {other_to}), "
                      f"reach.measured_from = {r.measured_from}.")
-    parts.append("If the source does not state the reach definition, list reach.measured_from/measured_to in "
-                 "`estimates` instead of switching endpoints until it passes.")
+    parts.append("If the source does not state the reach definition, leave reach.measured_from/measured_to "
+                 "unstated or list them in `estimates` instead of switching endpoints until it passes; if it "
+                 "does, write them in the spec and source them.")
     return " ".join(parts)
 
 
