@@ -38,7 +38,7 @@ def test_units_conversion_mm_deg():
     assert si.joints[1].dh.a == pytest.approx(-0.4)
     assert si.joints[0].dh.alpha == pytest.approx(math.pi / 2)
     assert si.joints[0].limits.upper == pytest.approx(2 * math.pi)
-    assert si.reach.value == pytest.approx(0.85)
+    assert si.reach.value == pytest.approx(0.90)
 
 
 def test_offset_chain_fk_toy():

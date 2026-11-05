@@ -96,7 +96,7 @@ and `info` checks never block. Every failed check MUST carry a concrete
 | `joint_structure` | joint count, types (hinge/slide) and order vs spec | exact match by name and type, in chain order | error |
 | `ee_site` | site named `spec.ee.name` exists on the last body | exists | error |
 | `joint_limits` | MJCF `range` vs spec limits (SI) | all limited joints match within 1e-3 rad / 1e-4 m; a joint without spec limits -> warning | error |
-| `reach` | max of the reach metric over 5,000 uniform random configurations within limits vs `spec.reach` | within ±5% (relative) | error (info + pass if spec has no reach) |
+| `reach` | max of the reach metric over 5,000 uniform random configurations within limits, the best 8 polished by a short local search, vs `spec.reach` | within ±5% (relative) | error (info + pass if spec has no reach) |
 | `total_mass` | sum of body masses vs `spec.total_mass` | within ±5% | error (info + pass if absent) |
 | `inertia_valid` | every non-world body: mass > 0, principal inertias > 0, triangle inequality `A+B >= C` (1e-9 slack) | all bodies | error |
 | `self_collision_home` | contacts at the home pose between bodies that are not parent/child | none with penetration > 1 mm | error |
@@ -106,7 +106,8 @@ and `info` checks never block. Every failed check MUST carry a concrete
 
 Reach metric (`spec.reach.measured_from` -> `measured_to`):
 `shoulder` = world position of the 2nd joint's body origin at the home pose
-(1st joint's for 1-DOF); `base_origin` = robot base frame origin;
+(1st joint's for 1-DOF, or when the first two joints are hinges with parallel
+axes, i.e. planar/SCARA-style arms; the report records the choice); `base_origin` = robot base frame origin;
 `base_axis_horizontal` = distance from the 1st joint axis line, measured
 perpendicular to it. `ee_site` = the EE site; `wrist_center` = origin of the
 body of joint `dof-2` (0-based; the 2nd-to-last joint's body, which for a
