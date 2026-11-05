@@ -6,7 +6,7 @@ Resume from this file and BUDGET.md alone. Updated at every phase boundary and r
 - Phases 1-3 complete: all components merged (cherry-picked from agent worktrees), pytest green, `loop` verified end to end on a toy spec (fail -> fix -> pass, renders + report written and inspected).
 - Phase 4 complete: 6 dev robots generated blind into benchmark/runs/<id>/round0/, evaluated (benchmark/RESULTS.md). 5/6 pass all checks (xArm7 fails reach: unstated reach definition). Median p95 EE error on DH-published robots 0.2 mm; all six robots <= 1.4 mm p95.
 - Phase 5 round 1: reviews done (3), triage below, fixes merged (fixer A: 7, fixer B: 7, orchestrator: end-cap exclusion rule, friendly check errors, README/RESULTS framing). Blind re-run into round1/ done: 6/6 pass all error checks, kinematic metrics unchanged (RESULTS.md round-over-round table). Orchestrator fixes after the re-run: gross reach mismatch (>30%) stays an error; .gitignore `runs/` anchored to root.
-- Phase 5 round 2 in progress: new-user tester (verifies gates 2-3 incl. one real /sim-anything run on a non-benchmark arm) + code reviewer.
+- Phase 5 round 2: reviews done, fixers C (evaluator) and D (CLI/check/builder/skill) merged; rounds 0-1 re-scored with the fixed evaluator (unchanged). Blind round2 re-run in progress (2 agents x 3 robots). Menagerie hidden at /root/.cache/simrefs/third_party during generation.
 - Menagerie is back in third_party/. While generation agents run, Menagerie is moved OUT of the repo to /tmp/claude-0/-home-user-sim-anything/a95fd57d-4f5a-5b98-a53c-0a6678d950af/scratchpad/.refs/third_party (move back with `mv <that>/third_party .` before evaluating; if the container was recycled, re-clone it).
 
 ## How to run
