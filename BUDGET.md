@@ -22,6 +22,6 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 13 | 5 r1 | review: code reviewer | done: 12 findings (no kinematic-consistency check, silent collision exclusions, ...) |
 | 14 | 5 r1 | review: benchmark auditor | done: no leakage found, metrics reproduce; framing + weak sources |
 | 15 | 5 r1 | fixer A: checker/builder/spec | running |
-| 16 | 5 r1 | fixer B: loop/CLI/report/eval/plugin/docs | running |
+| 16 | 5 r1 | fixer B: loop/CLI/report/eval/plugin/docs | done: 7 fixes merged (report every iteration, cap exit 2, skill renamed robot-to-mujoco, friendly errors, slide range, skill docs) |
 
 ## Refinement rounds used: 1 / 3 (in progress)
