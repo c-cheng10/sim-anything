@@ -1,0 +1,28 @@
+{
+  "robot": "ur5e",
+  "spec": "benchmark/runs/ur5e/round1/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T08:29:11+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 2,
+      "failed_ids": [],
+      "note": "initial spec: UR DH article (standard DH), techsheet ranges/speeds, datasheet mass/payload/reach, UR torque article",
+      "build_error": null
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-11-05T08:29:38+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 1,
+      "failed_ids": [],
+      "note": "units m->mm for the whole file: reach 850 and repeatability 0.03 are mm but were read as m in iter 1",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
