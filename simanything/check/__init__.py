@@ -110,11 +110,12 @@ def run_checks(model_path: str | Path, spec_path: str | Path | None = None, *, s
         "actuators": lambda: check_actuators(ctx),
         "sources_complete": lambda: check_sources_complete(ctx),
     }
+    spec_name = str(spec_path) if spec_path is not None else "the spec"
     checks: list[CheckResult] = []
     for cid in CHECK_IDS:
         if spec_bad and cid in SPEC_DEPENDENT:
             checks.append(result(cid, False, message=f"spec could not be loaded: {ctx.spec_error}",
-                                 fix_hint="Fix spec.yaml so it validates (`sim-anything validate spec.yaml`); "
+                                 fix_hint=f"Fix {spec_name} so it validates (`sim-anything validate {spec_name}`); "
                                           "the error names the offending field."))
         elif ctx.model is None and cid not in ("compiles", "sources_complete"):
             checks.append(_not_run(cid, "model did not compile",

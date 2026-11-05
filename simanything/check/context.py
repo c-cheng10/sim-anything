@@ -60,7 +60,9 @@ class CheckContext:
                 ctx.spec_raw = load_spec(spec_path)
                 ctx.spec = ctx.spec_raw.to_si()
             except Exception as e:  # noqa: BLE001 - any spec problem is reported, not raised
-                ctx.spec_error = f"{type(e).__name__}: {e}"
+                from ..errors import describe_exception
+
+                ctx.spec_error = describe_exception(e)
         try:
             ctx.model = mujoco.MjModel.from_xml_path(str(model_path))
             ctx.data = mujoco.MjData(ctx.model)
