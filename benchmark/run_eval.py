@@ -37,9 +37,9 @@ def main() -> int:
 
     robots = yaml.safe_load((ROOT / "benchmark/robots.yaml").read_text())[args.set]
     header = ("| Robot | DH published | Checks | Iterations | EE pos mean / p95 / max (mm) | "
-              "Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Score |")
+              "Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |")
     print(header)
-    print("|" + "---|" * 9)
+    print("|" + "---|" * 10)
     p95s_dh = []
     for r in robots:
         rd = ROOT / "benchmark/runs" / r["id"] / args.round
@@ -55,17 +55,20 @@ def main() -> int:
             hj = json.loads((rd / "run/history.json").read_text())
             iters = str(len(hj.get("iterations", [])))
         if not model.exists() or not mp.exists():
-            print(f"| {r['name']} | {r.get('publishes_dh')} | {checks} | {iters} | no model or map | - | - | - | - |")
+            print(f"| {r['name']} | {r.get('publishes_dh')} | {checks} | {iters} | no model or map | - | - | - | - | - |")
             continue
         res = evaluate(model, ROOT / r["reference"], load_mapping(mp), n_samples=args.samples, seed=0)
         (rd / "eval.json").write_text(json.dumps(res.model_dump(mode="json"), indent=2) + "\n")
         p = res.ee_position_error_mm
+        flips = sum(c.sign == -1 for c in res.conventions)
+        offs = sum(c.offset != 0.0 for c in res.conventions)
+        conv = f"yaw {res.base_yaw_deg:+.0f}°, {flips} sign flip(s), {offs} offset(s)"
         if r.get("publishes_dh"):
             p95s_dh.append(p.p95)
         print(f"| {r['name']} | {r.get('publishes_dh')} | {checks} | {iters} | "
               f"{p.mean:.1f} / {p.p95:.1f} / {p.max:.1f} | {res.ee_orientation_error_aligned_deg.p95:.1f} | "
               f"{res.joint_limit_mae_deg:.1f} | {res.mass_candidate:.2f} / {res.mass_reference:.2f} | "
-              f"{res.score:.1f} |")
+              f"{conv} | {res.score:.1f} |")
     if p95s_dh:
         print(f"\nMedian p95 EE position error, robots with published DH: {statistics.median(p95s_dh):.1f} mm "
               f"(n={len(p95s_dh)})")

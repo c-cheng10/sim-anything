@@ -339,3 +339,20 @@ def test_base_yaw_is_fitted_instead_of_joint1_offset(tmp_path):
     assert [(c.sign, c.offset) for c in res.conventions] == [(1, 0.0)] * 4
     assert res.ee_position_error_mm.max < 1e-6
     assert res.joint_limit_mae_deg == pytest.approx(0.0, abs=1e-9)
+
+
+def test_base_body_frames_remove_mounting_offset(tmp_path):
+    """A reference standing on a pedestal (base body raised) matches when both sides
+    express EE poses in their base body frames."""
+    xml = REF.read_text().replace('<body name="base">', '<body name="base" pos="0 0 0.12">')
+    raised = tmp_path / "raised.xml"
+    raised.write_text(xml)
+    side = {"joints": ["j1", "j2", "j3", "j4"], "ee": {"site": "tool"}}
+    m = {"candidate": side, "reference": side}
+    res = evaluate(REF, raised, m, n_samples=200)
+    assert res.ee_position_error_mm.max == pytest.approx(120.0, abs=1e-6)
+    m2 = {"candidate": {**side, "base_body": "base"}, "reference": {**side, "base_body": "base"}}
+    res2 = evaluate(REF, raised, m2, n_samples=200)
+    assert res2.ee_position_error_mm.max < 1e-6
+    with pytest.raises(ValueError):
+        evaluate(REF, raised, {"candidate": {**side, "base_body": "link2"}, "reference": side}, n_samples=10)

@@ -3,24 +3,32 @@
 ur5e:
   joints: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
   ee: {site: attachment_site}
+  base_body: base
 franka_panda:
   joints: [joint1, joint2, joint3, joint4, joint5, joint6, joint7]
   ee: {site: attachment_site}
+  base_body: link0
 kinova_gen3:
   joints: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6, joint_7]
   ee: {site: pinch_site}
+  base_body: base_link
 xarm7:
   joints: [joint1, joint2, joint3, joint4, joint5, joint6, joint7]
   ee: {site: attachment_site}
+  base_body: link_base
 kuka_iiwa14:
   joints: [joint1, joint2, joint3, joint4, joint5, joint6, joint7]
   ee: {site: attachment_site}
+  base_body: base
 viperx_300s:
   joints: [waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate]
   ee: {body: gripper_link}
+  base_body: base_link
 ur10e:
   joints: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
   ee: {site: attachment_site}
+  base_body: base
 ufactory_lite6:
   joints: [joint1, joint2, joint3, joint4, joint5, joint6]
   ee: {site: attachment_site}
+  base_body: link_base

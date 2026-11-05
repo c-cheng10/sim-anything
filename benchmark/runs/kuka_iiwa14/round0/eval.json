@@ -1,0 +1,173 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/kuka_iiwa14/round0/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/kuka_iiwa_14/iiwa14.xml",
+  "robot": "kuka_iiwa14",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 7,
+  "dof_reference": 7,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": -1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 0.0,
+  "ee_position_error_mm": {
+    "mean": 4.340971273779469e-13,
+    "p95": 7.474189764381548e-13,
+    "max": 1.1960688787401997e-12
+  },
+  "ee_orientation_error_deg": {
+    "mean": 7.84868449536813e-14,
+    "p95": 1.1716363923378178e-13,
+    "max": 1.6186590083943386e-13
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 8.314400421098895e-14,
+    "p95": 1.2072230600473359e-13,
+    "max": 1.6441979634550707e-13
+  },
+  "joint_limits": [
+    {
+      "candidate": "A1",
+      "reference": "joint1",
+      "candidate_range": [
+        -2.96705972839,
+        2.96705972839
+      ],
+      "reference_range": [
+        -2.96706,
+        2.96706
+      ],
+      "lower_diff": 2.7160999982456246e-07,
+      "upper_diff": -2.7160999982456246e-07
+    },
+    {
+      "candidate": "A2",
+      "reference": "joint2",
+      "candidate_range": [
+        -2.09439510239,
+        2.09439510239
+      ],
+      "reference_range": [
+        -2.0944,
+        2.0944
+      ],
+      "lower_diff": 4.89760999977662e-06,
+      "upper_diff": -4.89760999977662e-06
+    },
+    {
+      "candidate": "A3",
+      "reference": "joint3",
+      "candidate_range": [
+        -2.96705972839,
+        2.96705972839
+      ],
+      "reference_range": [
+        -2.96706,
+        2.96706
+      ],
+      "lower_diff": 2.7160999982456246e-07,
+      "upper_diff": -2.7160999982456246e-07
+    },
+    {
+      "candidate": "A4",
+      "reference": "joint4",
+      "candidate_range": [
+        -2.09439510239,
+        2.09439510239
+      ],
+      "reference_range": [
+        -2.0944,
+        2.0944
+      ],
+      "lower_diff": 4.89760999977662e-06,
+      "upper_diff": -4.89760999977662e-06
+    },
+    {
+      "candidate": "A5",
+      "reference": "joint5",
+      "candidate_range": [
+        -2.96705972839,
+        2.96705972839
+      ],
+      "reference_range": [
+        -2.96706,
+        2.96706
+      ],
+      "lower_diff": 2.7160999982456246e-07,
+      "upper_diff": -2.7160999982456246e-07
+    },
+    {
+      "candidate": "A6",
+      "reference": "joint6",
+      "candidate_range": [
+        -2.09439510239,
+        2.09439510239
+      ],
+      "reference_range": [
+        -2.0944,
+        2.0944
+      ],
+      "lower_diff": 4.89760999977662e-06,
+      "upper_diff": -4.89760999977662e-06
+    },
+    {
+      "candidate": "A7",
+      "reference": "joint7",
+      "candidate_range": [
+        -3.05432619099,
+        3.05432619099
+      ],
+      "reference_range": [
+        -3.05433,
+        3.05433
+      ],
+      "lower_diff": 3.8090100002996508e-06,
+      "upper_diff": -3.8090100002996508e-06
+    }
+  ],
+  "joint_limit_mae_deg": 0.00015810909502794127,
+  "mass_candidate": 29.90000012,
+  "mass_reference": 30.61,
+  "mass_diff": -0.709999879999998,
+  "mass_rel_diff": -0.023195030382227966,
+  "score": 98.90473634002913,
+  "score_breakdown": {
+    "pos": 0.9999999999999701,
+    "orient": 0.9999999999999879,
+    "limits": 0.9999841892154889,
+    "mass": 0.8904973501798531,
+    "dof": 1.0
+  },
+  "notes": [
+    "fitted non-identity conventions: A4: sign -1, offset +0 deg"
+  ]
+}

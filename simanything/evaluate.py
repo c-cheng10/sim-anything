@@ -36,7 +36,8 @@ __all__ = ["load_mapping", "evaluate", "compute_score", "sampling_interval", "fi
            "N_FIT_CONFIGS", "OFFSET_CHOICES"]
 
 N_FIT_CONFIGS = 256
-FIT_SWEEPS = 2
+FIT_SWEEPS = 6
+FIT_RESTARTS = 4
 OFFSET_CHOICES = (0.0, math.pi / 2, -math.pi / 2, math.pi)
 _HINGE = int(mujoco.mjtJoint.mjJNT_HINGE)
 _SLIDE = int(mujoco.mjtJoint.mjJNT_SLIDE)
@@ -98,6 +99,8 @@ class _Side:
     ee_pos: np.ndarray
     ee_rot: np.ndarray
     yaw: float = 0.0  # rotation of this whole model about world z (base mounting convention)
+    base_pos: Optional[np.ndarray] = None  # world pose of the mapping's base body (fixed), if any
+    base_rot: Optional[np.ndarray] = None
 
     def fk(self, Q: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """EE world positions (N,3) and rotation matrices (N,3,3) for joint configs Q (N,n)."""
@@ -117,6 +120,9 @@ class _Side:
                 Rb = d.xmat[self.body_id].reshape(3, 3)
                 P[i] = d.xpos[self.body_id] + Rb @ self.ee_pos
                 R[i] = Rb @ self.ee_rot
+        if self.base_rot is not None:
+            P = (P - self.base_pos) @ self.base_rot  # rows: R^T (p - p0)
+            R = np.einsum("ji,njk->nik", self.base_rot, R)
         if self.yaw != 0.0:
             c, s = math.cos(self.yaw), math.sin(self.yaw)
             Rz = np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
@@ -125,7 +131,8 @@ class _Side:
         return P, R
 
 
-def _load_side(label: str, path: PathLike, joints: list[str], ee: EESpec) -> _Side:
+def _load_side(label: str, path: PathLike, joints: list[str], ee: EESpec,
+               base_body: Optional[str] = None) -> _Side:
     try:
         model = mujoco.MjModel.from_xml_path(str(path))
     except Exception as exc:  # mujoco raises ValueError with the compiler message
@@ -159,8 +166,27 @@ def _load_side(label: str, path: PathLike, joints: list[str], ee: EESpec) -> _Si
         raise ValueError(f"{label} EE quat must be non-zero")
     rot = np.empty(9)
     mujoco.mju_quat2Mat(rot, quat / np.linalg.norm(quat))
-    return _Side(label, model, data, np.array(jids, dtype=int), np.array(qadr, dtype=int), jtypes, ranges,
+    side = _Side(label, model, data, np.array(jids, dtype=int), np.array(qadr, dtype=int), jtypes, ranges,
                  site_id, body_id, np.asarray(ee.pos, dtype=float), rot.reshape(3, 3))
+    if base_body is not None:
+        bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, base_body)
+        if bid < 0:
+            raise ValueError(f"{label} base body {base_body!r} not found in {path}")
+        if bid > 0 and any(model.body_jntnum[b] > 0 for b in _ancestors(model, bid)):
+            raise ValueError(f"{label} base body {base_body!r} must not move (it has jointed ancestors)")
+        data.qpos[:] = model.qpos0
+        mujoco.mj_kinematics(model, data)
+        side.base_pos = data.xpos[bid].copy()
+        side.base_rot = data.xmat[bid].reshape(3, 3).copy()
+    return side
+
+
+def _ancestors(model: mujoco.MjModel, bid: int) -> list[int]:
+    out = []
+    while bid > 0:
+        out.append(bid)
+        bid = int(model.body_parentid[bid])
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -271,59 +297,113 @@ def _uniform(rng: np.random.Generator, bounds: list[tuple[float, float]], n: int
 
 
 def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, sweeps: int = FIT_SWEEPS,
-                    fit_yaw: bool = True) -> list[JointConvention]:
-    """Discrete per-hinge sign/offset fit by coordinate descent (see module docstring).
+                    fit_yaw: bool = True, restarts: int = FIT_RESTARTS, seed: int = 0) -> list[JointConvention]:
+    """Discrete fit of per-hinge sign/offset (and the candidate base yaw).
 
-    If ``fit_yaw`` is true, the candidate's base yaw (``cand.yaw``, a rotation of
-    the whole candidate about world z from {0, +90, -90, 180} deg) is fitted first
-    in every sweep and left set on ``cand``. A base frame turned relative to the
-    datasheet frame is a mounting convention; fitting it explicitly keeps it from
-    being absorbed into joint 1's offset (which would distort the limit comparison).
+    Steepest descent over single changes (the yaw or one joint's option), run
+    from the identity and from ``restarts`` random starting points until no
+    change improves the cost. The best result by mean EE
+    position error (ties: mean aligned orientation error) is then simplified:
+    any joint/yaw is moved to a simpler option (identity < sign flip < offset)
+    when that does not make the cost worse. Simplicity matters because several
+    discrete combinations can be kinematically equivalent (e.g. a pi offset on
+    two parallel-axis neighbours vs a sign flip), and the simplest one makes the
+    joint-limit comparison meaningful. ``cand.yaw`` is left set to the fitted yaw.
     """
     n = len(cand.jtypes)
-    conv = [JointConvention() for _ in range(n)]
     fittable = [i for i in range(n) if cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE]
     options = [(s, o) for s in (1, -1) for o in OFFSET_CHOICES]
+    yaw_opts = list(OFFSET_CHOICES) if fit_yaw else [cand.yaw]
     Pr_cache: dict = {}
     Pc_cache: dict = {}
 
-    def cost(cv: list[JointConvention]) -> tuple[float, float]:
-        if cand.yaw not in Pc_cache:
-            Pc_cache[cand.yaw] = cand.fk(Q)
-        Pc, Rc = Pc_cache[cand.yaw]
-        key = tuple((c.sign, c.offset) for c in cv)
-        if key not in Pr_cache:
-            Pr_cache[key] = ref.fk(_apply(cv, Q))
-        Pr, Rr = Pr_cache[key]
-        pos = float(np.mean(np.linalg.norm(Pc - Pr, axis=1)))
-        ori = float(np.mean(_aligned_angles(Rc, Rr)))
-        return pos, ori
+    def cost(yaw: float, cv: tuple) -> tuple[float, float]:
+        if yaw not in Pc_cache:
+            cand.yaw = yaw
+            Pc_cache[yaw] = cand.fk(Q)
+        Pc, Rc = Pc_cache[yaw]
+        if cv not in Pr_cache:
+            Pr_cache[cv] = ref.fk(_apply([JointConvention(sign=s, offset=o) for s, o in cv], Q))
+        Pr, Rr = Pr_cache[cv]
+        return (float(np.mean(np.linalg.norm(Pc - Pr, axis=1))), float(np.mean(_aligned_angles(Rc, Rr))))
 
-    def pick(results):
-        best_pos = min(r[1] for r in results)
-        near = [r for r in results if r[1] <= best_pos + 1e-9 + 1e-6 * best_pos]
-        best_ori = min(r[2] for r in near)
-        return next(r for r in near if r[2] <= best_ori + 1e-9)
+    def better(a: tuple[float, float], b: tuple[float, float]) -> bool:
+        """a strictly better than b (position first, orientation breaks ties)."""
+        tol = 1e-9 + 1e-6 * min(a[0], b[0])
+        if a[0] < b[0] - tol:
+            return True
+        if a[0] > b[0] + tol:
+            return False
+        return a[1] < b[1] - 1e-9
 
-    for _ in range(sweeps):
-        if fit_yaw:
-            cur = cand.yaw
-            results = []
-            for y in [cur] + [o for o in OFFSET_CHOICES if o != cur]:
-                cand.yaw = y
-                results.append((y, *cost(conv)))
-            cand.yaw = pick(results)[0]
+    def complexity(opt) -> int:
+        if isinstance(opt, tuple):
+            return (opt[0] == -1) + 2 * (opt[1] != 0.0)
+        return 2 * (opt != 0.0)
+
+    def descend(yaw: float, cv: list) -> tuple[float, list, tuple[float, float]]:
+        """Steepest descent: each step takes the single change (yaw or one joint) with
+        the lowest cost; among equal-cost changes the simplest one wins."""
+        cur = cost(yaw, tuple(cv))
+        for _ in range(sweeps * max(1, len(fittable))):
+            best_move = None  # (cost, complexity, yaw, cv)
+            for y in yaw_opts:
+                if y != yaw:
+                    best_move = _pick(best_move, (cost(y, tuple(cv)), complexity(y), y, cv))
+            for i in fittable:
+                for opt in options:
+                    if opt == cv[i]:
+                        continue
+                    trial = list(cv)
+                    trial[i] = opt
+                    cx = complexity(opt) - complexity(cv[i])
+                    best_move = _pick(best_move, (cost(yaw, tuple(trial)), cx, yaw, trial))
+            if best_move is None or not better(best_move[0], cur):
+                break
+            cur, _, yaw, cv = best_move
+        return yaw, cv, cur
+
+    def _pick(a, b):
+        if a is None or better(b[0], a[0]):
+            return b
+        if not better(a[0], b[0]) and b[1] < a[1]:
+            return b
+        return a
+
+    def total_complexity(yaw: float, cv: list) -> int:
+        return complexity(yaw) + sum(complexity(o) for o in cv)
+
+    rng = np.random.default_rng(seed)
+    starts = [(cand.yaw if not fit_yaw else 0.0, [(1, 0.0)] * n)]
+    for _ in range(restarts):
+        cv = [(1, 0.0)] * n
         for i in fittable:
-            cur = (conv[i].sign, conv[i].offset)
-            ordered = [cur] + [o for o in options if o != cur]
-            results = []
-            for s, o in ordered:
-                trial = list(conv)
-                trial[i] = JointConvention(sign=s, offset=o)
-                results.append(((s, o), *cost(trial)))
-            choice = pick(results)
-            conv[i] = JointConvention(sign=choice[0][0], offset=choice[0][1])
-    return conv
+            cv[i] = options[int(rng.integers(len(options)))]
+        starts.append((yaw_opts[int(rng.integers(len(yaw_opts)))], cv))
+    best = None
+    for y0, cv0 in starts:
+        res = descend(y0, list(cv0))
+        if best is None or better(res[2], best[2]) or (
+                not better(best[2], res[2]) and total_complexity(res[0], res[1]) < total_complexity(best[0], best[1])):
+            best = res
+    yaw, cv, cur = best
+    # simplify without making the cost worse
+    for _ in range(2):
+        for y in sorted(yaw_opts, key=complexity):
+            if complexity(y) < complexity(yaw) and not better(cur, cost(y, tuple(cv))):
+                yaw, cur = y, cost(y, tuple(cv))
+        for i in fittable:
+            for opt in sorted(options, key=complexity):
+                if complexity(opt) >= complexity(cv[i]):
+                    break
+                trial = list(cv)
+                trial[i] = opt
+                c = cost(yaw, tuple(trial))
+                if not better(cur, c):
+                    cv, cur = trial, c
+                    break
+    cand.yaw = yaw
+    return [JointConvention(sign=s, offset=o) for s, o in cv]
 
 
 # --------------------------------------------------------------------------- #
@@ -364,8 +444,10 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
     if n_samples < 1:
         raise ValueError("n_samples must be >= 1")
     notes: list[str] = []
-    cand = _load_side("candidate", candidate_path, mapping.candidate.joints, mapping.candidate.ee)
-    ref = _load_side("reference", reference_path, mapping.reference.joints, mapping.reference.ee)
+    cand = _load_side("candidate", candidate_path, mapping.candidate.joints, mapping.candidate.ee,
+                      mapping.candidate.base_body)
+    ref = _load_side("reference", reference_path, mapping.reference.joints, mapping.reference.ee,
+                     mapping.reference.base_body)
     n = len(mapping.candidate.joints)
 
     # -- structure notes ------------------------------------------------------
@@ -395,7 +477,7 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
     elif mapping.fit_conventions:
         fit_bounds = [_own_range(r) for r in cand.ranges]
         Qfit = _uniform(rng, fit_bounds, N_FIT_CONFIGS)
-        conv = fit_conventions(cand, ref, Qfit, fit_yaw=mapping.base_yaw is None)
+        conv = fit_conventions(cand, ref, Qfit, fit_yaw=mapping.base_yaw is None, seed=seed)
         fitted = True
         if cand.yaw != 0.0:
             notes.append(f"fitted candidate base yaw {math.degrees(cand.yaw):+.0f} deg (mounting-frame convention)")

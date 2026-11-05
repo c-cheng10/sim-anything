@@ -81,6 +81,7 @@ class MappingSide(BaseModel):
 
     joints: list[str]
     ee: EESpec
+    base_body: Optional[str] = None  # express EE poses in this body's frame (default: world)
 
 
 class JointConvention(BaseModel):

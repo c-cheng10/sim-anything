@@ -21,4 +21,5 @@ reference:
   - joint7
   ee:
     site: attachment_site
+  base_body: link0
 fit_conventions: true

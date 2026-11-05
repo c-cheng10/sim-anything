@@ -1,7 +1,11 @@
 """Write benchmark/runs/<id>/<round>/map.yaml from the candidate spec and reference_sides.yaml.
 
 Usage: python benchmark/make_map.py <round> [ids...]
-Candidate side: the spec's joints in chain order and its EE site. Orchestrator-only.
+Candidate side: the spec's joints in chain order and its EE site, in world coordinates
+(the spec's base.origin places the arm's mounting frame in the world; the builder's
+`base` body may carry a rotation used to orient DH frame 0, so it is not the mount).
+Reference side: its mounting base body (removes pedestals such as xArm's).
+Orchestrator-only.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ def main() -> int:
         n = min(len(spec.joints), len(ref["joints"]))
         m = {"robot": rid,
              "candidate": {"joints": [j.name for j in spec.joints][:n], "ee": {"site": spec.ee.name}},
-             "reference": {"joints": ref["joints"][:n], "ee": ref["ee"]},
+             "reference": {"joints": ref["joints"][:n], "ee": ref["ee"], "base_body": ref["base_body"]},
              "fit_conventions": True}
         (rd / "map.yaml").write_text(yaml.safe_dump(m, sort_keys=False))
         print(f"{rid}: wrote {rd / 'map.yaml'} ({len(spec.joints)} cand joints, {len(ref['joints'])} ref joints)")

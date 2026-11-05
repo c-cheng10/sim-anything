@@ -125,6 +125,7 @@ candidate:
 reference:
   joints: [shoulder_pan_joint, shoulder_lift_joint, elbow_joint, wrist_1_joint, wrist_2_joint, wrist_3_joint]
   ee: {site: attachment_site}            # or {body: name, pos: [x,y,z], quat: [w,x,y,z]}
+  base_body: base                        # optional: compare EE poses in this (fixed) body's frame
 joint_conventions:                       # optional, one per mapped joint:
   - {sign: 1, offset: 0.0}               #   q_ref = sign * q_cand + offset
 base_yaw: null                           # optional, rad; null = fitted (see below)
@@ -139,13 +140,15 @@ gripper fingers) are held at their `qpos0`.
 differ between a datasheet and a simulation model. If `joint_conventions` is
 given it is used as-is. Otherwise, if `fit_conventions` is true, the evaluator
 picks, per hinge joint, `sign ∈ {+1,-1}` and `offset ∈ {0, +π/2, -π/2, π}`
-minimising mean EE position error on 256 configurations (coordinate descent,
-2 sweeps), and reports the choice in `conventions` with
-`conventions_fitted: true`. Before the joints in every sweep it also fits a
-candidate base yaw (rotation of the whole candidate about world z, from the
-same four angles) unless `base_yaw` is given; reported as `base_yaw_deg`.
-A base frame turned relative to the datasheet frame is a mounting convention;
-fitting it explicitly keeps it out of joint 1's offset and the limit comparison. Only these discrete conventional choices are
+minimising mean EE position error on 256 configurations (steepest descent over
+single changes from the identity plus 4 seeded random starts; equal-cost
+alternatives resolve to the simplest: identity < sign flip < offset), and
+reports the choice in `conventions` with `conventions_fitted: true`. Before
+the joints it also considers a candidate base yaw (rotation of the whole
+candidate about world z, from the same four angles) unless `base_yaw` is
+given; reported as `base_yaw_deg`. A base frame turned relative to the
+datasheet frame is a mounting convention; fitting it explicitly keeps it out
+of joint 1's offset and the limit comparison. Only these discrete conventional choices are
 searched; no continuous parameters are fitted.
 
 ### Sampling
@@ -162,7 +165,9 @@ unlimited joint is compared as [-π, π] in limit diffs.
 ### Metrics (`simanything.schemas.EvalResult`)
 
 * `ee_position_error_mm`: |p_cand - p_ref| of the mapped EE points, both in
-  world coordinates (mean, p95, max).
+  world coordinates, or in each side's `base_body` frame when given (the
+  benchmark maps use the robot's mounting base so a pedestal or a world
+  placement offset is not counted as model error) (mean, p95, max).
 * `ee_orientation_error_deg`: geodesic angle between EE frames, raw.
 * `ee_orientation_error_aligned_deg`: same after the best constant tool-frame
   rotation R* (R_ref ≈ R_cand · R*, chordal L2 mean over the samples),
