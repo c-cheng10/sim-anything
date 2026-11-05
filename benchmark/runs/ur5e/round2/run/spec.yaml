@@ -1,0 +1,93 @@
+name: ur5e
+manufacturer: Universal Robots
+model: UR5e (e-Series)
+description: UR5e collaborative robot arm, arm only (no tool); EE site at the tool flange (DH frame 6).
+dof: 6
+units: {length: m, angle: deg}      # DH table is in m and rad; pi/2 rad written as 90 deg
+convention: dh_standard             # UR article: a_i, d_i, alpha_i per joint, theta_i = q_i
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 0.0745}]
+joints:
+  - name: shoulder_pan
+    dh: {a: 0, d: 0.1625, alpha: 90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 3.761, com: [0, -0.02561, 0.00193], geometry: [{shape: capsule, radius: 0.06}]}
+  - name: shoulder_lift
+    dh: {a: -0.425, d: 0, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 8.058, com: [0.2125, 0, 0.11336], geometry: [{shape: capsule, radius: 0.055}]}
+  - name: elbow
+    dh: {a: -0.3922, d: 0, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 2.846, geometry: [{shape: capsule, radius: 0.04}]}
+  - name: wrist_1
+    dh: {a: 0, d: 0.1333, alpha: 90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 1.37, geometry: [{shape: capsule, radius: 0.04}]}
+  - name: wrist_2
+    dh: {a: 0, d: 0.0997, alpha: -90}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 1.3, com: [0, 0.0018, 0.01634], geometry: [{shape: capsule, radius: 0.04}]}
+  - name: wrist_3
+    dh: {a: 0, d: 0.0996, alpha: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 28
+    link: {mass: 0.365, geometry: [{shape: cylinder, radius: 0.032}]}
+ee: {name: ee_site}                 # frame 6 is the tool flange in UR's DH convention (d6 = flange distance)
+total_mass: 20.6
+payload: 5
+repeatability: 0.03
+reach: {value: 0.85, measured_from: base_axis_horizontal, measured_to: ee_site}
+sources:
+  joints[*].dh: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].link.mass: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].link.com: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].limits: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  joints[*].velocity_limit: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  joints[4].effort_limit: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+  joints[5].effort_limit: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+  joints[0].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[1].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[2].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[3].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  total_mass: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  payload: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  repeatability: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  reach.value: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  reach.measured_from: https://www.universal-robots.com/manuals/EN/PDF/SW5_19/user-manual-UR5e-PDF_online/710-965-00_UR5e_User_Manual_en_Global.pdf
+estimates:
+  - base.link.geometry
+  - joints[*].link.geometry
+  - reach.measured_to
+notes: >
+  Kinematic source: published DH table (Universal Robots support article "DH parameters for calculations of
+  kinematics and dynamics", primary; retrieved as web-search extracts because universal-robots.com could not be
+  fetched directly). Standard DH, theta_i = q_i (no offsets); rows copied verbatim, alpha pi/2 written as 90 deg.
+  The datasheet drawing labels (162.5, 425, 392.2, 99.7, 133 mm) agree with d1, a2, a3, d5, d4.
+  EE site = DH frame 6 = tool flange face (UR's d6 = 0.0996 m is the distance to the flange), so ee.origin is zero.
+  Joint ranges: techsheet working range +-360 deg on every joint; speeds 180 deg/s each (techsheet).
+  Link masses (3.761, 8.058, 2.846, 1.37, 1.3, 0.365 kg) and the CoMs of links 1, 2 and 5 from the same UR article
+  (CoMs are offsets from the DH frame of that link); CoMs of links 3, 4, 6 were not extracted, so left to the builder.
+  total_mass 20.6 kg is the datasheet weight including cable (user manual says 20.7 kg); the base gets the remainder
+  (about 2.9 kg) since its mass is not published. Effort limits: wrist 2/3 = Size 1 = 28 Nm from the official UR
+  torque article extract; base/shoulder/elbow 150 Nm and wrist 1 28 Nm are SECOND-HAND (UR forum post); per the forum
+  these are damage thresholds, not continuous output torques.
+  Reach: datasheet R850 working-area radius; the manual describes it as measured from the base joint (J1 axis), so
+  measured_from = base_axis_horizontal. That it ends at the flange (not the wrist centre) is my assumption, listed
+  as an estimate. Footprint: datasheet says 149 mm, techsheet 151 mm.
+  Estimated geometry (no housing diameters are published except the footprint): base cylinder radius 0.0745 m = half
+  the 149 mm footprint; link capsule radii 0.06/0.055/0.04/0.04/0.04 m and the 0.032 m flange cylinder are judged from
+  product photos relative to the 149 mm base. Capsules follow the DH segments, so the real lateral shoulder/elbow
+  offsets (folded into d4 by the DH table) are not drawn where the real housings are.
