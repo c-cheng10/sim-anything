@@ -13,8 +13,9 @@ Interpretation notes (where the contract leaves room):
 * Convention fitting: the primary objective is the mean EE position error.
   Options whose position error ties the best one (e.g. a wrist roll whose axis
   passes through the EE point) are separated by the mean aligned orientation
-  error, and the current choice is kept on a full tie. Slide joints are not
-  fitted (sign 1, offset 0).
+  error. The discrete search (single, then pair and triple changes, restarted
+  until two runs agree) is described in :func:`fit_conventions`. Slide joints
+  are not fitted (sign 1, offset 0).
 * Base yaw: the candidate may be rotated about world z by a fitted (or given)
   multiple of 90 deg before comparison, reported as ``base_yaw_deg``.
 * Joint-limit diffs: an unlimited joint is reported as its default range
@@ -24,6 +25,8 @@ Interpretation notes (where the contract leaves room):
 
 from __future__ import annotations
 
+import functools
+import itertools
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -39,8 +42,14 @@ __all__ = ["load_mapping", "evaluate", "compute_score", "sampling_interval", "de
            "N_FIT_CONFIGS", "OFFSET_CHOICES"]
 
 N_FIT_CONFIGS = 256
-FIT_SWEEPS = 6
-FIT_RESTARTS = 4
+FIT_MAX_RUNS = 16  # descents (identity + seeded random starts) until two reach the same best cost
+FIT_MAX_STEPS = 50  # accepted changes per descent
+N_SCREEN_CONFIGS = 32  # configurations used to rank candidate moves before confirming them on all
+N_CONFIRM = 8  # best-ranked pair moves confirmed on all configurations
+TINY_POS_M = 1e-6  # mean EE position error below which pair moves are not tried
+MAX_MOVE_ORDER = 3  # largest number of variables changed in one move (descent and equal-cost search)
+N_TIE_SCREEN_CONFIGS = 8  # configurations used to screen equal-cost alternatives (exact ties hold on any subset)
+PLATEAU_MAX = 128  # cap on the number of equal-cost alternatives collected
 OFFSET_CHOICES = (0.0, math.pi / 2, -math.pi / 2, math.pi)
 UNLIMITED_SLIDE_RANGE_M = 0.1  # an unlimited slide joint is sampled/compared over +-this many metres
 _HINGE = int(mujoco.mjtJoint.mjJNT_HINGE)
@@ -310,36 +319,137 @@ def _uniform(rng: np.random.Generator, bounds: list[tuple[float, float]], n: int
     return lo + (hi - lo) * rng.random((n, len(bounds)))
 
 
-def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, sweeps: int = FIT_SWEEPS,
-                    fit_yaw: bool = True, restarts: int = FIT_RESTARTS, seed: int = 0) -> list[JointConvention]:
+def _hom(R: np.ndarray, t: np.ndarray) -> np.ndarray:
+    T = np.zeros(R.shape[:-2] + (4, 4))
+    T[..., :3, :3] = R
+    T[..., :3, 3] = t
+    T[..., 3, 3] = 1.0
+    return T
+
+
+def _screw(axis: np.ndarray, anchor: np.ndarray, jtype: int, q: np.ndarray) -> np.ndarray:
+    """(N,4,4) transforms of a hinge (rotation by q about the line anchor + t*axis) or a
+    slide (translation by q along axis), all in world coordinates."""
+    n = len(q)
+    if jtype == _SLIDE:
+        return _hom(np.broadcast_to(np.eye(3), (n, 3, 3)), q[:, None] * axis)
+    K = np.array([[0.0, -axis[2], axis[1]], [axis[2], 0.0, -axis[0]], [-axis[1], axis[0], 0.0]])
+    s, c = np.sin(q)[:, None, None], np.cos(q)[:, None, None]
+    R = np.eye(3) + s * K + (1.0 - c) * (K @ K)
+    return _hom(R, anchor - R @ anchor)
+
+
+def _xform_points(T: np.ndarray, w: Optional[np.ndarray]) -> np.ndarray:
+    """Homogeneous transforms T (..., 4, 4) applied to points w (..., 3); w=None is the origin."""
+    if w is None:
+        return T[..., :3, 3]
+    return T[..., :3, 0] * w[..., :1] + T[..., :3, 1] * w[..., 1:2] + T[..., :3, 2] * w[..., 2:] + T[..., :3, 3]
+
+
+def _poe_factors(side: _Side, Q: np.ndarray, opts: list[list[tuple[int, float]]]
+                 ) -> tuple[list[int], list[np.ndarray], np.ndarray]:
+    """Product-of-exponentials form of ``side.fk`` (without yaw) for vectorised fitting.
+
+    With every joint at qpos0 (where MuJoCo's joint rotations/translations are
+    zero) the EE pose is M, and each mapped joint on the EE body's ancestor path
+    is a screw about its world axis through its anchor, so
+    ``T(q) = B E_1(q_1) ... E_k(q_k) M`` in chain (joint id) order, B being the
+    ``base_body`` frame. Returns ``(order, factors, BM)``: ``order`` lists the
+    mapping indices of those joints (others cannot move the EE),
+    ``factors[j][k]`` is E for joint ``order[j]`` under option ``opts[i][k]``
+    (``q_ref = sign * Q[:, i] + offset``), shape (K, N, 4, 4), and
+    ``BM = (B, M)`` as (1, 1, 4, 4) arrays.
+    """
+    m, d = side.model, side.data
+    d.qpos[:] = m.qpos0
+    mujoco.mj_kinematics(m, d)
+    if side.site_id >= 0:
+        bid = int(m.site_bodyid[side.site_id])
+        M = _hom(d.site_xmat[side.site_id].reshape(3, 3), d.site_xpos[side.site_id])
+    else:
+        bid = side.body_id
+        Rb = d.xmat[bid].reshape(3, 3)
+        M = _hom(Rb @ side.ee_rot, d.xpos[bid] + Rb @ side.ee_pos)
+    path = set(_ancestors(m, bid))
+    B = np.eye(4)
+    if side.base_rot is not None:
+        B = _hom(side.base_rot.T, -side.base_rot.T @ side.base_pos)
+    order = sorted((i for i, j in enumerate(side.joint_ids) if int(m.jnt_bodyid[j]) in path),
+                   key=lambda i: int(side.joint_ids[i]))
+    factors = []
+    for i in order:
+        j, adr = int(side.joint_ids[i]), int(side.qadr[i])
+        axis, anchor = d.xaxis[j].copy(), d.xanchor[j].copy()
+        factors.append(np.stack([_screw(axis, anchor, side.jtypes[i], s * Q[:, i] + o - m.qpos0[adr])
+                                 for s, o in opts[i]]))
+    return order, factors, (B[None, None], M[None, None])
+
+
+def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, fit_yaw: bool = True, seed: int = 0,
+                    max_runs: int = FIT_MAX_RUNS) -> list[JointConvention]:
     """Discrete fit of per-hinge sign/offset (and the candidate base yaw).
 
-    Steepest descent over single changes (the yaw or one joint's option), run
-    from the identity and from ``restarts`` random starting points until no
-    change improves the cost. The best result by mean EE
-    position error (ties: mean aligned orientation error) is then simplified:
-    any joint/yaw is moved to a simpler option (identity < sign flip < offset)
-    when that does not make the cost worse. Simplicity matters because several
-    discrete combinations can be kinematically equivalent (e.g. a pi offset on
-    two parallel-axis neighbours vs a sign flip), and the simplest one makes the
-    joint-limit comparison meaningful. ``cand.yaw`` is left set to the fitted yaw.
+    Cost: mean EE position error over the configurations ``Q`` (candidate
+    coordinates), ties broken by the mean aligned orientation error. Search:
+    steepest descent over single changes (the yaw or one joint's option); when
+    those stall above ``TINY_POS_M``, the best simultaneous change of two, then
+    three, variables is tried (e.g. a base turn compensated further down the
+    chain). Runs start from the identity, then from seeded random starting
+    points, until two runs reach the same best cost (at most ``max_runs``).
+    Moves are ranked on the first ``N_SCREEN_CONFIGS`` configurations and the
+    best few confirmed on all of ``Q``; the reference EE pose of any convention
+    is a product of precomputed per-joint screw transforms
+    (:func:`_poe_factors`, checked against MuJoCo's kinematics), so a move is
+    cheap to evaluate. Equal-cost alternatives (reachable from the best by
+    cost-preserving changes of up to ``MAX_MOVE_ORDER`` variables) resolve to
+    the simplest (identity < sign flip < offset; a base yaw before joint
+    offsets). ``cand.yaw`` is left set to the fitted yaw.
     """
     n = len(cand.jtypes)
-    fittable = [i for i in range(n) if cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE]
-    options = [(s, o) for s in (1, -1) for o in OFFSET_CHOICES]
+    hinge_opts = [(s, o) for s in (1, -1) for o in OFFSET_CHOICES]
+    opts = [hinge_opts if cand.jtypes[i] == _HINGE and ref.jtypes[i] == _HINGE else [(1, 0.0)] for i in range(n)]
     yaw_opts = list(OFFSET_CHOICES) if fit_yaw else [cand.yaw]
-    Pr_cache: dict = {}
-    Pc_cache: dict = {}
 
-    def cost(yaw: float, cv: tuple) -> tuple[float, float]:
-        if yaw not in Pc_cache:
-            cand.yaw = yaw
-            Pc_cache[yaw] = cand.fk(Q)
-        Pc, Rc = Pc_cache[yaw]
-        if cv not in Pr_cache:
-            Pr_cache[cv] = ref.fk(_apply([JointConvention(sign=s, offset=o) for s, o in cv], Q))
-        Pr, Rr = Pr_cache[cv]
-        return (float(np.mean(np.linalg.norm(Pc - Pr, axis=1))), float(np.mean(_aligned_angles(Rc, Rr))))
+    cand.yaw = 0.0  # the yaw is applied to the reference side instead (as its inverse)
+    Pc, Rc = cand.fk(Q)
+    ns = min(N_SCREEN_CONFIGS, len(Q))
+    ns_tie = min(N_TIE_SCREEN_CONFIGS, len(Q))
+    order, jfac, (B, M) = _poe_factors(ref, Q, opts)
+    Rz = np.array([[[math.cos(-y), -math.sin(-y), 0.0], [math.sin(-y), math.cos(-y), 0.0], [0.0, 0.0, 1.0]]
+                   for y in yaw_opts])
+    # chain of factors: [yaw (inverse) . base frame], joints in chain order, [EE at qpos0]
+    F = [(_hom(Rz, np.zeros(3)) @ B[0])[:, None]] + jfac + [M]
+    var_opts = [[(1, y) for y in yaw_opts]] + [opts[i] for i in order] + [[(1, 0.0)]]
+    nv = len(F)
+    searchable = [v for v in range(nv) if len(var_opts[v]) > 1]
+
+    def cx(v: int, k: int) -> int:
+        s, o = var_opts[v][k]
+        return (s == -1) + 2 * (o != 0.0)
+
+    def chain(x: tuple, stop: Optional[int] = None, lo: int = 0, hi: Optional[int] = None) -> np.ndarray:
+        T = np.broadcast_to(np.eye(4), (1, 4, 4))
+        for v in range(lo, nv if hi is None else hi):
+            T = T @ F[v][x[v], :stop]
+        return T
+
+    identity = tuple(0 for _ in range(nv))
+    if fit_yaw:
+        identity = (yaw_opts.index(0.0),) + identity[1:]
+    # sanity check of the factorisation against MuJoCo (identity conventions, no yaw)
+    T0 = np.broadcast_to(B[0] @ chain(identity, 8, 1), (min(8, len(Q)), 4, 4))
+    P0, R0 = ref.fk(Q[:8])
+    if np.max(np.abs(T0[:, :3, 3] - P0)) > 1e-9 or np.max(np.abs(T0[:, :3, :3] - R0)) > 1e-9:
+        raise RuntimeError("internal error: product-of-exponentials kinematics disagree with MuJoCo")
+
+    cache: dict[tuple, tuple[float, float]] = {}
+
+    def cost(x: tuple) -> tuple[float, float]:
+        if x not in cache:
+            T = np.broadcast_to(chain(x), (len(Q), 4, 4))
+            pos = float(np.mean(np.linalg.norm(Pc - T[:, :3, 3], axis=1)))
+            cache[x] = (pos, float(np.mean(_aligned_angles(Rc, T[:, :3, :3]))))
+        return cache[x]
 
     def better(a: tuple[float, float], b: tuple[float, float]) -> bool:
         """a strictly better than b (position first, orientation breaks ties)."""
@@ -348,76 +458,101 @@ def fit_conventions(cand: _Side, ref: _Side, Q: np.ndarray, sweeps: int = FIT_SW
             return True
         if a[0] > b[0] + tol:
             return False
-        return a[1] < b[1] - 1e-9
+        return a[1] < b[1] - 1e-9 - 1e-6 * min(a[1], b[1])
 
-    def complexity(opt) -> int:
-        if isinstance(opt, tuple):
-            return (opt[0] == -1) + 2 * (opt[1] != 0.0)
-        return 2 * (opt != 0.0)
+    def scan(x: tuple, vs: tuple[int, ...], ns: int = ns) -> tuple[np.ndarray, list]:
+        """Screening position cost of every change of exactly the variables ``vs``
+        (flat array over the alternatives, in ``itertools.product`` order)."""
+        alts = [[k for k in range(len(var_opts[v])) if k != x[v]] for v in vs]
+        # propagate the EE point from the tip to the base; alternatives of earlier
+        # variables become leading axes
+        w, nxt = None, nv
+        for v, alt in zip(reversed(vs), reversed(alts)):
+            w = _xform_points(chain(x, ns, v + 1, nxt), w)
+            Fa = F[v][alt, :ns]
+            w = _xform_points(Fa.reshape(Fa.shape[:1] + (1,) * (w.ndim - 2) + Fa.shape[1:]), w[None])
+            nxt = v
+        w = _xform_points(chain(x, ns, 0, nxt), w)
+        return np.mean(np.linalg.norm(w - Pc[:ns], axis=-1), axis=-1).ravel(), alts
 
-    def descend(yaw: float, cv: list) -> tuple[float, list, tuple[float, float]]:
-        """Steepest descent: each step takes the single change (yaw or one joint) with
-        the lowest cost; among equal-cost changes the simplest one wins."""
-        cur = cost(yaw, tuple(cv))
-        for _ in range(sweeps * max(1, len(fittable))):
-            best_move = None  # (cost, complexity, yaw, cv)
-            for y in yaw_opts:
-                if y != yaw:
-                    best_move = _pick(best_move, (cost(y, tuple(cv)), complexity(y), y, cv))
-            for i in fittable:
-                for opt in options:
-                    if opt == cv[i]:
-                        continue
-                    trial = list(cv)
-                    trial[i] = opt
-                    cx = complexity(opt) - complexity(cv[i])
-                    best_move = _pick(best_move, (cost(yaw, tuple(trial)), cx, yaw, trial))
-            if best_move is None or not better(best_move[0], cur):
+    def moved(x: tuple, vs: tuple[int, ...], alts: list, flat: int) -> tuple:
+        y = list(x)
+        for v, alt, k in zip(vs, alts, np.unravel_index(flat, [len(a) for a in alts])):
+            y[v] = alt[k]
+        return tuple(y)
+
+    def best_move(x: tuple, order_: int) -> Optional[tuple]:
+        """Best change of exactly ``order_`` variables: all are ranked on the screening
+        configurations, the best ``N_CONFIRM`` (all single changes) confirmed on all."""
+        scans = [(vs,) + scan(x, vs) for vs in itertools.combinations(searchable, order_)]
+        if not scans:
+            return None
+        errs = np.concatenate([s[1] for s in scans])
+        owner = np.concatenate([np.full(len(s[1]), j) for j, s in enumerate(scans)])
+        start = np.cumsum([0] + [len(s[1]) for s in scans])
+        picks = np.argsort(errs, kind="stable")
+        best = None
+        for f in (picks if order_ == 1 else picks[:N_CONFIRM]):
+            vs, _, alts = scans[owner[f]]
+            y = moved(x, vs, alts, int(f - start[owner[f]]))
+            if best is None or better(cost(y), cost(best)):
+                best = y
+        return best
+
+    def descend(x: tuple) -> tuple:
+        """Steepest descent; changes of 2..MAX_MOVE_ORDER variables are tried only when
+        smaller ones stall above TINY_POS_M."""
+        for _ in range(FIT_MAX_STEPS):
+            cur = cost(x)
+            for order_ in range(1, MAX_MOVE_ORDER + 1):
+                if order_ > 1 and cur[0] <= TINY_POS_M:
+                    break
+                y = best_move(x, order_)
+                if y is not None and better(cost(y), cur):
+                    break
+            if y is None or not better(cost(y), cur):
                 break
-            cur, _, yaw, cv = best_move
-        return yaw, cv, cur
+            x = y
+        return x
 
-    def _pick(a, b):
-        if a is None or better(b[0], a[0]):
-            return b
-        if not better(a[0], b[0]) and b[1] < a[1]:
-            return b
-        return a
+    def same(a: tuple[float, float], b: tuple[float, float]) -> bool:
+        return not better(a, b) and not better(b, a)
 
-    def total_complexity(yaw: float, cv: list) -> int:
-        return complexity(yaw) + sum(complexity(o) for o in cv)
-
+    by_cost = functools.cmp_to_key(lambda a, b: -1 if better(cost(a), cost(b)) else int(better(cost(b), cost(a))))
     rng = np.random.default_rng(seed)
-    starts = [(cand.yaw if not fit_yaw else 0.0, [(1, 0.0)] * n)]
-    for _ in range(restarts):
-        cv = [(1, 0.0)] * n
-        for i in fittable:
-            cv[i] = options[int(rng.integers(len(options)))]
-        starts.append((yaw_opts[int(rng.integers(len(yaw_opts)))], cv))
-    best = None
-    for y0, cv0 in starts:
-        res = descend(y0, list(cv0))
-        if best is None or better(res[2], best[2]) or (
-                not better(best[2], res[2]) and total_complexity(res[0], res[1]) < total_complexity(best[0], best[1])):
-            best = res
-    yaw, cv, cur = best
-    # simplify without making the cost worse
-    for _ in range(2):
-        for y in sorted(yaw_opts, key=complexity):
-            if complexity(y) < complexity(yaw) and not better(cur, cost(y, tuple(cv))):
-                yaw, cur = y, cost(y, tuple(cv))
-        for i in fittable:
-            for opt in sorted(options, key=complexity):
-                if complexity(opt) >= complexity(cv[i]):
-                    break
-                trial = list(cv)
-                trial[i] = opt
-                c = cost(yaw, tuple(trial))
-                if not better(cur, c):
-                    cv, cur = trial, c
-                    break
-    cand.yaw = yaw
-    return [JointConvention(sign=s, offset=o) for s, o in cv]
+    results = [descend(identity)]
+    while len(results) < max_runs:
+        best = min(results, key=by_cost)
+        if sum(same(cost(r), cost(best)) for r in results) >= 2:
+            break
+        results.append(descend(tuple(int(rng.integers(len(var_opts[v]))) for v in range(nv))))
+    best = min(results, key=by_cost)
+    # Equal-cost solutions: collect those reachable from the best by changes of up
+    # to MAX_MOVE_ORDER variables that keep the cost (exact kinematic
+    # equivalences tie on every configuration, so on the screening set too).
+    best_cost = cost(best)
+    tied = {x for x in cache if same(cache[x], best_cost)}
+    queue = sorted(tied)
+    while queue and len(tied) < PLATEAU_MAX:
+        x = queue.pop(0)
+        e0 = float(scan(x, (), ns_tie)[0][0])
+        tol = 1e-9 + 1e-6 * e0
+        for r in range(1, MAX_MOVE_ORDER + 1):
+            for vs in itertools.combinations(searchable, r):
+                errs, alts = scan(x, vs, ns_tie)
+                for f in np.flatnonzero(np.abs(errs - e0) <= tol):
+                    y = moved(x, vs, alts, int(f))
+                    if y not in tied and same(cost(y), best_cost):
+                        tied.add(y)
+                        queue.append(y)
+    # simplest first; on equal complexity a base yaw rather than joint offsets
+    x = min(tied, key=lambda t: (sum(cx(v, t[v]) for v in range(nv)), sum(cx(v, t[v]) for v in range(1, nv)), t))
+    cand.yaw = var_opts[0][x[0]][1]
+    conv = [JointConvention() for _ in range(n)]
+    for j, i in enumerate(order):
+        s, o = var_opts[j + 1][x[j + 1]]
+        conv[i] = JointConvention(sign=s, offset=o)
+    return conv
 
 
 # --------------------------------------------------------------------------- #

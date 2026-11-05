@@ -296,6 +296,91 @@ def _ur5e_copy(menagerie_dir: Path, tmp_path: Path, *subs: tuple[str, str]) -> P
     return out
 
 
+PANDA_JOINTS = [f"joint{i}" for i in range(1, 8)]
+
+
+def _reconventioned(src: Path, out: Path, joints: list[str], conv: list[tuple[int, float]], yaw: float) -> Path:
+    """Exact copy of ``src`` whose joint i satisfies q_src = sign * q_out + offset (axis
+    flipped, zero moved via the joint ``ref``, range mapped) and whose top-level bodies are
+    turned by -yaw about world z, so the evaluator should fit ``conv`` and base yaw ``yaw``.
+    Values are written with full float precision, so the kinematics are identical."""
+    import xml.etree.ElementTree as ET
+
+    import mujoco
+
+    model = mujoco.MjModel.from_xml_path(str(src))
+    tree = ET.parse(src)
+    root = tree.getroot()
+    for comp in root.iter("compiler"):
+        for attr in ("meshdir", "texturedir", "assetdir"):
+            if attr in comp.attrib:
+                comp.set(attr, str((src.parent / comp.get(attr)).resolve()))
+    fmt = lambda v: " ".join(repr(float(a)) for a in v)  # noqa: E731
+    for name, (s, o) in zip(joints, conv):
+        el = next(e for e in root.iter("joint") if e.get("name") == name)
+        jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+        r0 = float(model.qpos0[model.jnt_qposadr[jid]])
+        lo, hi = (s * (v - o) for v in model.jnt_range[jid])
+        el.set("axis", fmt(s * model.jnt_axis[jid]))
+        el.set("ref", repr(s * (r0 - o)))
+        el.set("range", fmt(sorted((lo, hi))))
+    c, sn = math.cos(-yaw), math.sin(-yaw)
+    qz = np.array([math.cos(-yaw / 2), 0.0, 0.0, math.sin(-yaw / 2)])
+    for el in root.find("worldbody").findall("body"):
+        bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, el.get("name"))
+        quat = np.empty(4)
+        mujoco.mju_mulQuat(quat, qz, model.body_quat[bid])
+        for attr in ("euler", "axisangle", "xyaxes", "zaxis"):
+            el.attrib.pop(attr, None)
+        el.set("quat", fmt(quat))
+        el.set("pos", fmt(np.array([[c, -sn, 0.0], [sn, c, 0.0], [0.0, 0.0, 1.0]]) @ model.body_pos[bid]))
+    tree.write(out)
+    return out
+
+
+def _random_conventions(rng: np.random.Generator, n: int, frac: float) -> tuple[list[tuple[int, float]], float]:
+    choices = (0.0, PI / 2, -PI / 2, PI)
+    conv = [(int(rng.choice([1, -1])), float(rng.choice(choices))) if rng.random() < frac else (1, 0.0)
+            for _ in range(n)]
+    yaw = float(rng.choice(choices)) if rng.random() < frac else 0.0
+    return conv, yaw
+
+
+MENAGERIE_ARMS = {
+    "panda": ("franka_emika_panda/panda_nohand.xml", PANDA_JOINTS),
+    "ur5e": ("universal_robots_ur5e/ur5e.xml", UR5E_JOINTS),
+}
+
+
+@pytest.mark.menagerie
+@pytest.mark.parametrize("robot", sorted(MENAGERIE_ARMS))
+def test_reconventioned_menagerie_arm_is_recovered(menagerie_dir, tmp_path, robot):
+    """Re-conventioned exact copies (random signs/offsets on all or some joints plus a base
+    yaw) must fit to ~0 EE error: the discrete search must not stop in a local minimum."""
+    rel, joints = MENAGERIE_ARMS[robot]
+    ref = menagerie_dir / rel
+    side = {"joints": joints, "ee": {"site": "attachment_site"}}
+    # Trials 0-5: every joint and the yaw re-conventioned; 6-8: about 30% of them.
+    # (Before pair/triple moves, Panda trials 0, 3 and 4 stopped at 27-353 mm.)
+    for trial in range(9):
+        conv, yaw = _random_conventions(np.random.default_rng(1000 + trial), len(joints), 1.0 if trial < 6 else 0.3)
+        cand = _reconventioned(ref, tmp_path / f"{robot}_{trial}.xml", joints, conv, yaw)
+        res = evaluate(cand, ref, {"candidate": side, "reference": side}, n_samples=500, seed=trial)
+        assert res.ee_position_error_mm.max < 1e-6, (trial, conv, yaw, res.conventions, res.base_yaw_deg)
+        assert res.ee_orientation_error_aligned_deg.max < 1e-6, (trial, conv, yaw)
+
+
+@pytest.mark.menagerie
+def test_seven_dof_evaluate_is_fast(menagerie_dir, tmp_path):
+    ref = menagerie_dir / MENAGERIE_ARMS["panda"][0]
+    conv, yaw = _random_conventions(np.random.default_rng(7), 7, 1.0)
+    cand = _reconventioned(ref, tmp_path / "panda.xml", PANDA_JOINTS, conv, yaw)
+    side = {"joints": PANDA_JOINTS, "ee": {"site": "attachment_site"}}
+    t0 = time.perf_counter()
+    evaluate(cand, ref, {"candidate": side, "reference": side}, n_samples=2000, seed=0)
+    assert time.perf_counter() - t0 < 15.0
+
+
 @pytest.mark.menagerie
 def test_ur5e_self_evaluation(menagerie_dir):
     ur5e = menagerie_dir / "universal_robots_ur5e" / "ur5e.xml"

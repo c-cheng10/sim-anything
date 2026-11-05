@@ -180,8 +180,11 @@ differ between a datasheet and a simulation model. If `joint_conventions` is
 given it is used as-is. Otherwise, if `fit_conventions` is true, the evaluator
 picks, per hinge joint, `sign ∈ {+1,-1}` and `offset ∈ {0, +π/2, -π/2, π}`
 minimising mean EE position error on 256 configurations (steepest descent over
-single changes from the identity plus 4 seeded random starts; equal-cost
-alternatives resolve to the simplest: identity < sign flip < offset), and
+single changes, escalating to simultaneous changes of two and then three
+variables when single changes stall above 1 µm; run from the identity and
+then from seeded random starts until two runs reach the same best cost, at
+most 16 runs; equal-cost alternatives resolve to the simplest: identity <
+sign flip < offset, a base yaw before joint offsets), and
 reports the choice in `conventions` with `conventions_fitted: true`. Before
 the joints it also considers a candidate base yaw (rotation of the whole
 candidate about world z, from the same four angles) unless `base_yaw` is
