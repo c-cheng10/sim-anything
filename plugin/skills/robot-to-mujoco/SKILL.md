@@ -1,9 +1,9 @@
 ---
-name: sim-anything
+name: robot-to-mujoco
 description: Reverse-engineer a real robot arm into a verified MuJoCo simulation from public information (datasheets, manuals, product pages). Use when asked to build, model, or simulate a specific robot arm in MuJoCo from its specs. Gathers sourced specs into spec.yaml, then runs the sim-anything build/check loop until the model passes, and writes renders plus an HTML/Markdown report.
 ---
 
-# sim-anything: robot arm -> verified MuJoCo model
+# robot-to-mujoco: robot arm -> verified MuJoCo model (sim-anything)
 
 You write exactly one file, `spec.yaml`. Deterministic code builds the MJCF,
 checks it, renders it and writes the report. Your job is to get the numbers

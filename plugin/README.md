@@ -1,6 +1,6 @@
 # sim-anything Claude Code plugin
 
-Gives Claude Code a `sim-anything` skill and a `/sim-anything <robot>` command that turn a real
+Gives Claude Code a `robot-to-mujoco` skill and a `/sim-anything <robot>` command that turn a real
 robot arm's public datasheets into a verified MuJoCo model (spec.yaml -> MJCF -> checks -> renders
 and report).
 
@@ -41,6 +41,6 @@ Claude gathers sources into `runs/ur5e/sources.md`, writes `runs/ur5e/spec.yaml`
 plugin/
   .claude-plugin/plugin.json      # plugin manifest
   commands/sim-anything.md        # /sim-anything slash command
-  skills/sim-anything/SKILL.md    # the workflow the agent follows
+  skills/robot-to-mujoco/SKILL.md # the workflow the agent follows (skill `robot-to-mujoco`)
 .claude-plugin/marketplace.json   # (repo root) marketplace listing this plugin at ./plugin
 ```

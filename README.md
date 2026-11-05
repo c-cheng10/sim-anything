@@ -24,7 +24,7 @@ flowchart LR
     R -.-> E["EVAL<br/>score vs a reference model"]
 ```
 
-* **GATHER** — the plugin's skill (`plugin/skills/sim-anything/SKILL.md`) tells
+* **GATHER** — the plugin's skill (`plugin/skills/robot-to-mujoco/SKILL.md`) tells
   the agent where to look, how to read DH tables (standard vs modified), and the
   one rule that matters: never invent numbers. Every number is either listed in
   `sources` with a URL or in `estimates`.

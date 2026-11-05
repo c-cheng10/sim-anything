@@ -5,7 +5,7 @@ argument-hint: <robot name, e.g. "UR5e" or "Franka Emika Panda">
 
 Build a verified MuJoCo simulation of this robot arm: **$ARGUMENTS**
 
-Follow the `sim-anything` skill exactly (load it now if it is not already loaded). Summary:
+Follow the `robot-to-mujoco` skill exactly (load it now if it is not already loaded). Summary:
 
 1. Pick a slug for the robot (lowercase, underscores, e.g. `ur5e`, `kuka_iiwa14`) and work in
    `runs/<slug>/`. Create the directory. If `runs/<slug>/spec.yaml` already exists, continue
