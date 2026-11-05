@@ -58,9 +58,11 @@ Contact exclusions
     with the body whose segment ends at the shared origin (bodies separated
     only by zero-length links). The only other automatic exclusion is a
     grandparent/grandchild pair (k, k+2) whose geoms overlap in *every* one of
-    32 sampled configurations (home + 31 seeded random ones) and, at home, by
-    at most twice the thinner geom's thickness and within the thicker geom's radius of the middle link's
-    segment: the end caps of two links meeting around a short link. Any
+    32 sampled configurations (home + 31 seeded random ones) and, at home, only
+    as two capsule/cylinder end caps meeting around the short middle link (the
+    segment ends next to it are the closest points of the two segments, the
+    overlap is at most r1 + r2 - their distance, and the contact is within the
+    thicker radius of the middle link's segment). Any
     other overlap (an oversized primitive, geometry reaching back over a
     joint, a deep overlap at home, bodies further apart) is not excluded, so
     self_collision_home reports it. Each exclusion is listed with its reason in an XML comment
@@ -95,7 +97,7 @@ SAT_ERROR = {"hinge": 0.02, "slide": 0.002}        # error at which the effort l
 WN = 25.0                         # rad/s, minimum closed-loop bandwidth (if effort allows)
 WN_MAX = 150.0                    # rad/s, stability cap for the explicit position loop
 N_CONTACT_SAMPLES = 32
-SHALLOW_OVERLAP = 0.005           # m; deepest overlap tolerated around a short link (see _shallow_joint_excludes)
+END_CAP_TOL = 0.001               # m; numerical slack of the end-cap test (see _shallow_joint_excludes)
 
 _RGBA = ["0.55 0.6 0.68 1", "0.85 0.55 0.2 1"]
 _BASE_RGBA = "0.3 0.3 0.33 1"
@@ -555,13 +557,53 @@ def _seg_dist(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
     return float(np.linalg.norm(p - (a + t * d)))
 
 
+def _seg_seg_dist(a1: np.ndarray, b1: np.ndarray, a2: np.ndarray, b2: np.ndarray) -> float:
+    """Distance between segments [a1, b1] and [a2, b2] (Ericson, Real-Time Collision Detection 5.1.9)."""
+    d1, d2, r = b1 - a1, b2 - a2, a1 - a2
+    a, e, f = float(d1 @ d1), float(d2 @ d2), float(d2 @ r)
+    eps = EPS_LEN ** 2
+    if a <= eps and e <= eps:
+        return float(np.linalg.norm(r))
+    if a <= eps:
+        s, t = 0.0, min(1.0, max(0.0, f / e))
+    else:
+        c = float(d1 @ r)
+        if e <= eps:
+            s, t = min(1.0, max(0.0, -c / a)), 0.0
+        else:
+            b = float(d1 @ d2)
+            den = a * e - b * b
+            s = min(1.0, max(0.0, (b * f - c * e) / den)) if den > eps * max(a, e) else 0.0
+            t = (b * s + f) / e
+            if t < 0.0:
+                s, t = min(1.0, max(0.0, -c / a)), 0.0
+            elif t > 1.0:
+                s, t = min(1.0, max(0.0, (b - c) / a)), 1.0
+    return float(np.linalg.norm((a1 + s * d1) - (a2 + t * d2)))
+
+
+def _geom_segment(model, data, g: int) -> tuple[np.ndarray, np.ndarray]:
+    """World end points of a capsule/cylinder geom's axis segment."""
+    axis = data.geom_xmat[g].reshape(3, 3)[:, 2]
+    h = float(model.geom_size[g][1])
+    c = np.array(data.geom_xpos[g])
+    return c - h * axis, c + h * axis
+
+
 def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: set[frozenset]
                             ) -> list[tuple[str, str, str]]:
     """Grandparent/grandchild pairs (k, k+2) whose geoms overlap in *every* sampled configuration and,
-    at home, only next to the middle link's segment (within the thicker geom's radius) and by no more
-    than twice the thinner geom's thickness (at least SHALLOW_OVERLAP): the end caps of two links
-    meeting around a short link. Only capsule/cylinder contacts qualify: any box or sphere contact
-    between the pair disqualifies it (an oversized primitive is a geometry error, not an end cap). Anything else that
+    at home, only as two end caps meeting around the short middle link: the end cap of link k's
+    segment and the end cap of link k+2's segment.
+
+    At home, for every contact of the pair, take each geom's axis segment and its end adjacent to the
+    middle link (the end nearest the middle link's segment). The pair qualifies only if the closest
+    points of the two segments are those two ends (within END_CAP_TOL), the overlap is no deeper than
+    r1 + r2 - (distance between those ends) (plus END_CAP_TOL), and the contact lies next to the middle
+    link (within the thicker geom's radius of its segment). A geom that reaches back past its joint
+    into the grandparent link, two links folded onto each other, or an oversized primitive fails these
+    tests. Only capsule/cylinder contacts qualify: any box or sphere contact between the pair
+    disqualifies it (an oversized primitive is a geometry error, not an end cap). Anything else that
     overlaps (deeper at home, away from the shared joints, only in some poses, or between bodies
     further apart) is a real collision, left for the self_collision_home check to report. (MuJoCo
     reports one contact per geom pair, the deepest, so in folded poses the end-cap overlap can be
@@ -577,7 +619,6 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
     if not cand:
         return []
     home_depth = {pr: 0.0 for pr in cand}
-    home_limit = {pr: SHALLOW_OVERLAP for pr in cand}
     data = mujoco.MjData(model)
     for s, q in enumerate(_sample_configs(si, N_CONTACT_SAMPLES)):  # sample 0 is home
         data.qpos[:] = q
@@ -595,18 +636,29 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
                 far.add(pr)  # only rounded/flat end caps of link segments qualify; never boxes/spheres
                 continue
             touched.add(pr)
-            if s == 0:  # at home the overlap must be shallow and right around the middle link
-                home_depth[pr] = max(home_depth[pr], -float(c.dist))
-                t1, t2 = _geom_thickness(model, c.geom1), _geom_thickness(model, c.geom2)
-                # two end caps meeting around a short link can overlap by up to twice the thinner
-                # geom's thickness; deeper than that (e.g. an oversized primitive) is not an end-cap
-                # artifact
-                home_limit[pr] = max(home_limit[pr], 2.0 * min(t1, t2))
+            if s == 0:  # at home the overlap must be two end caps meeting right around the middle link
+                depth = -float(c.dist)
+                home_depth[pr] = max(home_depth[pr], depth)
                 mid, child = cand[pr]
-                if _seg_dist(np.array(c.pos), data.xpos[mid], data.xpos[child]) > max(t1, t2):
+                pm, pc = data.xpos[mid], data.xpos[child]
+                ends = []
+                for g in (c.geom1, c.geom2):
+                    p, q2 = _geom_segment(model, data, g)
+                    ends.append((p, q2, p if _seg_dist(p, pm, pc) <= _seg_dist(q2, pm, pc) else q2))
+                (a1, b1, e1), (a2, b2, e2) = ends
+                gap = float(np.linalg.norm(e1 - e2))
+                r1, r2 = _geom_thickness(model, c.geom1), _geom_thickness(model, c.geom2)
+                # Overlap of the two capsules' axis segments (>= the reported depth; for cylinders the
+                # contact depth itself can be smaller). Capping it at what two end caps can overlap
+                # across the gap between the adjacent ends means that those ends are the closest points
+                # of the two segments: the geoms meet cap to cap, not side-on or reaching past a joint.
+                seg_depth = max(depth, r1 + r2 - _seg_seg_dist(a1, b1, a2, b2))
+                if seg_depth > r1 + r2 - gap + END_CAP_TOL:
                     far.add(pr)
+                if _seg_dist(np.array(c.pos), pm, pc) > max(r1, r2):
+                    far.add(pr)  # not next to the middle link
         for pr in list(cand):
-            if pr not in touched or pr in far or home_depth[pr] > home_limit[pr]:
+            if pr not in touched or pr in far:
                 del cand[pr]
         if not cand:
             return []

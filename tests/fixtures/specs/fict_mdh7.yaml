@@ -1,0 +1,26 @@
+# A fictional 7-DOF arm described with modified (Craig) DH parameters, with
+# short elbow offsets of 8.25 cm (a Franka-style layout). Every number is an
+# estimate: there is no real robot behind it. Used to check that short elbow
+# offsets do not give false self-collision errors.
+name: fict_mdh7
+manufacturer: none (fictional)
+dof: 7
+units: {length: m, angle: deg}
+convention: dh_modified
+base: {link: {mass: 2.0}}
+joints:
+  - {name: j1, dh: {a: 0,       alpha: 0,   d: 0.333}, limits: {lower: -166, upper: 166}, effort_limit: 87, link: {mass: 4.0}}
+  - {name: j2, dh: {a: 0,       alpha: -90, d: 0},     limits: {lower: -101, upper: 101}, effort_limit: 87, link: {mass: 4.0}}
+  - {name: j3, dh: {a: 0,       alpha: 90,  d: 0.316}, limits: {lower: -166, upper: 166}, effort_limit: 87, link: {mass: 3.0}}
+  - {name: j4, dh: {a: 0.0825,  alpha: 90,  d: 0},     limits: {lower: -176, upper: -4},  effort_limit: 87, home: -135,
+     link: {mass: 3.0}}
+  - {name: j5, dh: {a: -0.0825, alpha: -90, d: 0.384}, limits: {lower: -166, upper: 166}, effort_limit: 12,
+     link: {mass: 2.0, geometry: [{shape: sphere, radius: 0.05}]}}
+  - {name: j6, dh: {a: 0,       alpha: 90,  d: 0},     limits: {lower: -1,   upper: 215}, effort_limit: 12, home: 90,
+     link: {mass: 1.5}}
+  - {name: j7, dh: {a: 0.088,   alpha: 90,  d: 0},     limits: {lower: -166, upper: 166}, effort_limit: 12, home: 45,
+     link: {mass: 0.5}}
+ee: {name: flange, origin: {xyz: [0, 0, 0.107]}}
+total_mass: 20
+reach: {value: 0.855, measured_from: shoulder, measured_to: ee_site}
+estimates: [base, joints, ee, total_mass, reach]

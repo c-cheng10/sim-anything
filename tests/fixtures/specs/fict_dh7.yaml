@@ -1,0 +1,28 @@
+# A fictional 7-DOF arm described with standard DH parameters, with 12 mm
+# joint offsets and 45 mm link radii (a Kinova-style layout). Every number is
+# an estimate: there is no real robot behind it. Used to check that short
+# joint offsets do not give false self-collision errors.
+name: fict_dh7
+manufacturer: none (fictional)
+dof: 7
+units: {length: m, angle: deg}
+convention: dh_standard
+base: {link: {mass: 1.7}}
+joints:
+  - {name: j1, dh: {a: 0, alpha: 90, d: 0.2848}, effort_limit: 39,
+     link: {mass: 1.4, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j2, dh: {a: 0, alpha: 90, d: -0.012}, limits: {lower: -128, upper: 128}, effort_limit: 39, home: 15,
+     link: {mass: 1.2, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j3, dh: {a: 0, alpha: 90, d: -0.4208}, effort_limit: 39, home: 180,
+     link: {mass: 1.2, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j4, dh: {a: 0, alpha: 90, d: -0.012}, limits: {lower: -147, upper: 147}, effort_limit: 39, home: 130,
+     link: {mass: 1.1, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j5, dh: {a: 0, alpha: 90, d: -0.3143}, effort_limit: 9,
+     link: {mass: 0.9, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j6, dh: {a: 0, alpha: 90, d: 0}, limits: {lower: -120, upper: 120}, effort_limit: 9, home: 90,
+     link: {mass: 0.6, geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: j7, dh: {a: 0, alpha: 180, d: -0.1674}, effort_limit: 9, home: 180,
+     link: {mass: 0.6, geometry: [{shape: capsule, radius: 0.045}]}}
+total_mass: 8.7
+reach: {value: 0.9, measured_from: shoulder, measured_to: ee_site}
+estimates: [base, joints, total_mass, reach]

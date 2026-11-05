@@ -278,9 +278,12 @@ score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
   2. bodies whose origins coincide (zero-length links, e.g. a spherical wrist), pairwise, together with the
      body whose segment ends at the shared origin (bodies separated only by zero-length links);
   3. a grandparent/grandchild pair (k, k+2) whose capsule/cylinder geoms overlap in every one of 32
-     sampled configurations (home + 31 seeded) and, at home, by at most twice the thinner geom's radius
-     (minimum 5 mm) and within the thicker geom's radius of the middle link's segment (the end caps of
-     two links meeting around a short link). Any box or sphere contact between the pair disqualifies it.
+     sampled configurations (home + 31 seeded) and, at home, only as two end caps meeting around the
+     short middle link: for every contact, with e1, e2 the ends of the two geoms' axis segments adjacent
+     to the middle link (nearest its segment), the overlap of the two segments' capsules is at most
+     r1 + r2 - |e1 - e2| (+1 mm), i.e. e1 and e2 are the closest points of the two segments, and the
+     contact lies within the thicker geom's radius of the middle link's segment. Any box or sphere
+     contact between the pair disqualifies it.
 
   No other overlap is excluded: an oversized primitive, geometry reaching back over a joint or a deep
   overlap is left for `self_collision_home` to report. Each `<exclude>` is preceded by an XML comment

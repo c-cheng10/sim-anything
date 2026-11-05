@@ -352,3 +352,86 @@ def test_interpenetration_not_excluded(tmp_path, c_geom):
     c = checks["self_collision_home"]
     assert not c.passed and "'a_link'" in c.message and "'c_link'" in c.message
     assert checks["collision_exclusions"].passed and "base / a_link" in checks["collision_exclusions"].message
+
+
+def _pairs(spec: Spec) -> set:
+    root = ET.fromstring(build_mjcf(spec))
+    return {frozenset((e.get("body1"), e.get("body2"))) for e in root.iter("exclude")}
+
+
+@pytest.mark.parametrize("shape", ["capsule", "cylinder"])
+def test_geometry_reaching_back_past_the_joint_not_excluded(tmp_path, shape):
+    # link c's capsule reaches back 40 mm past joint b into link a: an 80 mm overlap (r1 + r2) that is
+    # not two end caps meeting around the 10 mm middle link, so it must be reported, not excluded
+    from simanything.spec import GeometryHint
+
+    spec = _three_link(0.01, None, r=0.04)
+    spec.joints[2].link.geometry = [GeometryHint(shape=shape, radius=0.04, fromto=[0, 0, -0.05, 0, 0, 0.3])]
+    assert frozenset(("a_link", "c_link")) not in _pairs(spec)
+    assert not _check_built(tmp_path, spec)["self_collision_home"].passed
+
+
+def test_side_on_overlap_around_short_link_not_excluded():
+    # link c's capsule lies sideways across the end of link a, centred on joint b: the closest points of
+    # the two segments are not their ends next to the 2 cm middle link (link a's end cap sinks into the
+    # side of link c's capsule), so it is not an end-cap overlap
+    from simanything.spec import GeometryHint
+
+    spec = _three_link(0.02, r=0.03)
+    spec.joints[2].link.geometry = [GeometryHint(shape="capsule", radius=0.03,
+                                                 fromto=[0.15, 0, -0.02, -0.15, 0, -0.02])]
+    assert frozenset(("a_link", "c_link")) not in _pairs(spec)
+
+
+@pytest.mark.parametrize("c_geom", [
+    {"shape": "sphere", "radius": 0.05, "pos": [0, 0, 0]},
+    {"shape": "box", "size": [0.035, 0.035, 0.035], "pos": [0, 0, 0]},
+])
+def test_box_or_sphere_end_cap_overlap_not_excluded(c_geom):
+    # the same shallow overlap around the short link as test_shallow_overlap_around_short_link_excluded,
+    # but made by a sphere/box on link c: only capsule/cylinder end caps qualify
+    from simanything.spec import GeometryHint
+
+    assert frozenset(("a_link", "c_link")) not in _pairs(_three_link(0.097, [GeometryHint(**c_geom)]))
+
+
+def test_end_caps_away_from_the_middle_link_not_excluded():
+    # joints b and c only move by +-0.5 deg, so the geoms of links a and c overlap in every sampled pose;
+    # but their end caps meet 15 cm away from the middle link, which is not the artifact of a short link
+    from simanything.spec import GeometryHint, Limits
+
+    spec = _three_link(0.01, r=0.02)
+    for j in spec.joints[1:]:
+        j.limits = Limits(lower=-0.01, upper=0.01)
+    spec.joints[0].link.geometry = [GeometryHint(shape="capsule", radius=0.02, fromto=[0.15, 0, 0.2, 0.15, 0, 0.3])]
+    spec.joints[2].link.geometry = [GeometryHint(shape="capsule", radius=0.02,
+                                                 fromto=[0.16, 0, 0, 0.4, 0, 0])]
+    assert frozenset(("a_link", "c_link")) not in _pairs(spec)
+    # the same two end caps right at the middle link are excluded
+    spec.joints[0].link.geometry = [GeometryHint(shape="capsule", radius=0.02, fromto=[0, 0, 0.2, 0, 0, 0.3])]
+    spec.joints[2].link.geometry = [GeometryHint(shape="capsule", radius=0.02, fromto=[0.01, 0, -0.01, 0.3, 0, -0.01])]
+    assert frozenset(("a_link", "c_link")) in _pairs(spec)
+
+
+def test_overlap_only_at_home_not_excluded():
+    # link a's capsule is shifted 15 mm sideways: the end caps overlap by ~2 mm at home, but bending
+    # joint b the other way separates them, so the pair does not overlap in every sampled pose
+    from simanything.spec import GeometryHint
+
+    spec = _three_link(0.097)
+    spec.joints[0].link.geometry = [GeometryHint(shape="capsule", radius=0.05, fromto=[0.015, 0, 0, 0.015, 0, 0.3])]
+    assert frozenset(("a_link", "c_link")) not in _pairs(spec)
+
+
+@pytest.mark.parametrize("name", ["fict_mdh7", "fict_dh7"])
+def test_seven_dof_arms_with_short_offsets_pass(tmp_path, name):
+    # fictional 7-DOF arms whose elbow/wrist offsets are shorter than the link radii: the end caps around
+    # those short links are excluded (and reported), with no false self-collision error
+    from simanything.check import run_checks
+
+    model = tmp_path / "model.xml"
+    sp = ROOT / "tests" / "fixtures" / "specs" / f"{name}.yaml"
+    build_file(sp, model)
+    report = run_checks(model, sp)
+    assert report.passed, [c.message for c in report.checks if not c.passed and c.severity == "error"]
+    assert "around the short link" in model.read_text()
