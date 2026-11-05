@@ -1,0 +1,77 @@
+# Structured facts for the UR10e. Quotes and retrieval notes: sources.md.
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: ur10e
+name: UR10e
+manufacturer: Universal Robots
+accessed: "2026-11-05"
+publishes_dh: true
+
+sources:
+  dh: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  dh_dev: https://www.universal-robots.com/developer/hardware-and-motion/robot-motion-dh-parameters/
+  datasheet: https://www.universal-robots.com/media/1807466/ur10e_e-series_datasheets_web.pdf
+  techsheet: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+  techspec_sw522: https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-usr-man/complianceUR10e/H_g5_sections/appendix_g5/tech_spec_sheet.htm
+  user_manual: https://www.universal-robots.com/manuals/EN/PDF/SW5_19/user-manual-UR10e-PDF_online/711-039-00_UR10e_User_Manual_en_Global.pdf
+  tech_specs_weight: https://www.universal-robots.com/media/1802458/ur10e-tech-specs-eng.pdf
+  torques: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+
+dof: {value: 6, source: techsheet}
+
+kinematics:
+  convention: dh_standard
+  units: {length: m, angle: rad}
+  source: dh
+  table:
+    - {joint: 1, a: 0,        d: 0.1807,  alpha: "pi/2"}
+    - {joint: 2, a: -0.6127,  d: 0,       alpha: "0"}
+    - {joint: 3, a: -0.57155, d: 0,       alpha: "0"}
+    - {joint: 4, a: 0,        d: 0.17415, alpha: "pi/2"}
+    - {joint: 5, a: 0,        d: 0.11985, alpha: "-pi/2"}
+    - {joint: 6, a: 0,        d: 0.11655, alpha: "0"}
+  theta_offsets: none listed (theta_i = q_i)
+  flange: d6 = 0.11655 m to the tool flange frame
+  drawing_dimensions_mm:
+    values: [180.7, 612.7, 571.55, 119.85, 174.15, 691.4, "R1300", "190"]
+    source: datasheet
+    note: match d1, a2, a3, d5, d4 in mm; 691.4 unlabelled in the extract; 190 = footprint diameter
+
+joints:
+  - {name: base,     range_deg: [-360, 360], max_speed_deg_s: 120, source: techsheet}
+  - {name: shoulder, range_deg: [-360, 360], max_speed_deg_s: 120, source: techsheet}
+  - {name: elbow,    range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet, note: "SW5.22 tech spec page reports ±160°"}
+  - {name: wrist_1,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: wrist_2,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: wrist_3,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+
+torques_nm:
+  joint_size_ratings: {size_0: 9, size_1: 28, size_2: 54, size_3: 150, size_4: 330}
+  source: torques
+  mapping: "wrist 2 and wrist 3 are Size 2 (54 Nm) for UR10e (official extract)"
+  per_joint_secondary: [330, 330, 150, 56, 56, 56]
+  secondary_source: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+
+link_masses_kg:
+  values: [7.369, 13.051, 3.989, 2.1, 1.98, 0.615]
+  source: dh_dev
+
+total_mass: {value: 33.5, unit: kg, note: "33.5 kg including cable (tech specs sheet); user manual: 33.3 kg", source: tech_specs_weight}
+payload: {value: 12.5, unit: kg, source: techsheet}
+reach:
+  value: 1300
+  unit: mm
+  definition: "R1300 working-area radius on the datasheet drawing (same drawing style as UR5e: radius about the base joint axis)"
+  source: datasheet
+repeatability: {value: 0.05, unit: mm, note: "±0.05 mm ISO 9283", source: techsheet}
+footprint: {value: 190, unit: mm, source: techsheet}
+
+conflicts:
+  - "elbow range ±360° (techsheet) vs ±160° (SW5.22 tech spec page extract)"
+  - "base/shoulder max speed 120°/s (current techsheet) vs 180°/s (06/2023 factsheet)"
+  - "weight 33.5 kg incl. cable vs 33.3 kg (user manual)"
+  - "wrist torque 54 Nm (Size 2 rating) vs 56 Nm (forum)"
+
+not_found:
+  - link CoMs and inertia matrices (on the DH article, not extracted)
+  - housing / link outer diameters (only Ø190 mm footprint)
+  - official torque mapping for base/shoulder/elbow

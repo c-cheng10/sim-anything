@@ -1,0 +1,58 @@
+# Structured facts for the UFactory xArm 7 (no gripper).
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: xarm7
+name: UFactory xArm 7
+manufacturer: UFactory
+accessed: "2026-11-05"
+publishes_dh: true
+
+sources:
+  dh: https://docs.supportarticle.ufactory.cc/zhHans/support_articles/developer/kinematic-and-dynamic-parameters/xArm_Series/xarm-7.html
+  dh_index: http://help.ufactory.cc/en/articles/4330809-kinematic-and-dynamic-parameters-of-ufactory-xarm-series
+  tech_spec: https://docs.xarm.ufactory.cc/8.technical_specifications.html
+  difference_article: https://docs.supportarticle.ufactory.cc/support_articles/hardware/the-difference-between-ufactory-xarm5-xarm6-and-xarm7.html
+  product_page: https://www.ufactory.us/product/ufactory-xarm-7
+
+dof: {value: 7, source: tech_spec}
+
+kinematics:
+  convention: dh_modified        # page section "Modified D-H parameters"; a/alpha on row i are a_{i-1}/alpha_{i-1}
+  units: {length: mm, angle: rad}
+  source: dh
+  table:                         # exactly as published; theta column 0 and offset column 0 for every row
+    - {joint: 1, d: 267,   alpha: "0",     a: 0,    offset: 0}
+    - {joint: 2, d: 0,     alpha: "-pi/2", a: 0,    offset: 0}
+    - {joint: 3, d: 293,   alpha: "pi/2",  a: 0,    offset: 0}
+    - {joint: 4, d: 0,     alpha: "pi/2",  a: 52.5, offset: 0}
+    - {joint: 5, d: 342.5, alpha: "pi/2",  a: 77.5, offset: 0}
+    - {joint: 6, d: 0,     alpha: "pi/2",  a: 0,    offset: 0}
+    - {joint: 7, d: 97,    alpha: "-pi/2", a: 76,   offset: 0}
+  flange: "d7 = 97 mm places frame 7 at the flange (per table); no separate flange row in the extract"
+  standard_dh_table: on the same page, not extracted
+
+joints:
+  - {name: J1, range_deg: [-360, 360], max_speed_deg_s: 180}
+  - {name: J2, range_deg: [-117, 116], max_speed_deg_s: 180}
+  - {name: J3, range_deg: [-360, 360], max_speed_deg_s: 180}
+  - {name: J4, range_deg: [-6, 225],   max_speed_deg_s: 180}
+  - {name: J5, range_deg: [-360, 360], max_speed_deg_s: 180}
+  - {name: J6, range_deg: [-97, 180],  max_speed_deg_s: 180}
+  - {name: J7, range_deg: [-360, 360], max_speed_deg_s: 180}
+joint_limits_source: tech_spec   # difference_article: J2 -118~120, J4 -11~225
+speed_note: "single 'maximum joint speed 180°/s' for all joints"
+
+total_mass: {value: 13.7, unit: kg, note: "product page / support article 13.7 kg; tech spec chapter 14.3 kg", source: product_page}
+payload: {value: 3.5, unit: kg, source: product_page}
+reach: {value: 700, unit: mm, definition: "not stated in the extracts", source: product_page}
+repeatability: {value: 0.1, unit: mm, note: "±0.1 mm", source: tech_spec}
+max_tcp_speed: {value: 1, unit: m/s, source: tech_spec}
+
+conflicts:
+  - "J2 range -117~116 (tech spec) vs -118~120 (support article); J4 -6~225 vs -11~225"
+  - "weight 13.7 kg vs 14.3 kg"
+
+not_found:
+  - joint torques
+  - link masses / CoMs (on the DH page, not extracted)
+  - reach definition
+  - housing diameters

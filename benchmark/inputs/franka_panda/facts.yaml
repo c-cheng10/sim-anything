@@ -1,0 +1,63 @@
+# Structured facts for the Franka Emika Panda arm (FER), without hand.
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: franka_panda
+name: Franka Emika Panda
+manufacturer: Franka Emika
+accessed: "2026-11-05"
+publishes_dh: true
+
+sources:
+  fci: https://frankarobotics.github.io/docs/robot_specifications.html
+  fci_old: https://frankaemika.github.io/docs/control_parameters.html
+  gaz2019: https://www.diag.uniroma1.it/~labrob/pub/papers/RAL_2019_PandaDynamicModel_PreprintXplore.pdf
+  datasheet: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  datasheet_weight: https://centers.ulbsibiu.ro/incon/wp-content/uploads/Datasheet-Franka-Emika-Panda-Research-collaborative-robot.pdf
+  handbook: https://www.manualslib.com/manual/2575639/Franka-Emika-Panda.html?page=42
+
+dof: {value: 7, source: datasheet}
+
+kinematics:
+  convention: dh_modified        # "following Craig's convention"; row i holds a_{i-1}, alpha_{i-1}, d_i, theta_i
+  units: {length: m, angle: rad}
+  source: fci
+  table:                         # as published (theta_i = q_i, no offsets)
+    - {joint: 1, a: 0,       d: 0.333, alpha: "0"}
+    - {joint: 2, a: 0,       d: 0,     alpha: "-pi/2"}
+    - {joint: 3, a: 0,       d: 0.316, alpha: "pi/2"}
+    - {joint: 4, a: 0.0825,  d: 0,     alpha: "pi/2"}
+    - {joint: 5, a: -0.0825, d: 0.384, alpha: "-pi/2"}
+    - {joint: 6, a: 0,       d: 0,     alpha: "pi/2"}
+    - {joint: 7, a: 0.088,   d: 0,     alpha: "pi/2", source: gaz2019}
+    - {row: flange, a: 0,    d: 0.107, alpha: "0", theta: "0", note: "not a joint: a fixed offset from frame 7 to the flange"}
+  verification: >
+    d and a values extracted from both FCI and gaz2019; alpha for joints 1-6 from an FCI extract, joint 7 from the
+    gaz2019 table row. The current FCI page labels the table as FR3; the same table was given for Panda on the old
+    page and in gaz2019.
+
+joints:                          # A1..A7
+  - {name: A1, range_deg: [-166, 166], max_speed_deg_s: 150, max_speed_rad_s: 2.1750, torque_nm: 87}
+  - {name: A2, range_deg: [-101, 101], max_speed_deg_s: 150, max_speed_rad_s: 2.1750, torque_nm: 87}
+  - {name: A3, range_deg: [-166, 166], max_speed_deg_s: 150, max_speed_rad_s: 2.1750, torque_nm: 87}
+  - {name: A4, range_deg: [-176, -4],  max_speed_deg_s: 150, max_speed_rad_s: 2.1750, torque_nm: 87}
+  - {name: A5, range_deg: [-166, 166], max_speed_deg_s: 180, max_speed_rad_s: 2.6100, torque_nm: 12}
+  - {name: A6, range_deg: [-1, 215],   max_speed_deg_s: 180, max_speed_rad_s: 2.6100, torque_nm: 12}
+  - {name: A7, range_deg: [-166, 166], max_speed_deg_s: 180, max_speed_rad_s: 2.6100, torque_nm: 12}
+joint_limits_source: datasheet   # degrees as printed in the datasheet
+speed_source: {deg_s: datasheet, rad_s: fci}
+torque_source: fci
+joint_note: "A4 range does not include 0 (the q=0 configuration is outside the limits); home pose must respect this"
+
+total_mass: {value: 17.8, unit: kg, note: "datasheet '~17.8 kg'; handbook 'approx. 18 kg'", source: datasheet_weight}
+payload: {value: 3, unit: kg, source: datasheet}
+reach: {value: 855, unit: mm, definition: "'Maximum reach 855 mm' - reference points not stated in the extract", source: datasheet}
+repeatability: {value: 0.1, unit: mm, note: "<+/- 0.1 mm ISO 9283", source: datasheet}
+flange_offset: {value: 0.107, unit: m, note: "flange row of the DH table, along z7", source: fci}
+
+conflicts:
+  - "weight ~17.8 kg (datasheet) vs approx. 18 kg (handbook)"
+  - "A5-A7 speed 180°/s confirmed in one datasheet version only"
+
+not_found:
+  - link masses / CoMs from the manufacturer (gaz2019 identifies them experimentally; not extracted)
+  - housing diameters / link outer dimensions
+  - reach reference points (from where to where 855 mm is measured)

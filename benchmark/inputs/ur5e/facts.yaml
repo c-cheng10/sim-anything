@@ -1,0 +1,79 @@
+# Structured facts for the UR5e. Quotes and retrieval notes: sources.md.
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: ur5e
+name: UR5e
+manufacturer: Universal Robots
+accessed: "2026-11-05"
+publishes_dh: true
+
+sources:
+  dh: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  datasheet: https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf
+  techsheet: https://www.universal-robots.com/manuals/EN/TechSheets/UR5e_techsheet_pdf_online/UR5e_techsheet_en.pdf
+  user_manual: https://www.universal-robots.com/manuals/EN/PDF/SW5_19/user-manual-UR5e-PDF_online/710-965-00_UR5e_User_Manual_en_Global.pdf
+  torques: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+
+dof: {value: 6, source: techsheet}
+
+kinematics:
+  convention: dh_standard        # UR publishes classic DH: a_i, d_i, alpha_i per joint, theta_i = q_i
+  units: {length: m, angle: rad}
+  source: dh
+  table:                         # exactly as published
+    - {joint: 1, a: 0,       d: 0.1625, alpha: "pi/2"}
+    - {joint: 2, a: -0.425,  d: 0,      alpha: "0"}
+    - {joint: 3, a: -0.3922, d: 0,      alpha: "0"}
+    - {joint: 4, a: 0,       d: 0.1333, alpha: "pi/2"}
+    - {joint: 5, a: 0,       d: 0.0997, alpha: "-pi/2"}
+    - {joint: 6, a: 0,       d: 0.0996, alpha: "0"}
+  theta_offsets: none listed (theta_i = q_i)
+  flange: d6 = 0.0996 m is the distance to the tool flange frame (frame 6 is the flange in UR's convention)
+  drawing_dimensions_mm:         # labels on the datasheet dimension drawing (indexed title line)
+    values: [162.5, 425, 392.2, "99,7", 133, "494,9", "R850", "149"]
+    source: datasheet
+    note: match d1, a2, a3, d5, d4 in mm; 494.9 and Ø149 footprint unlabelled in the extract
+
+joints:                          # names as used by UR
+  - {name: base,     range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: shoulder, range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: elbow,    range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: wrist_1,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: wrist_2,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+  - {name: wrist_3,  range_deg: [-360, 360], max_speed_deg_s: 180, source: techsheet}
+joint_axes: "all revolute; axis directions follow the DH frames (z_{i-1})"
+
+torques_nm:
+  joint_size_ratings: {size_0: 9, size_1: 28, size_2: 54, size_3: 150, size_4: 330}
+  source: torques
+  mapping: "wrist 2 and wrist 3 are Size 1 (28 Nm) for UR5e (official extract); base/shoulder/elbow 150 Nm and all wrists 28 Nm per forum post (secondary)"
+  secondary_source: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  per_joint_secondary: [150, 150, 150, 28, 28, 28]
+
+link_masses_kg:
+  values: [3.761, 8.058, 2.846, 1.37, 1.3, 0.365]
+  source: dh
+link_com_m:                      # offset from the corresponding DH joint frame
+  source: dh
+  known: {link1: [0, -0.02561, 0.00193], link2: [0.2125, 0, 0.11336], link5: [0, 0.0018, 0.01634]}
+
+total_mass: {value: 20.6, unit: kg, note: "including cable (datasheet 08/2023); user manual says 20.7 kg", source: datasheet}
+payload: {value: 5, unit: kg, source: datasheet}
+reach:
+  value: 850
+  unit: mm
+  definition: "R850 working-area radius on the datasheet drawing; manual: cylindrical working volume, 850 mm from the base joint (J1 axis)"
+  source: datasheet
+repeatability: {value: 0.03, unit: mm, note: "±0.03 mm, ISO 9283", source: techsheet}
+footprint: {value: 149, unit: mm, note: "Ø149 mm (datasheet); techsheet says Ø151 mm", source: datasheet}
+max_tcp_speed: {value: 4, unit: m/s, note: "datasheet 08/2023; older manual text says approx. 1 m/s", source: datasheet}
+
+conflicts:
+  - "weight 20.6 kg (datasheet) vs 20.7 kg (user manual SW5.19)"
+  - "footprint Ø149 mm (datasheet) vs Ø151 mm (techsheet)"
+  - "UR5e torque per joint: only partly official"
+
+not_found:
+  - link CoMs for links 3, 4, 6 (in the DH article but not extracted)
+  - link inertias (article says negligible for UR5e)
+  - housing / link outer diameters (only the Ø149 mm base footprint)
+  - official per-joint torque mapping for base/shoulder/elbow

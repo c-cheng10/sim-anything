@@ -1,0 +1,54 @@
+# Structured facts for the Trossen (Interbotix) ViperX 300 S, arm joints only.
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: viperx_300s
+name: Trossen ViperX 300 S
+manufacturer: Trossen Robotics
+accessed: "2026-11-05"
+publishes_dh: false   # Trossen publishes link lengths/offsets, not a DH table
+
+sources:
+  vx300s_spec: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  arms_spec: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications.html
+  product_page: https://www.trossenrobotics.com/viperx-300
+
+dof: {value: 6, note: "arm joints; plus a gripper", source: vx300s_spec}
+
+kinematics:
+  convention: offset
+  units: {length: mm, angle: deg}
+  source: arms_spec
+  upper_arm:                     # shoulder -> elbow
+    vertical_leg: 300            # "Offsets" column, best reading
+    horizontal_offset: 60
+    true_length: 306
+    offset_angle_deg: 11.3
+  forearm_elbow_to_wrist_tilt: 300
+  wrist_tilt_to_wrist_rotate: 70
+  wrist_rotate_to_gripper_rail: 69
+  gripper_rail_to_fingertip: 68
+  cumulative_from_shoulder: {elbow: 306, wrist_tilt: 606, wrist_rotate: 676, gripper_rail: 745, fingertip: 812}
+  cumulative_note: "extract calls these 'cumulative reach distances from the base'; they start with the 306 mm upper arm, i.e. at the shoulder axis"
+  shoulder_height: not found
+  joint_order: [waist, shoulder, elbow, forearm_roll, wrist_angle, wrist_rotate]
+  joint_axes: "not stated in the extracts (names imply: waist = vertical yaw, shoulder/elbow/wrist_angle = pitch, forearm_roll/wrist_rotate = roll about the arm)"
+
+joints:
+  - {name: waist,        range_deg: [-180, 180]}
+  - {name: shoulder,     range_deg: [-101, 101], note: "two servos"}
+  - {name: elbow,        range_deg: [-101, 92]}
+  - {name: forearm_roll, range_deg: [-180, 180]}
+  - {name: wrist_angle,  range_deg: [-107, 130]}
+  - {name: wrist_rotate, range_deg: [-180, 180]}
+joint_limits_source: vx300s_spec   # firmware default limits
+
+payload: {value: 0.75, unit: kg, note: "working payload; at no more than ~50% extension", source: vx300s_spec}
+reach: {value: 750, unit: mm, definition: "'750mm reach', 1500 mm tip-to-tip span; reference points not stated", source: vx300s_spec}
+repeatability: {value: 1, unit: mm, source: vx300s_spec}
+accuracy: {value: "5-8", unit: mm, source: vx300s_spec}
+
+not_found:
+  - shoulder height (base to shoulder axis) and waist-to-shoulder horizontal offset
+  - total mass
+  - joint max speeds and torques (servo models not extracted)
+  - link masses, housing dimensions
+  - exact mapping of the "Offsets" table columns (best reading, consistent with 306 = sqrt(300²+60²))

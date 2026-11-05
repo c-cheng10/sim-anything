@@ -1,0 +1,62 @@
+# Structured facts for the UFactory Lite 6 (no gripper).
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: ufactory_lite6
+name: UFactory Lite 6
+manufacturer: UFactory
+accessed: "2026-11-05"
+publishes_dh: true
+
+sources:
+  dh: https://docs.supportarticle.ufactory.cc/support_articles/developer/kinematic-and-dynamic-parameters/lite6.html
+  tech_spec: https://docs.lite6.ufactory.cc/8.technical_specifications.html
+  hardware_manual: https://www.ufactory.cc/wp-content/uploads/2025/05/Lite6_Hardware_Manual_V2.6.0.pdf
+  developer_manual: https://www.ufactory.cc/wp-content/uploads/2023/04/Lite-6-Developer-Manual-V1.11.0.pdf
+  product_page: https://www.ufactory.us/product/lite-6
+
+dof: {value: 6, source: tech_spec}
+
+kinematics:
+  convention: dh_modified        # first table labelled "Modified D-H parameters"; row i holds a_{i-1}, alpha_{i-1}
+  units: {length: mm, angle: deg}
+  source: dh
+  table:                         # exactly as published
+    - {joint: 1, theta_offset: 0,   d: 243.3, alpha: 0,   a: 0}
+    - {joint: 2, theta_offset: -90, d: 0,     alpha: -90, a: 0}
+    - {joint: 3, theta_offset: -90, d: 0,     alpha: 180, a: 200}
+    - {joint: 4, theta_offset: 0,   d: 227.6, alpha: 90,  a: 87}
+    - {joint: 5, theta_offset: 0,   d: 0,     alpha: 90,  a: 0}
+    - {joint: 6, theta_offset: 0,   d: 61.5,  alpha: -90, a: 0}
+  flange: "d6 = 61.5 mm places frame 6 at the flange (per table)"
+  verification: "full table from one extract; d1, d4, a(row 3), a(row 4), d6 confirmed by a second extract"
+
+joints:
+  - {name: J1, range_deg: [-360, 360]}
+  - {name: J2, range_deg: [-150, 150]}
+  - {name: J3, range_deg: [-3.5, 300]}
+  - {name: J4, range_deg: [-360, 360]}
+  - {name: J5, range_deg: [-124, 124]}
+  - {name: J6, range_deg: [-360, 360]}
+joint_limits_source: hardware_manual
+max_joint_speed: {value: 180, unit: deg/s, note: "single value for all joints", source: developer_manual}
+
+link_masses_kg: {values: [1.411, 1.34, 0.953, 1.284, 0.804, 0.13], source: dh}
+link_com_mm: {known: {link2: [179.0, 0.0, 58.4]}, source: dh, note: "frame not stated in the extract"}
+
+total_mass: {value: 8, unit: kg, note: "docs '8KG' robot alone; product spec card 7.2 kg", source: tech_spec}
+payload: {value: 0.6, unit: kg, source: tech_spec}
+reach:
+  value: 440
+  unit: mm
+  definition: "not stated explicitly; Cartesian range X: ±440mm; Y: ±440mm; Z: -165~683.5mm suggests horizontal radius about J1"
+  source: tech_spec
+repeatability: {value: 0.5, unit: mm, note: "±0.5 mm", source: tech_spec}
+max_tcp_speed: {value: 500, unit: mm/s, source: tech_spec}
+footprint: {value: [130, 140], unit: mm, source: tech_spec}
+
+conflicts:
+  - "weight 8 kg (docs) vs 7.2 kg (product page spec card)"
+
+not_found:
+  - joint torques
+  - link CoMs except link 2
+  - housing diameters

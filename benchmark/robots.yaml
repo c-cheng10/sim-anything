@@ -15,37 +15,37 @@ dev:
     manufacturer: Universal Robots
     product: UR5e collaborative robot arm (e-Series)
     reference: third_party/mujoco_menagerie/universal_robots_ur5e/ur5e.xml
-    publishes_dh: null
+    publishes_dh: true
   - id: franka_panda
     name: Franka Emika Panda
     manufacturer: Franka Emika
     product: Panda arm (7-DOF), without hand
     reference: third_party/mujoco_menagerie/franka_emika_panda/panda_nohand.xml
-    publishes_dh: null
+    publishes_dh: true
   - id: kinova_gen3
     name: Kinova Gen3 (7-DOF)
     manufacturer: Kinova
     product: Gen3 ultra lightweight robot, 7-DOF, no gripper
     reference: third_party/mujoco_menagerie/kinova_gen3/gen3.xml
-    publishes_dh: null
+    publishes_dh: true
   - id: xarm7
     name: UFactory xArm 7
     manufacturer: UFactory
     product: xArm 7 (7-DOF), without gripper
     reference: third_party/mujoco_menagerie/ufactory_xarm7/xarm7_nohand.xml
-    publishes_dh: null
+    publishes_dh: true
   - id: kuka_iiwa14
     name: KUKA LBR iiwa 14 R820
     manufacturer: KUKA
     product: LBR iiwa 14 R820 (7-DOF)
     reference: third_party/mujoco_menagerie/kuka_iiwa_14/iiwa14.xml
-    publishes_dh: null
+    publishes_dh: false
   - id: viperx_300s
     name: Trossen ViperX 300 S
     manufacturer: Trossen Robotics
     product: ViperX 300 Robot Arm 6DOF (ViperX 300 S), arm joints only
     reference: third_party/mujoco_menagerie/trossen_vx300s/vx300s.xml
-    publishes_dh: null
+    publishes_dh: false
 
 holdout:
   - id: ur10e
@@ -53,10 +53,10 @@ holdout:
     manufacturer: Universal Robots
     product: UR10e collaborative robot arm (e-Series)
     reference: third_party/mujoco_menagerie/universal_robots_ur10e/ur10e.xml
-    publishes_dh: null
+    publishes_dh: true
   - id: ufactory_lite6
     name: UFactory Lite 6
     manufacturer: UFactory
     product: Lite 6 (6-DOF), without gripper
     reference: third_party/mujoco_menagerie/ufactory_lite6/lite6.xml
-    publishes_dh: null
+    publishes_dh: true

@@ -1,0 +1,60 @@
+# Structured facts for the KUKA LBR iiwa 14 R820.
+# All values came from web-search extracts of the cited pages (direct fetch blocked); see sources.md.
+robot: kuka_iiwa14
+name: KUKA LBR iiwa 14 R820
+manufacturer: KUKA
+accessed: "2026-11-05"
+publishes_dh: false   # KUKA publishes a dimensioned drawing (spec Fig. 4-7), not a DH table
+
+sources:
+  product_page: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  product_page_cr: https://my.kuka.com/s/product/lbr-iiwa-14-r820-cr/01t58000004l0ebAAA?language=pt_BR
+  spec_v5: https://www.oir.caltech.edu/twiki_oir/pub/Palomar/ZTF/KUKARoboticArmMaterial/Spez_LBR_iiwa_en.pdf
+  spec_v8: https://www.yiliang.com.tw/data/editor/files/Spez_LBR_iiwa_en.pdf
+  brochure: https://storage.googleapis.com/bucket-two-leobotics/product/datasheet-fiche-technique-robot-axe-industriel-collaboratif-7-axes-kuka-lbr-iiwa-7-r800-2-14-r820-2.pdf
+  lbr_med_brochure: https://apps.kuka.com/KUKA/virtualshowroom/assets/downloads/KUKA_LBR_Med_EN.pdf
+
+dof: {value: 7, source: product_page}
+
+kinematics:
+  convention: offset   # no DH table published; build from the dimensioned drawing
+  link_lengths: not extracted - the dimensions are in spec_v8 Fig. 4-7 (working envelope side view)
+  related_dimensions_mm:
+    source: lbr_med_brochure
+    note: "LBR Med 14 R820 (medical variant) dimension letters, not labelled as joint distances in the extract"
+    A: 1306
+    B: 1180
+    G_reach: 820
+    H: 255
+  joint_axes: "not stated in the extracts"
+
+joints:
+  - {name: A1, range_deg: [-170, 170], max_speed_deg_s: 85}
+  - {name: A2, range_deg: [-120, 120], max_speed_deg_s: 85}
+  - {name: A3, range_deg: [-170, 170], max_speed_deg_s: 100}
+  - {name: A4, range_deg: [-120, 120], max_speed_deg_s: 75}
+  - {name: A5, range_deg: [-170, 170], max_speed_deg_s: 130}
+  - {name: A6, range_deg: [-120, 120], max_speed_deg_s: 135, speed_source: product_page_cr}
+  - {name: A7, range_deg: [-175, 175], max_speed_deg_s: 135, speed_source: product_page_cr}
+joint_limits_source: product_page
+speed_source: product_page     # A6/A7 from the cleanroom variant page
+torques_nm:
+  source: brochure
+  values: {A1: 320, A2: 320, A3: "176 (unlabelled in extract, probable)", A4: 176, A5: 110, A6: 40, A7: 40}
+  note: "extract described as garbled; treat as unverified"
+
+total_mass: {value: 29.9, unit: kg, note: "approx.", source: product_page}
+payload: {value: 14, unit: kg, source: product_page}
+reach: {value: 820, unit: mm, definition: "maximum reach; reference points not stated in the extracts", source: product_page}
+repeatability: {value: 0.15, unit: mm, note: "±0.15 mm ISO 9283", source: product_page}
+
+conflicts:
+  - "working envelope volume 1.8 m³ (spec V5) vs 1.7 m³ (spec V8)"
+
+not_found:
+  - joint-to-joint link lengths (base to A2, A2 to A4, A4 to A6, A6 to flange) - in spec Fig. 4-7, not extractable by search
+  - joint axis directions and zero pose
+  - flange offset
+  - link masses / CoMs
+  - housing diameters
+  - official per-axis torques (only a garbled distributor extract)
