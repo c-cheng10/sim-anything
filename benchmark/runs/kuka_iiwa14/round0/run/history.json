@@ -1,0 +1,18 @@
+{
+  "robot": "kuka_iiwa14",
+  "spec": "benchmark/runs/kuka_iiwa14/round0/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T07:47:44+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 0,
+      "failed_ids": [],
+      "note": "initial offset spec from KUKA envelope dimensions C/D/E/F, product page ranges, spec axis data",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

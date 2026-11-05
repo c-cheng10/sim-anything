@@ -1,0 +1,103 @@
+name: kuka_iiwa14
+manufacturer: KUKA
+model: LBR iiwa 14 R820
+description: 7-DOF lightweight arm, arm only (no media flange / gripper); EE site at the A7 output flange face.
+dof: 7
+units: {length: mm, angle: deg}
+convention: offset
+# q = 0: arm stretched straight up (all link segments collinear with the A1 axis).
+# Segment lengths are the KUKA envelope-drawing dimensions C, D, E, F (see notes / sources.md).
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 80, half_length: 60, pos: [0, 0, 60]}]
+joints:
+  - name: A1
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 85
+    effort_limit: 320
+    link:
+      geometry: [{shape: capsule, radius: 70}]
+  - name: A2
+    origin: {xyz: [0, 0, 360]}            # dimension C
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 85
+    effort_limit: 320
+  - name: A3
+    origin: {xyz: [0, 0, 0]}              # A3 axis collinear with the A2->A4 segment; placed at A2
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 100
+    effort_limit: 176
+    link:
+      geometry: [{shape: capsule, radius: 65}]
+  - name: A4
+    origin: {xyz: [0, 0, 420]}            # dimension D
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 75
+    effort_limit: 176
+  - name: A5
+    origin: {xyz: [0, 0, 0]}              # A5 axis collinear with the A4->A6 segment; placed at A4
+    axis: [0, 0, 1]
+    limits: {lower: -170, upper: 170}
+    velocity_limit: 130
+    effort_limit: 110
+    link:
+      geometry: [{shape: capsule, radius: 55}]
+  - name: A6
+    origin: {xyz: [0, 0, 400]}            # dimension E
+    axis: [0, 1, 0]
+    limits: {lower: -120, upper: 120}
+    velocity_limit: 135
+    effort_limit: 40
+  - name: A7
+    origin: {xyz: [0, 0, 0]}              # A7 axis collinear with the A6->flange segment; placed at A6
+    axis: [0, 0, 1]
+    limits: {lower: -175, upper: 175}
+    velocity_limit: 135
+    effort_limit: 40
+    link:
+      geometry: [{shape: cylinder, radius: 45}]
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 126]}              # dimension F: A6 axis to output flange face
+total_mass: 29.9
+payload: 14
+reach: {value: 820, measured_from: shoulder, measured_to: wrist_center}
+repeatability: 0.15
+sources:
+  joints[*].origin: https://apps.kuka.com/KUKA/virtualshowroom/assets/downloads/KUKA_LBR_Med_EN.pdf
+  ee.origin: https://apps.kuka.com/KUKA/virtualshowroom/assets/downloads/KUKA_LBR_Med_EN.pdf
+  joints[*].limits: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  joints[*].velocity_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  joints[*].effort_limit: https://git.phschoen.de/phschoen/lwr_server/raw/commit/1debece1117ae5d940d2f15c0647304bf45473c6/lwrserv/doc/LBRiiwa_en.pdf
+  total_mass: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  payload: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  reach: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+  repeatability: https://my.kuka.com/s/product/lbr-iiwa-14-r820/01t58000002hnktAAA?language=en_US
+estimates:
+  - joints[*].axis
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  Kinematics: KUKA publishes no DH table, so the chain uses the offset convention with q = 0 = arm straight up.
+  Segment lengths are the KUKA work-envelope dimensions for the 14 R820: A 1306, B 1180, C 360, D 420, E 400,
+  F 126, G 820, H 255 mm (LBR Med brochure; the KMR iiwa brochure gives the same A-E, G, H for the standard
+  LBR iiwa 14 R820). The extracts do not label the letters, so their meaning is an interpretation, chosen because
+  it is internally exact: C = base mounting face to A2, D = A2 to A4, E = A4 to A6, F = A6 to output flange,
+  B = C+D+E = 1180 (A6 height when stretched up), A = B+F = 1306 (flange height when stretched up),
+  G = D+E = 820 = maximum reach, which is therefore modelled as A2 (shoulder) to A6 (wrist centre).
+  H = 255 is not used (meaning unknown). A3, A5, A7 lie on the segment lines, so their frames are placed at
+  A2, A4, A6 respectively (any point on the line gives the same kinematics).
+  Joint axis directions (A1/A3/A5/A7 along the arm, A2/A4/A6 about one horizontal axis) follow the 7-axis
+  roll-pitch layout seen in product photos; the positive rotation sense of A2/A4/A6 is not published in what
+  could be read and is an estimate (+y for all three).
+  Joint ranges from the product page (A1/A3/A5 +-170, A2/A4/A6 +-120, A7 +-175). Max speeds and max torques
+  per axis from the KUKA specification "LBR iiwa 7 R800, LBR iiwa 14 R820" (mirror; garbled text extract, column
+  alignment read by the search tool): A1-A7 320/320/176/176/110/40/40 Nm and 85/85/100/75/130/135/135 deg/s; the
+  A1-A5 speeds match the product page "speed with rated payload". Link radii and base cylinder are estimates
+  from product photos (no housing diameters found). Link masses omitted (builder distributes total_mass).
+  Mass 29.9 kg is "approx." on the product page.
