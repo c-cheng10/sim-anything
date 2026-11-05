@@ -128,7 +128,7 @@ and `info` checks never block. Every failed check MUST carry a concrete
 | `collision_exclusions` | every `<exclude>` pair of the model, with its reason read from the `<!-- body1 / body2: reason -->` comment before it (section 7), listed in the message and `details.excluded` | every pair is parent/child (incl. welded) or separated only by zero-length links (all bodies after the ancestor's child sit at their parent's origin) | warning |
 | `stable_hold` | 2 s simulation at home under gravity, actuators commanded to home | no NaN/instability warning, max joint drift < 0.05 rad (hinge) / 5 mm (slide), final max joint speed < 0.1 | error |
 | `actuators` | each spec joint driven by exactly one actuator | all | error |
-| `sources_complete` | `spec.uncovered_fields()` is empty | empty | error |
+| `sources_complete` | `uncovered_fields(spec)` (numbers without a source/estimate), `bad_source_values(spec)` (a `sources` value that is not an http(s) URL or `doc:<relative path>`), `unmatched_keys(spec)` (a `sources`/`estimates` key naming no field of the spec: out-of-range index, unknown field, a field of the other convention; null/zero/default fields count as existing); `details` also has `n_numbers`, `n_estimated`, `estimate_fraction` | all three empty; then estimates <= 50% of the numbers | error; warning (fail) when only the estimate fraction exceeds 50% |
 
 Reach metric (`spec.reach.measured_from` -> `measured_to`):
 `shoulder` = world position of the 2nd joint's body origin at the home pose

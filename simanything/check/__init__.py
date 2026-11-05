@@ -13,7 +13,7 @@ from typing import Callable, Optional
 import mujoco
 
 from ..schemas import CheckReport, CheckResult
-from ..spec import uncovered_fields
+from ..spec import bad_source_values, estimate_counts, uncovered_fields, unmatched_keys
 from .context import CheckContext, result, skipped_no_spec
 from .kinematics import check_kinematics_match, check_reach
 from .physics import (check_collision_exclusions, check_inertia_valid, check_mass_plausibility,
@@ -23,6 +23,7 @@ from .structure import check_actuators, check_compiles, check_ee_site, check_joi
 CHECK_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
              "mass_plausibility", "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
              "sources_complete"]
+MAX_ESTIMATE_FRACTION = 0.5  # above this share of estimated numbers, sources_complete warns
 SPEC_DEPENDENT = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
                   "actuators", "sources_complete"}
 
@@ -30,18 +31,48 @@ SPEC_DEPENDENT = {"joint_structure", "ee_site", "kinematics_match", "joint_limit
 def check_sources_complete(ctx: CheckContext) -> CheckResult:
     if ctx.spec_raw is None:
         return skipped_no_spec("sources_complete")
-    missing = uncovered_fields(ctx.spec_raw)
-    if not missing:
-        return result("sources_complete", True, measured=0, expected=0,
-                      message="every number in the spec has a source or is listed as an estimate")
-    shown = missing[:8]
-    more = f" (and {len(missing) - len(shown)} more)" if len(missing) > len(shown) else ""
-    hint = ("; ".join(f"add a source URL for {p} to `sources` or list it in `estimates`" for p in shown[:3])
-            + (". Same for: " + ", ".join(shown[3:]) if len(shown) > 3 else "") + more
-            + ". A parent path covers its children (e.g. `joints[*].limits`).")
-    return result("sources_complete", False, measured=len(missing), expected=0,
-                  message=f"{len(missing)} spec number(s) lack a source or estimate: {', '.join(shown)}{more}",
-                  fix_hint=hint, details={"uncovered": missing})
+    spec = ctx.spec_raw
+    missing = uncovered_fields(spec)
+    bad = bad_source_values(spec)
+    unmatched = unmatched_keys(spec)
+    n_est, n_num = estimate_counts(spec)
+    frac = n_est / n_num if n_num else 0.0
+    details = {"uncovered": missing, "bad_sources": {k: v for k, v in bad}, "unmatched_keys": unmatched,
+               "n_numbers": n_num, "n_estimated": n_est, "estimate_fraction": frac}
+    msgs, hints = [], []
+    if missing:
+        shown = missing[:8]
+        more = f" (and {len(missing) - len(shown)} more)" if len(missing) > len(shown) else ""
+        msgs.append(f"{len(missing)} spec number(s) lack a source or estimate: {', '.join(shown)}{more}")
+        hints.append("; ".join(f"add a source URL for {p} to `sources` or list it in `estimates`" for p in shown[:3])
+                     + (". Same for: " + ", ".join(shown[3:]) if len(shown) > 3 else "") + more
+                     + ". A parent path covers its children (e.g. `joints[*].limits`).")
+    if bad:
+        msgs.append(f"{len(bad)} source value(s) are not URLs: "
+                    + ", ".join(f"sources[{k!r}] = {v!r}" for k, v in bad[:5]))
+        hints.append("Each `sources` value must be an http(s) URL of the document that states the number, or "
+                     "`doc:<relative path>` for a local file quoting it; put page numbers or quotes in `notes`, and "
+                     "move numbers you inferred rather than read to `estimates`.")
+    if unmatched:
+        msgs.append(f"{len(unmatched)} sources/estimates key(s) match no field of the spec (typo?): "
+                    + ", ".join(unmatched[:8]))
+        hints.append("Fix or remove " + ", ".join(f"`{k}`" for k in unmatched[:8]) + ": keys are field paths such "
+                     "as `joints[2].dh.a`, `joints[*].limits` or `reach.value`, with indices inside the joint list "
+                     "and field names of this spec's convention.")
+    if msgs:
+        return result("sources_complete", False, measured=len(missing) + len(bad) + len(unmatched), expected=0,
+                      message="; ".join(msgs), fix_hint=" ".join(hints), details=details)
+    if frac > MAX_ESTIMATE_FRACTION:
+        return result("sources_complete", False, severity="warning", measured=frac, expected=0,
+                      tolerance=MAX_ESTIMATE_FRACTION,
+                      message=f"every number is covered, but {n_est} of {n_num} ({frac * 100:.0f}%) are estimates",
+                      fix_hint="More than half of the numbers are estimates: look for sources (datasheet, manual, "
+                               "DH table) for the ones that matter most, i.e. link lengths / DH rows, joint limits, "
+                               "total_mass and reach, and move them from `estimates` to `sources`.",
+                      details=details)
+    return result("sources_complete", True, measured=0, expected=0,
+                  message=f"every number in the spec has a source or is listed as an estimate ({n_est} of {n_num} "
+                          f"estimated)", details=details)
 
 
 def _not_run(id: str, why: str, hint: str) -> CheckResult:

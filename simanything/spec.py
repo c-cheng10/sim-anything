@@ -30,7 +30,10 @@ Conventions
   the distal end of link i, as in published DH dynamics tables).
 * ``ee`` is a fixed offset from the frame after the last joint (frame n for DH,
   the last link frame for ``offset``) to the end-effector site (tool flange).
-* ``sources`` maps a field path to the URL that supports it. ``estimates`` lists
+* ``sources`` maps a field path to the http(s) URL that supports it, or to
+  ``doc:<relative path>`` for a local document (e.g. a sources.md quoting the
+  values). Every key of ``sources``/``estimates`` must name a field of the spec
+  (the checker reports keys that match nothing as likely typos). ``estimates`` lists
   field paths whose values were estimated rather than read from a source.
   A path covers itself and everything under it, e.g. ``joints[2]`` covers
   ``joints[2].dh.a``; ``joints[*].limits`` covers the limits of every joint.
@@ -623,6 +626,54 @@ def uncovered_fields(spec: Spec) -> list[str]:
     return out
 
 
+_SOURCE_VALUE = re.compile(r"^(https?://[^\s/?#]+[^\s]*|doc:(?![/\\~])(?![A-Za-z]:)[^\s]+)$")
+
+
+def bad_source_values(spec: Spec) -> list[tuple[str, str]]:
+    """(key, value) for every ``sources`` value that is neither an http(s) URL nor a
+    ``doc:<relative path>`` reference (e.g. ``doc:benchmark/inputs/x/sources.md``)."""
+    return [(k, v) for k, v in spec.sources.items() if not _SOURCE_VALUE.match(str(v).strip())]
+
+
+def _path_exists(data: Any, tokens: list[str]) -> bool:
+    if not tokens:
+        return True
+    t, rest = tokens[0], tokens[1:]
+    if isinstance(data, dict):
+        return t in data and _path_exists(data[t], rest)
+    if isinstance(data, list):
+        if t == "*":
+            return any(_path_exists(x, rest) for x in data)
+        return t.isdigit() and int(t) < len(data) and _path_exists(data[int(t)], rest)
+    return False
+
+
+def unmatched_keys(spec: Spec) -> list[str]:
+    """``sources``/``estimates`` keys that name no field of this spec at all (a typo, a wrong index or a
+    field of another convention). A key naming an existing field is fine even if its value is zero, a
+    default or null."""
+    data = spec.model_dump(mode="python")
+    forbidden = "dh" if spec.convention == "offset" else "origin"  # cannot hold a value in this convention
+    for j in data["joints"]:
+        j.pop(forbidden, None)
+    out = []
+    for k in list(spec.sources) + list(spec.estimates):
+        if not _path_exists(data, _parse_path(k)) and k not in out:
+            out.append(k)
+    return out
+
+
+def estimate_counts(spec: Spec) -> tuple[int, int]:
+    """(numbers that are estimates, numbers that need a source or estimate), as in ``uncovered_fields``."""
+    n = est = 0
+    for path, _ in iter_numeric_fields(spec):
+        if path == "dof":
+            continue
+        n += 1
+        est += is_estimate(spec, path)
+    return est, n
+
+
 def _specificity(key: str) -> tuple[int, int]:
     toks = _parse_path(key)
     return len(toks), sum(t != "*" for t in toks)
@@ -643,6 +694,6 @@ __all__ = [
     "Spec", "Joint", "Link", "GeometryHint", "DH", "Limits", "Pose", "Units", "EndEffector", "Base",
     "Reach", "Chain", "ChainJoint", "load_spec", "dump_spec", "json_schema", "write_json_schema",
     "build_chain", "dh_to_offset", "dh_fk", "iter_numeric_fields", "uncovered_fields", "path_covers",
-    "is_estimate", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
+    "is_estimate", "bad_source_values", "unmatched_keys", "estimate_counts", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
     "rot_x", "rot_y", "rot_z", "SCHEMA_VERSION",
 ]

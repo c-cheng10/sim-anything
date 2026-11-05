@@ -64,6 +64,26 @@ def test_source_coverage():
     assert "joints[1].origin.xyz" in paths
 
 
+def test_source_hygiene_helpers():
+    from simanything.spec import bad_source_values, estimate_counts, is_estimate, unmatched_keys
+
+    s = load_spec(ROOT / "examples/toy_6dof_dh.yaml")
+    assert unmatched_keys(s) == [] and bad_source_values(s) == []
+    est, n = estimate_counts(s)
+    assert est == n > 0
+    s2 = s.model_copy(update={
+        "sources": {"reach.value": "https://x.org/a.pdf", "total_mass": "doc:inputs/x/sources.md",
+                    "joints[0].dh.a": "ftp://x", "joints[1].dh": "doc:/abs/path", "joints[2].dh": "see manual"},
+        "estimates": ["joints", "reach", "joints[6]", "joints[*].origin", "joints[*].limits.lower", "base.link.mass"]})
+    assert [k for k, _ in bad_source_values(s2)] == ["joints[0].dh.a", "joints[1].dh", "joints[2].dh"]
+    # joints[6] is out of range and `origin` is not a field of a DH joint; base.link.mass is null but exists
+    assert unmatched_keys(s2) == ["joints[6]", "joints[*].origin"]
+    # most specific key wins: reach.value is sourced, the reach definition is estimated
+    assert not is_estimate(s2, "reach.value") and is_estimate(s2, "reach.measured_to")
+    assert is_estimate(s2, "joints[3].dh.d") and not is_estimate(s2, "joints[1].dh.d")
+    assert not is_estimate(s2, "total_mass")
+
+
 def test_validation_errors():
     with pytest.raises(ValueError):
         Spec(name="x", dof=2, joints=[Joint(name="a", dh=DH())], convention="dh_standard")

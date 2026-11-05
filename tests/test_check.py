@@ -45,8 +45,8 @@ SPEC = {
     "ee": {"name": "ee_site", "origin": {"xyz": [0.25, 0, 0]}},
     "total_mass": 2.5,
     "reach": {"value": 0.55, "measured_from": "shoulder", "measured_to": "ee_site"},
-    "sources": {"total_mass": "https://example.com/datasheet.pdf"},
-    "estimates": ["base", "joints", "ee", "reach"],
+    "sources": {"total_mass": "https://example.com/datasheet.pdf", "joints": "doc:inputs/test_2link/sources.md"},
+    "estimates": ["base", "ee", "reach"],
 }
 
 ACT = {
@@ -320,7 +320,7 @@ URL = "https://example.com/datasheet.pdf"
 
 def sourced_reach(**reach) -> dict:
     """SPEC with the whole reach (value and definition) sourced rather than estimated."""
-    return spec_with(reach=reach, sources={"total_mass": URL, "reach": URL}, estimates=["base", "joints", "ee"])
+    return spec_with(reach=reach, sources={"total_mass": URL, "joints": URL, "reach": URL}, estimates=["base", "ee"])
 
 
 def test_reach_too_long(tmp_path):
@@ -568,6 +568,41 @@ def test_spec_number_without_source(tmp_path):
     assert error_failures(report) == {"sources_complete"}
 
 
+def test_source_values_must_be_urls_or_doc_paths(tmp_path):
+    s = spec_with(sources={"total_mass": "datasheet p. 3", "joints": "/home/me/sources.md"})
+    model, spec = write_case(tmp_path, mjcf(), s)
+    report = run_checks(model, spec)
+    c = assert_fails(report, "sources_complete")
+    assert "not URLs" in c.message and "datasheet p. 3" in c.message
+    assert "doc:<relative path>" in c.fix_hint
+    assert set(c.details["bad_sources"]) == {"total_mass", "joints"}
+    assert error_failures(report) == {"sources_complete"}
+
+
+def test_source_keys_must_match_spec_fields(tmp_path):
+    s = spec_with(sources={"total_mass": URL, "joints": URL, "joints[2].limits": URL},
+                  estimates=["base", "ee", "reach", "joints[0].dh.a", "payload", "joints[*].link.com",
+                             "base.origin.rpy"])
+    model, spec = write_case(tmp_path, mjcf(), s)
+    c = assert_fails(run_checks(model, spec), "sources_complete")
+    # joints[2] does not exist (2 joints), dh is not a field of an offset-convention joint;
+    # payload / link.com are null and base.origin.rpy is zero, but those fields exist: fine
+    assert c.details["unmatched_keys"] == ["joints[2].limits", "joints[0].dh.a"]
+    assert "typo?" in c.message and "`joints[2].limits`" in c.fix_hint
+
+
+def test_estimate_fraction_reported(tmp_path):
+    model, spec = write_case(tmp_path, mjcf(), SPEC)
+    c = by_id(run_checks(model, spec))["sources_complete"]
+    assert c.passed and c.details["n_numbers"] == 21 and c.details["n_estimated"] == 6
+    model, spec = write_case(tmp_path, mjcf(), spec_with(sources={"total_mass": URL},
+                                                         estimates=["base", "joints", "ee", "reach"]))
+    report = run_checks(model, spec)
+    c = by_id(report)["sources_complete"]
+    assert not c.passed and c.severity == "warning" and report.passed
+    assert "20 of 21 (95%) are estimates" in c.message and c.details["estimate_fraction"] == pytest.approx(20 / 21)
+
+
 def test_invalid_spec_reported_not_raised(tmp_path):
     model, spec = write_case(tmp_path, mjcf(), spec_text="name: x\ndof: 3\njoints: []\n")
     report = run_checks(model, spec)
@@ -617,8 +652,10 @@ def test_dh_6dof_example(tmp_path, examples_dir):
     assert time.perf_counter() - t0 < 5.0
     checks = by_id(report)
     for cid in CONTRACT_IDS:
-        if cid != "reach":
+        if cid not in ("reach", "sources_complete"):
             assert checks[cid].passed, checks[cid]
+    # the fictional example is all estimates: covered, but flagged
+    assert checks["sources_complete"].severity == "warning" and checks["sources_complete"].measured == 1.0
     # Independent max of the reach metric (horizontal distance from the j1 axis) via the spec's numpy FK.
     ch = load_spec(spec_path).to_si().chain()
     rng = np.random.default_rng(1)
