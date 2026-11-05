@@ -1,0 +1,8 @@
+robot: arm
+candidate:
+  joints: [a1, a2, a3, a4]
+  ee: {site: ee}
+reference:
+  joints: [j1, j2, j3, j4]
+  ee: {site: tool}
+fit_conventions: true
