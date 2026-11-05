@@ -12,5 +12,10 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 3 | 2 | C: evaluator | done: evaluate.py + 40 tests, merged |
 | 4 | 2 | D: render + report | done: render.py, report.py + 11 tests, merged |
 | 5 | 2 | E: plugin, loop, benchmark inputs | done: SKILL.md, command, marketplace, loop.py + tests, inputs for 8 robots (search excerpts only; manufacturer hosts blocked), merged |
+| 6 | 4 | blind round0: ur5e | running |
+| 7 | 4 | blind round0: franka_panda | running |
+| 8 | 4 | blind round0: kinova_gen3 | running |
+| 9 | 4 | blind round0: xarm7 | running |
+| 10 | 4 | blind round0: kuka_iiwa14 | running |
 
 ## Refinement rounds used: 0 / 3
