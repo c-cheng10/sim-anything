@@ -30,6 +30,7 @@ Resume from this file and BUDGET.md alone. Updated at every phase boundary and r
 - D10: ViperX reference includes gripper finger joints; they are unmapped and held at qpos0; reference mass includes the gripper.
 
 ## Known issues
+- GitHub Pages is not enabled on the repo and the Actions token cannot enable it. Owner action needed once: Settings -> Pages -> Build and deployment -> Source: GitHub Actions. Then re-run the Gallery workflow. The gallery builds locally with `python gallery/build.py`.
 - Network: manufacturer sites (universal-robots.com, frankaemika.github.io, kinovarobotics.com, ufactory.cc, trossenrobotics.com, kuka.com, even wikipedia) are unreachable from the shell and from WebFetch; only WebSearch works. Benchmark inputs are built from search excerpts. Kinova (DH values) and KUKA (link lengths) inputs have the largest gaps.
 - Evaluator: when a reference base frame is yawed 180 deg relative to the datasheet frame, the fitted joint-1 offset of pi also shifts the joint-limit comparison by 180 deg (limit MAE inflated). Watch in results.
 - Matplotlib fallback renderer only depth-sorts whole geoms.
