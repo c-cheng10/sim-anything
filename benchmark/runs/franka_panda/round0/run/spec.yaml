@@ -1,0 +1,54 @@
+name: franka_panda
+manufacturer: Franka Emika
+model: Panda arm (FER), 7-DOF, without hand
+description: Franka Emika Panda arm only, EE site at the tool flange face (DH "Flange" row).
+dof: 7
+units: {length: m, angle: deg}      # DH table is published in m / rad; alpha pi/2 written as 90 deg
+convention: dh_modified             # FCI: "following Craig's convention"; Gaz 2019: "modified Denavit-Hartenberg"
+base:
+  link: {geometry: [{shape: cylinder, radius: 0.06}]}
+joints:                             # rows copied from the FCI table (a_{i-1}, alpha_{i-1}, d_i), theta_i = q_i
+  - {name: A1, dh: {a: 0,       alpha: 0,   d: 0.333}, limits: {lower: -166, upper: 166}, velocity_limit: 150, effort_limit: 87,
+     link: {geometry: [{shape: capsule, radius: 0.06}]}}
+  - {name: A2, dh: {a: 0,       alpha: -90, d: 0},     limits: {lower: -101, upper: 101}, velocity_limit: 150, effort_limit: 87,
+     home: -45, link: {geometry: [{shape: capsule, radius: 0.06}]}}
+  - {name: A3, dh: {a: 0,       alpha: 90,  d: 0.316}, limits: {lower: -166, upper: 166}, velocity_limit: 150, effort_limit: 87,
+     link: {geometry: [{shape: capsule, radius: 0.055}]}}
+  - {name: A4, dh: {a: 0.0825,  alpha: 90,  d: 0},     limits: {lower: -176, upper: -4},  velocity_limit: 150, effort_limit: 87,
+     home: -135, link: {geometry: [{shape: capsule, radius: 0.055}]}}
+  - {name: A5, dh: {a: -0.0825, alpha: -90, d: 0.384}, limits: {lower: -166, upper: 166}, velocity_limit: 180, effort_limit: 12,
+     link: {geometry: [{shape: capsule, radius: 0.05}]}}
+  - {name: A6, dh: {a: 0,       alpha: 90,  d: 0},     limits: {lower: -1,   upper: 215}, velocity_limit: 180, effort_limit: 12,
+     home: 90, link: {geometry: [{shape: capsule, radius: 0.045}]}}
+  - {name: A7, dh: {a: 0.088,   alpha: 90,  d: 0},     limits: {lower: -166, upper: 166}, velocity_limit: 180, effort_limit: 12,
+     home: 45, link: {geometry: [{shape: capsule, radius: 0.04}]}}
+ee: {name: ee_site, origin: {xyz: [0, 0, 0.107]}}   # DH "Flange" row: a = 0, d = 0.107 m, alpha = 0, theta = 0
+total_mass: 17.8
+payload: 3
+reach: {value: 0.855, measured_from: shoulder, measured_to: ee_site}
+repeatability: 0.0001
+sources:
+  joints[*].dh: https://frankarobotics.github.io/docs/robot_specifications.html
+  joints[6].dh: https://www.diag.uniroma1.it/~labrob/pub/papers/RAL_2019_PandaDynamicModel_PreprintXplore.pdf
+  ee.origin: https://frankarobotics.github.io/docs/robot_specifications.html
+  joints[*].limits: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  joints[*].velocity_limit: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  joints[*].effort_limit: https://frankarobotics.github.io/docs/robot_specifications.html
+  joints[*].home: https://raw.githubusercontent.com/frankaemika/libfranka/master/examples/generate_joint_position_motion.cpp
+  total_mass: https://centers.ulbsibiu.ro/incon/wp-content/uploads/Datasheet-Franka-Emika-Panda-Research-collaborative-robot.pdf
+  payload: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  reach: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+  repeatability: https://www.generationrobots.com/media/Panda_Datasheet_May_2019.pdf
+estimates:
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  DH: modified (Craig) table from the FCI docs (values extracted via web search; direct fetch blocked), alpha
+  converted from rad (pi/2) to 90 deg; joint-7 row (a = 0.088 m, alpha = pi/2) from Gaz et al. RA-L 2019. The
+  "Flange" row (d = 0.107 m) is not a joint and is ee.origin. Joint limits are the datasheet degree values (FER);
+  velocities are datasheet deg/s (A5-A7 180 deg/s seen in one datasheet version only); torques from FCI.
+  Home is libfranka's example start pose q_goal = {0, -pi/4, 0, -3pi/4, 0, pi/2, pi/4} written in deg, needed
+  because A4 = 0 is outside its range. Mass 17.8 kg is the datasheet's "~17.8 kg" (handbook: "approx. 18 kg").
+  Repeatability "<+/- 0.1 mm" written as 0.0001 m. Reach "Maximum reach 855 mm": the datasheet extract does not
+  say from/to where; shoulder -> flange is an interpretation. Link radii are estimates from product photos
+  (no housing diameters published): ~0.12 m diameter at base/shoulder, tapering towards the wrist.
