@@ -43,7 +43,7 @@ figcaption { padding: 4px 10px; color: var(--muted); font-size: 0.85rem; text-tr
 table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 th { background: var(--card); font-weight: 600; white-space: nowrap; }
-td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; max-width: 16rem; overflow-wrap: anywhere; }
 td.hint { color: var(--muted); min-width: 260px; }
 tr.fail td:first-child { box-shadow: inset 3px 0 var(--fail); }
 tr.warn td:first-child { box-shadow: inset 3px 0 var(--warn); }
