@@ -287,7 +287,8 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
     except Exception as e:  # noqa: BLE001 - any build failure is a failed `compiles` check
         from .errors import describe_exception
 
-        build_error = describe_exception(e)
+        # the build read the archived copy; name the file the user edits instead
+        build_error = describe_exception(e).replace(str(it_spec), str(spec_path))
 
     if build_error is not None:
         it_model.unlink(missing_ok=True)

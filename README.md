@@ -71,10 +71,12 @@ Build, check, render and report a (fictional) 6-DOF arm described by a DH table:
 sim-anything loop examples/toy_6dof_dh.yaml --run-dir runs/toy --note "first run"
 ```
 
-On a pass `loop` prints a one-line summary (`iteration 1/8: PASSED (N checks,
-0 errors)`, plus any non-blocking warnings) followed by the paths it wrote:
-`runs/toy/model.xml`, `runs/toy/renders/{front,side,top}.png`,
-`runs/toy/report.html` (and `report.md`) and `runs/toy/check.json`. The
+On a pass `loop` prints a one-line summary (`iteration 1/8: PASSED (14 checks,
+0 errors, 1 warning(s))`), the non-blocking warnings (here `sources_complete`:
+every number of the toy arm is an estimate), then the renders directory
+(`runs/toy/renders`, with the views and the render backend), the report
+(`runs/toy/report.html`, also `report.md`) and the check report
+(`runs/toy/check.json`). The built model is `runs/toy/model.xml`. The
 per-check details (measured vs expected, tolerance, messages) are in
 `check.json` and in the report's checks table; on a failure the summary lists
 each failed check with its fix hint. `loop` rewrites the renders and the report

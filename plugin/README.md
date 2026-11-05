@@ -36,6 +36,10 @@ Claude gathers sources into `runs/ur5e/sources.md`, writes `runs/ur5e/spec.yaml`
 they always show the latest one; delete `runs/ur5e/run/` to start over). You can also just ask
 "build a MuJoCo model of the Kinova Gen3"; the skill triggers on its own.
 
+Recent Claude Code versions may list the `/sim-anything` command among the skills (for example in
+`/skills` or the skill picker) rather than only under slash commands; it is the same command and works
+the same way.
+
 ## Layout
 
 ```

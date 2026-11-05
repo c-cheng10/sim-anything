@@ -127,6 +127,14 @@ def test_loop_build_error_is_friendly_and_names_the_spec(tmp_path):
     assert f"sim-anything validate {spec}" in res.stdout and "pydantic.dev" not in res.stdout
 
 
+def test_loop_yaml_error_names_the_user_spec(tmp_path):
+    spec = tmp_path / "my_robot.yaml"
+    spec.write_text("name: x\njoints: [a, b\n")
+    res = _runner().invoke(app, ["loop", str(spec), "--run-dir", str(tmp_path / "run")])
+    assert res.exit_code == 1
+    assert f'in "{spec}", line 2' in res.stdout and "iter_01" not in res.stdout.split("fix:")[0]
+
+
 def test_eval_bad_map_is_a_clean_error(tmp_path):
     bad = tmp_path / "map.yaml"
     bad.write_text("candidate: {jionts: [a], ee: {site: s}}\nreference: {joints: [b], ee: {site: s}}\n")
