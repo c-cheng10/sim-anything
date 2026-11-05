@@ -26,7 +26,9 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 17 | 5 r1 | blind round1: ur5e + franka_panda | done: both pass (2 iterations each) |
 | 18 | 5 r1 | blind round1: kinova_gen3 + xarm7 | done: both pass (2 / 1 iterations) |
 | 19 | 5 r1 | blind round1: kuka_iiwa14 + viperx_300s | done: both pass (1 iteration each) |
-| 20 | 5 r2 | review: new-user tester (incl. one capped real /sim-anything run) | running |
-| 21 | 5 r2 | review: code reviewer | running |
+| 20 | 5 r2 | review: new-user tester (incl. one capped real /sim-anything run) | done: gates 2-3 verified; validate parity, exit-code clash, blindness gap |
+| 21 | 5 r2 | review: code reviewer | done: eval fit local minima + tie-break, exit codes, exclusion depth, weak tests |
+| 22 | 5 r2 | fixer C: evaluator | running |
+| 23 | 5 r2 | fixer D: CLI/loop/check/builder/spec/skill | running |
 
 ## Refinement rounds used: 2 / 3 (round 1 done: checks 5/6 -> 6/6; round 2 in progress)

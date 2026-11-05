@@ -63,3 +63,22 @@ Fixer B (loop/CLI/report/eval/plugin/docs):
 Orchestrator (me):
 14. RESULTS/README: replace "DH published" with kinematic-source type (DH / PoE / dimension table); note UR5e reach-endpoint change; add weak-source caveats (Kinova placeholder attribution, KUKA letter mapping, forum torques, reseller datasheets); explain score terms that compare sourced datasheet values against reference choices (UR5e elbow limit, Panda/xArm mass); soften README wording ("any", "every number cites").
 15. Blindness hardening for re-runs: move third_party/ out of the repo tree while generation agents run.
+
+### Round 2 (from new-user tester incl. a real /sim-anything run, and code reviewer)
+Gates 2 and 3 verified by the round-2 tester: fresh-clone quickstart 24 s; plugin installs, skill `robot-to-mujoco` and command `/sim-anything` both discovered; one real `claude -p "/sim-anything Trossen WidowX 250 6DOF"` run completed gather -> loop -> report in 128 s ($0.79), sourced and honest.
+
+Fixer C (evaluator):
+1. HIGH: convention fit can stall in local minima (347 mm on a re-conventioned exact Panda in 3/6 random trials). Add pair moves when stuck and restart until two runs agree.
+2. HIGH: among equal-cost conventions prefer the lowest joint-limit error before simplicity (exact models scored 85-89).
+
+Fixer D (CLI/loop/check/builder/spec/skill):
+3. HIGH: usage errors (missing file, bad option) exit 2 = "max iterations reached" for loop; make them exit 1.
+4. MED: end-cap exclusion depth limit never rejects (geometry reaching back over a joint gets excluded). Require the closest points to be the segment ends at the short middle link / cap depth by r1+r2 minus end gap.
+5. MED: loop status not recomputed when the cap is raised for an unchanged spec.
+6. MED: reach definition fields left at defaults count as sourced; treat unset measured_from/measured_to as estimated (or require them).
+7. MED: validate must run the same source hygiene as sources_complete (URLs, typo keys, did-you-mean for estimate/source path typos).
+8. MED: reach message vs hint contradiction for gross mismatch; print small rated values with enough precision.
+9. LOW: element keys like xyz[2]; doc: path traversal; same key in sources and estimates; YAML parse errors name the archived copy; README loop-output list; plugin README note that Claude Code lists commands as skills.
+10. SKILL: generated runs (benchmark/runs/, runs/, HANDOFF) are outputs, not sources: never read them while gathering.
+11. Tests: mutation-resistant tests for exclusion depth/location, is_estimate precedence, density bounds, kinematics_match tolerance.
+
