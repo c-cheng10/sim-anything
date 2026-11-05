@@ -1,0 +1,96 @@
+name: viperx_300s
+manufacturer: Trossen Robotics
+model: ViperX 300 S (ViperX-300 6DOF, vx300s)
+description: 6-DOF Interbotix X-Series arm, arm joints only (no gripper); EE site at the gripper-mount face of the wrist_rotate link.
+dof: 6
+units: {length: m, angle: deg}   # the published PoE table is in metres; limits are in degrees
+convention: offset
+base:
+  link:
+    geometry:
+      - {shape: box, size: [0.14973, 0.055, 0.01], pos: [-0.06, 0, 0.01]}
+      - {shape: cylinder, radius: 0.07, half_length: 0.03, pos: [0, 0, 0.05]}
+joints:
+  # q = 0 is the PoE home configuration: upper arm vertical, forearm horizontal along +x (as in the drawing).
+  - name: waist
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry: [{shape: cylinder, radius: 0.04, fromto: [0, 0, 0.085, 0, 0, 0.12705]}]
+  - name: shoulder
+    origin: {xyz: [0, 0, 0.12705]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 101}
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.025, fromto: [0, 0, 0, 0, 0, 0.3]}
+        - {shape: capsule, radius: 0.025, fromto: [0, 0, 0.3, 0.05955, 0, 0.3]}
+  - name: elbow
+    origin: {xyz: [0.05955, 0, 0.3]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 92}
+    link:
+      geometry: [{shape: sphere, radius: 0.028}]
+  - name: forearm_roll
+    origin: {xyz: [0, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry: [{shape: capsule, radius: 0.025, fromto: [0.06, 0, 0, 0.27, 0, 0]}]
+  - name: wrist_angle
+    origin: {xyz: [0.3, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -107, upper: 130}
+    link:
+      geometry: [{shape: sphere, radius: 0.025}]
+  - name: wrist_rotate
+    origin: {xyz: [0, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry: [{shape: cylinder, radius: 0.02, fromto: [0.035, 0, 0, 0.07, 0, 0]}]
+ee:
+  name: ee_site
+  origin: {xyz: [0.07, 0, 0]}
+payload: 0.75
+reach: {value: 0.75, measured_from: shoulder, measured_to: ee_site}
+repeatability: 0.001
+sources:
+  joints[*].origin: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[*].axis: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[*].limits: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  payload: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  reach.value: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  repeatability: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+estimates:
+  - ee.origin
+  - reach.measured_from
+  - reach.measured_to
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  Kinematic source: published screw-axis (product-of-exponentials) table, Trossen vx300s specification page
+  "Kinematic Properties" (M and Slist, space frame, metres; primary). Converted exactly to offset with all frames
+  parallel to the base: p_i = w_i x v_i gives waist (0,0,0), shoulder (0,0,0.12705), elbow (0.05955,0,0.42705),
+  forearm_roll on the line through (x,0,0.42705) along +x, wrist_angle (0.35955,0,0.42705), wrist_rotate on the line
+  through (x,0,0.42705) along +x. The points chosen on the two roll axes are the elbow point for forearm_roll and the
+  wrist_angle point for wrist_rotate (x copied from the S3 / S5 rows; any point on the axis gives the same model), so
+  those two joints have zero origin offsets. Axis directions are the published w_i, signs kept. Cross-checks: the
+  technical drawing (DWG 11) shows 300 / 60 (305.94) upper arm, 300 forearm, 126.75 base plate to shoulder axis
+  (PoE gives 127.05 from the base frame origin; the 0.3 mm difference is the base-frame placement, PoE used) and the
+  arm-reach table gives 306 / 300 / 70 sections. EE site: arm only, no tool flange; the site is on the wrist_rotate
+  axis 0.07 m (70 mm) beyond the wrist_angle axis, at the face where the gripper bolts onto the wrist_rotate link.
+  The 70 mm is sourced (drawing "70", reach table C~D "Wrist Tilt to Rotate" 70 mm, cumulative D = 676 mm), but
+  reading its end point as the gripper-mount face (point D in the arm-reach picture sits at the servo/gripper-plate
+  interface) is my interpretation, so ee.origin is listed as an estimate. The PoE home tool pose M (x = 0.536494 m)
+  is a gripper frame 0.176944 m beyond the wrist_angle axis, i.e. on the gripper, so it is not used for the site.
+  Joint limits: firmware default limits ("degrees from Zero (servo centered)"); assumed to use the same zero as the
+  PoE home pose. Waist, forearm_roll and wrist_rotate are +-180 in firmware (mechanically continuous for waist per
+  "full 360 degree of rotation"), kept as +-180. Reach: "750mm" with no stated reference points; the cumulative
+  table puts the gripper rail at 745 mm and the finger tip at 812 mm from the shoulder, so 750 mm most likely
+  includes the gripper; the arm-only model measures shoulder to mount face (676 mm), so the reach definition is an
+  estimate and a mismatch is expected. Not found: total mass, link masses, joint torques/speeds (servo models are
+  XM540-W270 for joints 1-5 (shoulder and elbow doubled) and XM430-W350 for wrist_rotate, no joint-level ratings
+  published), so omitted. Collision radii and base shapes are estimates from the drawing's proportions (base plate
+  299.46 mm long; the 110 mm width and the turntable diameter were not used as sourced numbers).
