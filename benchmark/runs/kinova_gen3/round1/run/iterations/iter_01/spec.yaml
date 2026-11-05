@@ -1,0 +1,114 @@
+name: kinova_gen3
+manufacturer: Kinova
+model: Gen3 ultra lightweight robot, 7-DoF spherical wrist (no gripper)
+dof: 7
+units: {length: m, angle: deg}      # DH lengths copied in metres; pi/2 and pi written as 90 / 180 deg
+convention: dh_standard             # classical DH: T = Rz(theta) Tz(d) Tx(a) Rx(alpha)
+base:
+  # DH row 0 ("base -> frame 0"): alpha = pi, a = 0, d = 0, theta = 0 -> fixed Rx(180 deg)
+  origin: {xyz: [0, 0, 0], rpy: [180, 0, 0]}
+  link:
+    geometry:
+      - {shape: cylinder, radius: 0.045}
+joints:
+  # rows 1..7 of the classical DH table; theta_i = q_i (row 1), q_i + pi (rows 2..7)
+  - name: actuator_1
+    dh: {a: 0, alpha: 90, d: -0.2848, theta_offset: 0}
+    velocity_limit: 78
+    effort_limit: 54
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.045}
+  - name: actuator_2
+    dh: {a: 0, alpha: 90, d: -0.0118, theta_offset: 180}
+    limits: {lower: -128.9, upper: 128.9}
+    velocity_limit: 78
+    effort_limit: 54
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.045}
+  - name: actuator_3
+    dh: {a: 0, alpha: 90, d: -0.4208, theta_offset: 180}
+    velocity_limit: 78
+    effort_limit: 54
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.042}
+  - name: actuator_4
+    dh: {a: 0, alpha: 90, d: -0.0128, theta_offset: 180}
+    limits: {lower: -147.8, upper: 147.8}
+    velocity_limit: 78
+    effort_limit: 54
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.038}
+  - name: actuator_5
+    dh: {a: 0, alpha: 90, d: -0.3143, theta_offset: 180}
+    velocity_limit: 150
+    effort_limit: 34
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.035}
+  - name: actuator_6
+    dh: {a: 0, alpha: 90, d: 0, theta_offset: 180}
+    limits: {lower: -120.3, upper: 120.3}
+    velocity_limit: 150
+    effort_limit: 34
+    link:
+      geometry:
+        - {shape: capsule, radius: 0.035}
+  - name: actuator_7
+    dh: {a: 0, alpha: 180, d: -0.1674, theta_offset: 180}
+    velocity_limit: 150
+    effort_limit: 34
+    link:
+      geometry:
+        - {shape: cylinder, radius: 0.032}
+ee: {name: ee_site}                 # frame 7 is the end-effector (tool flange) frame; d7 includes 61.5 mm actuator-7-to-interface
+total_mass: 8.2
+payload: 4.0
+reach: {value: 902, measured_from: shoulder, measured_to: ee_site}
+sources:
+  joints[*].dh: https://raw.githubusercontent.com/Sahilnarola-1007/kinova-kinematics/main/design.md
+  base.origin: https://raw.githubusercontent.com/Sahilnarola-1007/kinova-kinematics/main/design.md
+  joints[*].limits: https://www.kinovarobotics.com/uploads/User-Guide-Gen3-R07.pdf
+  joints[*].velocity_limit: https://www.kinovarobotics.com/uploads/User-Guide-Gen3-R07.pdf
+  joints[*].effort_limit: https://www.kinovarobotics.com/uploads/User-Guide-Gen3-R07.pdf
+  total_mass: https://www.kinovarobotics.com/product/gen3-robots
+  payload: https://www.kinovarobotics.com/uploads/Kinova_Onepager_Gen3_2024_EN.pdf
+  reach: https://www.kinovarobotics.com/uploads/User-Guide-Gen3-R07.pdf
+estimates:
+  - base.link.geometry
+  - joints[*].link.geometry
+notes: >
+  Kinematic source: published DH table (classical DH, Kinova Gen3 User Guide section
+  "Denavit-Hartenberg (DH) parameters - 7 DoF spherical wrist"), but obtained SECOND-HAND:
+  the guide PDF and every mirror (kinovarobotics.com, csis.pace.edu, manualslib, scribd,
+  manualmachine, manuals.plus, manuals.online, unchainedrobotics.de) were blocked from this
+  session and search extracts only returned the table of contents, so the rows were copied
+  from a third-party transcription (Sahilnarola-1007/kinova-kinematics design.md section 5.1,
+  a C++ FK library; not a robot-description file) that does not cite the guide page.
+  Cross-check against the guide's own Table 9 geometric parameters (primary, via search
+  extract): |d1| = 156.4 + 128.4 = 284.8 mm ("Base to shoulder 284.8"), |d3| = 210.4 + 210.4
+  (two upper-arm halves), |d5| = 208.4 + 105.9 (forearm + first wrist length), |d7| = 105.9 +
+  61.5 (second wrist length + last actuator to end effector), |d2| = 5.4 + 6.4 and |d4| =
+  6.4 + 6.4 (the guide's 5.4 / 6.4 mm joint offsets), and q = 0 gives the arm straight up with
+  the flange at 1.1873 m = sum of all Table 9 lengths; every DH length is consistent with the
+  primary geometry. DH row 0 (alpha = pi) is a fixed base->frame-0 rotation, put in
+  base.origin rpy [180, 0, 0]. Angles pi/2 and pi converted to 90 / 180 deg; lengths kept in m.
+  EE site = DH frame 7 = the tool interface (flange face) of actuator 7 (the design.md extra
+  +0.113 m tool offset is for a gripper and is not used).
+  Joint limits: newer guide Table 35 "angular limits" (software limits) +-128.9 / +-147.8 /
+  +-120.3 deg for actuators 2 / 4 / 6; older guide lists +-126 / +-147 / +-117. Actuators 1, 3,
+  5, 7 have "no limit" (continuous) so their limits are omitted.
+  Actuators: joints 1-4 large, 5-7 small (Gen3 specifications sheet R01). velocity_limit is the
+  R07 "maximum unloaded speed" converted exactly from RPM (13 RPM = 78 deg/s large, 25 RPM =
+  150 deg/s small; older guide says 17 RPM for the large actuator). effort_limit is the R07
+  peak torque (54 N m large, 34 N m small; older guide: 74 N m large peak).
+  Mass 8.2 kg from the product page (guide: 8.3 kg with vision module, no gripper). Payload 4.0 kg
+  is the one-pager's mid-range continuous payload (2.0 kg full-range continuous, 4.5 kg peak).
+  Reach 902 mm is defined by the guide (search extract) as from the shoulder (actuator 2 frame)
+  to the end-effector frame.
+  Link geometry radii and extents are estimates (no housing diameters found): roughly the
+  proportions of product photos, ~90 mm diameter shoulder/upper arm tapering to ~64 mm at the
+  wrist. Link masses are not published; total_mass is distributed by volume.

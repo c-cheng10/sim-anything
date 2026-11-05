@@ -1,0 +1,30 @@
+{
+  "robot": "kinova_gen3",
+  "spec": "benchmark/runs/kinova_gen3/round1/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T08:31:04+00:00",
+      "passed": false,
+      "n_errors": 1,
+      "n_failed": 4,
+      "failed_ids": [
+        "reach"
+      ],
+      "note": "initial spec: classical DH table (second-hand copy of the user guide table), R07 limits/torques, auto link geometry",
+      "build_error": null
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2026-11-05T08:31:13+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 2,
+      "failed_ids": [],
+      "note": "reach 902 mm written as 0.902 (spec length unit is m)",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}
