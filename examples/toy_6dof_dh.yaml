@@ -1,0 +1,18 @@
+# A fictional 6-DOF arm described with standard DH parameters (UR-like layout).
+# Every number is an estimate: there is no real robot behind it.
+name: toy_6dof_dh
+manufacturer: none (fictional)
+dof: 6
+units: {length: mm, angle: deg}
+convention: dh_standard
+joints:
+  - {name: j1, dh: {a: 0,    alpha: 90,  d: 150}, limits: {lower: -360, upper: 360}, effort_limit: 150}
+  - {name: j2, dh: {a: -400, alpha: 0,   d: 0},   limits: {lower: -360, upper: 360}, effort_limit: 150}
+  - {name: j3, dh: {a: -350, alpha: 0,   d: 0},   limits: {lower: -180, upper: 180}, effort_limit: 150}
+  - {name: j4, dh: {a: 0,    alpha: 90,  d: 120}, limits: {lower: -360, upper: 360}, effort_limit: 28}
+  - {name: j5, dh: {a: 0,    alpha: -90, d: 100}, limits: {lower: -360, upper: 360}, effort_limit: 28}
+  - {name: j6, dh: {a: 0,    alpha: 0,   d: 100}, limits: {lower: -360, upper: 360}, effort_limit: 28}
+ee: {name: ee_site}
+total_mass: 18
+reach: {value: 850, measured_from: base_axis_horizontal, measured_to: ee_site}
+estimates: [joints, total_mass, reach]

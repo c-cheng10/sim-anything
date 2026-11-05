@@ -1,0 +1,620 @@
+{
+  "$defs": {
+    "Base": {
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "$ref": "#/$defs/Pose",
+          "description": "pose of the robot base in the world"
+        },
+        "link": {
+          "$ref": "#/$defs/Link",
+          "description": "the fixed base link"
+        }
+      },
+      "title": "Base",
+      "type": "object"
+    },
+    "DH": {
+      "additionalProperties": false,
+      "description": "One row of a DH table. See module docstring for the two conventions.",
+      "properties": {
+        "a": {
+          "default": 0.0,
+          "title": "A",
+          "type": "number"
+        },
+        "alpha": {
+          "default": 0.0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "d": {
+          "default": 0.0,
+          "title": "D",
+          "type": "number"
+        },
+        "theta_offset": {
+          "default": 0.0,
+          "title": "Theta Offset",
+          "type": "number"
+        }
+      },
+      "title": "DH",
+      "type": "object"
+    },
+    "EndEffector": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "default": "ee_site",
+          "title": "Name",
+          "type": "string"
+        },
+        "origin": {
+          "$ref": "#/$defs/Pose"
+        }
+      },
+      "title": "EndEffector",
+      "type": "object"
+    },
+    "GeometryHint": {
+      "additionalProperties": false,
+      "description": "Primitive collision/visual geometry for a link.\n\nIf neither ``fromto`` nor ``pos`` is given, the builder places the primitive\nautomatically: a capsule/cylinder spans from the link frame origin to the\nnext joint's origin (or the EE site for the last link); a box/sphere is\ncentred halfway between them.",
+      "properties": {
+        "shape": {
+          "default": "capsule",
+          "enum": [
+            "capsule",
+            "cylinder",
+            "box",
+            "sphere"
+          ],
+          "title": "Shape",
+          "type": "string"
+        },
+        "radius": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "capsule/cylinder/sphere radius",
+          "title": "Radius"
+        },
+        "half_length": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "capsule/cylinder half length",
+          "title": "Half Length"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "box half sizes [x, y, z]",
+          "title": "Size"
+        },
+        "fromto": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 6,
+              "minItems": 6,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "explicit endpoints in the link frame",
+          "title": "Fromto"
+        },
+        "pos": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pos"
+        },
+        "rpy": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rpy"
+        }
+      },
+      "title": "GeometryHint",
+      "type": "object"
+    },
+    "Joint": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "default": "hinge",
+          "enum": [
+            "hinge",
+            "slide"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Pose"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "axis": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Axis",
+          "type": "array"
+        },
+        "dh": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DH"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "limits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Limits"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "velocity_limit": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Velocity Limit"
+        },
+        "effort_limit": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effort Limit"
+        },
+        "damping": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Damping"
+        },
+        "armature": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Armature"
+        },
+        "home": {
+          "default": 0.0,
+          "title": "Home",
+          "type": "number"
+        },
+        "link": {
+          "$ref": "#/$defs/Link",
+          "description": "the child link moved by this joint"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Joint",
+      "type": "object"
+    },
+    "Limits": {
+      "additionalProperties": false,
+      "properties": {
+        "lower": {
+          "title": "Lower",
+          "type": "number"
+        },
+        "upper": {
+          "title": "Upper",
+          "type": "number"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "title": "Limits",
+      "type": "object"
+    },
+    "Link": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "mass": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mass"
+        },
+        "com": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "centre of mass in the link frame",
+          "title": "Com"
+        },
+        "geometry": {
+          "items": {
+            "$ref": "#/$defs/GeometryHint"
+          },
+          "title": "Geometry",
+          "type": "array"
+        }
+      },
+      "title": "Link",
+      "type": "object"
+    },
+    "Pose": {
+      "additionalProperties": false,
+      "properties": {
+        "xyz": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Xyz",
+          "type": "array"
+        },
+        "rpy": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Rpy",
+          "type": "array"
+        }
+      },
+      "title": "Pose",
+      "type": "object"
+    },
+    "Reach": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "exclusiveMinimum": 0,
+          "title": "Value",
+          "type": "number"
+        },
+        "measured_from": {
+          "default": "shoulder",
+          "enum": [
+            "shoulder",
+            "base_origin",
+            "base_axis_horizontal"
+          ],
+          "title": "Measured From",
+          "type": "string"
+        },
+        "measured_to": {
+          "default": "ee_site",
+          "enum": [
+            "ee_site",
+            "wrist_center"
+          ],
+          "title": "Measured To",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "Reach",
+      "type": "object"
+    },
+    "Units": {
+      "additionalProperties": false,
+      "properties": {
+        "length": {
+          "default": "m",
+          "enum": [
+            "m",
+            "mm"
+          ],
+          "title": "Length",
+          "type": "string"
+        },
+        "angle": {
+          "default": "deg",
+          "enum": [
+            "deg",
+            "rad"
+          ],
+          "title": "Angle",
+          "type": "string"
+        }
+      },
+      "title": "Units",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "manufacturer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Manufacturer"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model"
+    },
+    "description": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
+    "dof": {
+      "minimum": 1,
+      "title": "Dof",
+      "type": "integer"
+    },
+    "units": {
+      "$ref": "#/$defs/Units"
+    },
+    "convention": {
+      "default": "offset",
+      "enum": [
+        "offset",
+        "dh_standard",
+        "dh_modified"
+      ],
+      "title": "Convention",
+      "type": "string"
+    },
+    "base": {
+      "$ref": "#/$defs/Base"
+    },
+    "joints": {
+      "items": {
+        "$ref": "#/$defs/Joint"
+      },
+      "title": "Joints",
+      "type": "array"
+    },
+    "ee": {
+      "$ref": "#/$defs/EndEffector"
+    },
+    "total_mass": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Total Mass"
+    },
+    "payload": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Payload"
+    },
+    "reach": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Reach"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "repeatability": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Repeatability"
+    },
+    "sources": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Sources",
+      "type": "object"
+    },
+    "estimates": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Estimates",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "name",
+    "dof",
+    "joints"
+  ],
+  "title": "sim-anything robot spec",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

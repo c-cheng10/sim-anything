@@ -1,0 +1,37 @@
+# A fictional planar 2-link arm used for tests and the quickstart.
+# Every number is an estimate: there is no real robot behind it.
+name: toy_2link
+manufacturer: none (fictional)
+dof: 2
+units: {length: m, angle: deg}
+convention: offset
+base:
+  link:
+    mass: 1.0
+    geometry: [{shape: cylinder, radius: 0.06, half_length: 0.03, pos: [0, 0, 0.03]}]
+joints:
+  - name: shoulder
+    type: hinge
+    origin: {xyz: [0, 0, 0.1], rpy: [0, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -150, upper: 150}
+    effort_limit: 20
+    link:
+      mass: 1.0
+      geometry: [{shape: capsule, radius: 0.03}]
+  - name: elbow
+    type: hinge
+    origin: {xyz: [0.3, 0, 0], rpy: [0, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -150, upper: 150}
+    effort_limit: 10
+    link:
+      mass: 0.5
+      geometry: [{shape: capsule, radius: 0.025}]
+ee:
+  name: ee_site
+  origin: {xyz: [0.25, 0, 0]}
+total_mass: 2.5
+reach: {value: 0.55, measured_from: shoulder, measured_to: ee_site}
+sources: {}
+estimates: [base, joints, ee, total_mass, reach]
