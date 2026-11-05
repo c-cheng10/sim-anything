@@ -8,5 +8,5 @@ dist/
 .venv/
 /tmp/
 .claude/worktrees/
-runs/
+/runs/
 gallery/site/

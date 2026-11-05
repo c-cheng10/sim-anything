@@ -35,6 +35,9 @@ def _sample_ranges(ctx: CheckContext, jids: list[int]) -> tuple[np.ndarray, np.n
     return np.array(lo), np.array(hi), notes
 
 
+REACH_GROSS_TOL = 0.30  # beyond this a reach mismatch is always an error
+
+
 def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> CheckResult:
     if not ctx.has_spec:
         return skipped_no_spec("reach")
@@ -181,10 +184,15 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
     msg = (f"max reach {measured:.3f} m is {abs(rel) * 100:.1f}% {'above' if too_long else 'below'} "
            f"rated {expected:.3f} m")
     caveats = []
-    if def_est:
-        caveats.append(f"the reach definition is assumed ({' and '.join(def_est)} listed in estimates)")
-    if value_est:
-        caveats.append("reach.value is an estimate")
+    if abs(rel) > REACH_GROSS_TOL:
+        # no reach definition explains a mismatch this large: units or structure are wrong
+        msg += (f"; more than {REACH_GROSS_TOL * 100:.0f}% off, so this stays an error even if the reach "
+                "definition or value is estimated (check `units.length` and the link lengths)")
+    else:
+        if def_est:
+            caveats.append(f"the reach definition is assumed ({' and '.join(def_est)} listed in estimates)")
+        if value_est:
+            caveats.append("reach.value is an estimate")
     if caveats:
         msg += "; warning only: " + "; ".join(caveats)
     try:

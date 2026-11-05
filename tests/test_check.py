@@ -673,3 +673,18 @@ def test_dh_6dof_example(tmp_path, examples_dir):
     assert measured <= best * 1.03
     # deterministic for a fixed seed
     assert by_id(run_checks(model, spec_path, seed=0))["reach"].measured == pytest.approx(measured)
+
+
+def test_gross_reach_mismatch_stays_error_even_if_definition_estimated(tmp_path):
+    """A units slip (e.g. reach 850 read as metres) must not hide behind an estimated definition."""
+    from simanything.builder import build_mjcf
+    from simanything.check import run_checks
+    from simanything.spec import dump_spec, load_spec
+
+    spec = load_spec(Path(__file__).resolve().parents[1] / "examples" / "toy_6dof_dh.yaml")
+    spec = spec.model_copy(update={"reach": spec.reach.model_copy(update={"value": spec.reach.value * 3})})
+    sp, mp = tmp_path / "spec.yaml", tmp_path / "model.xml"
+    dump_spec(spec, sp)
+    mp.write_text(build_mjcf(spec))
+    c = {c.id: c for c in run_checks(mp, sp, n_reach_samples=300).checks}["reach"]
+    assert not c.passed and c.severity == "error" and "stays an error" in c.message
