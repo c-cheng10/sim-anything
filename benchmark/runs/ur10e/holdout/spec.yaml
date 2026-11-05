@@ -1,0 +1,94 @@
+name: ur10e
+manufacturer: Universal Robots
+model: UR10e
+description: UR10e collaborative robot arm (e-Series), arm only, EE site at the tool flange (DH frame 6).
+dof: 6
+units: {length: m, angle: deg}      # DH table lengths are in m; alpha pi/2 written as 90 deg
+convention: dh_standard
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 0.095, fromto: [0, 0, 0, 0, 0, 0.09]}]
+joints:
+  - name: base
+    dh: {a: 0, alpha: 90, d: 0.1807}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 120
+    effort_limit: 330
+    link: {mass: 7.369, geometry: [{shape: capsule, radius: 0.075}]}
+  - name: shoulder
+    dh: {a: -0.6127, alpha: 0, d: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 120
+    effort_limit: 330
+    link: {mass: 13.051, geometry: [{shape: capsule, radius: 0.06}]}
+  - name: elbow
+    dh: {a: -0.57155, alpha: 0, d: 0}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 150
+    link: {mass: 3.989, geometry: [{shape: capsule, radius: 0.045}]}
+  - name: wrist_1
+    dh: {a: 0, alpha: 90, d: 0.17415}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 54
+    link: {mass: 2.1, geometry: [{shape: capsule, radius: 0.045}]}
+  - name: wrist_2
+    dh: {a: 0, alpha: -90, d: 0.11985}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 54
+    link: {mass: 1.98, geometry: [{shape: capsule, radius: 0.045}]}
+  - name: wrist_3
+    dh: {a: 0, alpha: 0, d: 0.11655}
+    limits: {lower: -360, upper: 360}
+    velocity_limit: 180
+    effort_limit: 54
+    link: {mass: 0.615, geometry: [{shape: capsule, radius: 0.04}]}
+ee: {name: ee_site}                  # d6 already ends at the tool flange frame
+total_mass: 33.3
+payload: 12.5
+reach: {value: 1.3, measured_from: base_axis_horizontal, measured_to: ee_site}
+repeatability: 0.00005
+sources:
+  joints[*].dh: https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
+  joints[*].link.mass: https://www.universal-robots.com/developer/hardware-and-motion/robot-motion-dh-parameters/
+  joints[*].limits: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+  joints[*].velocity_limit: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+  joints[0].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[1].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[2].effort_limit: https://forum.universal-robots.com/t/maximum-axis-speed-acceleration/13338
+  joints[4].effort_limit: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+  joints[5].effort_limit: https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/
+  total_mass: https://www.universal-robots.com/manuals/EN/PDF/SW5_19/user-manual-UR10e-PDF_online/711-039-00_UR10e_User_Manual_en_Global.pdf
+  payload: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+  reach.value: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+  repeatability: https://www.universal-robots.com/manuals/EN/TechSheets/UR10e_techsheet_pdf_online/UR10e_techsheet_en.pdf
+estimates:
+  - joints[3].effort_limit
+  - joints[*].link.geometry
+  - base.link.geometry
+  - reach.measured_from
+  - reach.measured_to
+notes: >
+  Kinematic source: published DH table (UR support article "DH parameters for calculations of kinematics and
+  dynamics", UR10e/UR12e section, primary; values taken from web-search extracts because universal-robots.com
+  could not be fetched from this environment). Standard (distal) DH, theta_i = q_i (no theta offsets), rows copied
+  verbatim in metres; alpha pi/2 written as 90 deg (angle unit deg for the whole file). The datasheet drawing labels
+  (180.7, 612.7, 571.55, 119.85, 174.15 mm) agree with d1, a2, a3, d5, d4.
+  EE site: DH frame 6, which is the tool flange face (d6 = 0.11655 m ends at the flange); no extra ee offset.
+  Joint limits: +-360 deg for all six joints (techsheet working range). One search extract of the SW5.22 tech-spec page
+  reported +-160 deg for the elbow; a follow-up search found only +-360 deg for the UR10e elbow, so +-360 is used
+  (conflict noted). Velocity limits from the current techsheet (120 deg/s base and shoulder, 180 deg/s others); the
+  06/2023 factsheet lists 180 deg/s for base and shoulder (conflict).
+  Torques: UR article gives joint-size ratings (Size 2 = 54 Nm, Size 3 = 150 Nm, Size 4 = 330 Nm) and states wrist 2
+  and wrist 3 are Size 2 on the UR10e -> 54 Nm (sourced). Base/shoulder 330 Nm and elbow 150 Nm come from a UR forum
+  post (second-hand), consistent with the Size 4 / Size 3 ratings. Wrist 1 = 54 Nm is an estimate (assumed Size 2 like
+  the other wrists; the forum lists all three wrists equal, at 56 Nm, which conflicts with the 54 Nm Size 2 rating).
+  Mass: 33.3 kg robot weight from the user manual (the older tech-specs sheet gives 33.5 kg including cable). Link
+  masses from the UR DH page (sum 29.104 kg); the remainder goes to the base. CoMs/inertias not extracted, omitted.
+  Reach 1300 mm (techsheet; datasheet drawing "R1300"); the source does not state the endpoints in text: the drawing
+  shows a working-area radius around the base axis, so measured_from base_axis_horizontal and measured_to ee_site
+  (tool flange) are estimates. Repeatability +-0.05 mm (ISO 9283) written as 0.00005 m.
+  Geometry radii are estimates from product photos scaled by the 190 mm footprint diameter (base cylinder radius
+  0.095 m from the 190 mm footprint diameter, height 0.09 m estimated). Arm only, no gripper.
