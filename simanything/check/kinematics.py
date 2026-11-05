@@ -9,6 +9,7 @@ import mujoco
 import numpy as np
 
 from ..schemas import CheckResult
+from ..spec import is_estimate
 from .context import HINGE, JOINT_TYPE_NAMES, CheckContext, result, skipped_no_spec
 
 REACH_TOL = 0.05  # relative
@@ -55,6 +56,7 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
 
     # ---- origin of the measurement (fixed point/line, evaluated at home) ----
     origin_desc = reach.measured_from
+    shoulder_i = matched[0][0]  # spec index of the joint whose body origin is the shoulder
     if reach.measured_from == "shoulder":
         b_first = int(m.jnt_bodyid[jids[0]])
         if len(jids) == 1:
@@ -70,6 +72,7 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
                 notes.append("first two joint axes are parallel, so the shoulder is taken at the 1st joint")
             else:
                 b, origin_desc = b_second, f"body '{ctx.body_name(b_second)}' (2nd joint)"
+                shoulder_i = matched[1][0]
         o = d.xpos[b].copy()
         dist: Callable[[np.ndarray], float] = lambda p: float(np.linalg.norm(p - o))
     elif reach.measured_from == "base_origin":
@@ -156,50 +159,120 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
     }
     if notes:
         details["notes"] = notes
+    raw = ctx.spec_raw if ctx.spec_raw is not None else spec
+    def_est = [f for f in ("reach.measured_from", "reach.measured_to") if is_estimate(raw, f)]
+    value_est = is_estimate(raw, "reach.value")
+    details["definition_estimated"] = bool(def_est)
+    details["value_estimated"] = value_est
     if abs(rel) <= REACH_TOL:
         return result("reach", True, measured=measured, expected=expected, tolerance=REACH_TOL,
                       message=f"max reach {measured:.3f} m within {abs(rel) * 100:.1f}% of rated {expected:.3f} m",
                       details=details)
     too_long = rel > 0
-    return result("reach", False, measured=measured, expected=expected, tolerance=REACH_TOL,
-                  message=f"max reach {measured:.3f} m is {abs(rel) * 100:.1f}% {'above' if too_long else 'below'} "
-                          f"rated {expected:.3f} m",
-                  fix_hint=_reach_hint(ctx, too_long), details=details)
+    msg = (f"max reach {measured:.3f} m is {abs(rel) * 100:.1f}% {'above' if too_long else 'below'} "
+           f"rated {expected:.3f} m")
+    caveats = []
+    if def_est:
+        caveats.append(f"the reach definition is assumed ({' and '.join(def_est)} listed in estimates)")
+    if value_est:
+        caveats.append("reach.value is an estimate")
+    if caveats:
+        msg += "; warning only: " + "; ".join(caveats)
+    try:
+        lengths = _reach_sensitivities(spec, reach, shoulder_i, best_q, len(jids))
+    except Exception:  # noqa: BLE001 - the hint must not crash the check
+        lengths = []
+    details["length_sensitivity"] = {p: e for p, e in lengths}
+    return result("reach", False, severity="warning" if caveats else "error", measured=measured,
+                  expected=expected, tolerance=REACH_TOL, message=msg,
+                  fix_hint=_reach_hint(ctx, too_long, [p for p, _ in lengths[:4]], bool(def_est), value_est),
+                  details=details)
 
 
-def _reach_hint(ctx: CheckContext, too_long: bool) -> str:
-    spec = ctx.spec
-    assert spec is not None and spec.reach is not None
-    # the largest length contributions in the chain, so the agent knows where to look first
-    contrib: list[tuple[float, str]] = []
+def _reach_metric_spec(spec, reach, shoulder_i: int, q: np.ndarray, qhome: np.ndarray) -> float:
+    """The reach metric of ``spec`` (SI) at configuration ``q``, computed with the spec's own FK."""
+    ch = spec.chain()
+    if reach.measured_to == "ee_site":
+        p = ch.fk(q)[:3, 3]
+    else:
+        p = ch.fk(q, upto=max(spec.dof - 2, 0))[:3, 3]
+    if reach.measured_from == "shoulder":
+        return float(np.linalg.norm(p - ch.fk(qhome, upto=shoulder_i)[:3, 3]))
+    if reach.measured_from == "base_origin":
+        return float(np.linalg.norm(p - np.asarray(ch.base_pos)))
+    T0 = ch.fk(qhome, upto=0)
+    u = T0[:3, :3] @ np.asarray(ch.joints[0].axis, dtype=float)
+    u /= np.linalg.norm(u)
+    v = p - T0[:3, 3]
+    return float(np.linalg.norm(v - np.dot(v, u) * u))
+
+
+def _reach_sensitivities(spec, reach, shoulder_i: int, best_q: np.ndarray, n_matched: int
+                         ) -> list[tuple[str, float]]:
+    """(spec length path, effect), largest |effect| first, where effect = d(reach metric)/d(ln length)
+    at the configuration of maximum reach (to first order the argmax does not move). Lengths that do
+    not change the measured quantity (e.g. an offset along the first axis for base_axis_horizontal,
+    or anything before the shoulder) are left out."""
+    if n_matched != spec.dof:
+        return []
+    qhome = np.array([j.home for j in spec.joints], dtype=float)
+    q = np.asarray(best_q, dtype=float)
+    base = _reach_metric_spec(spec, reach, shoulder_i, q, qhome)
+    h = 1e-4
+
+    def scale_dh(i: int, f: str) -> Callable:
+        return lambda s: setattr(s.joints[i].dh, f, getattr(s.joints[i].dh, f) * (1 + h))
+
+    def scale_xyz(get: Callable) -> Callable:
+        return lambda s: setattr(get(s), "xyz", [x * (1 + h) for x in get(s).xyz])
+
+    params: list[tuple[str, Callable]] = []
     for i, j in enumerate(spec.joints):
         if j.dh is not None:
-            if abs(j.dh.a) > 0:
-                contrib.append((abs(j.dh.a), f"joints[{i}].dh.a"))
-            if abs(j.dh.d) > 0:
-                contrib.append((abs(j.dh.d), f"joints[{i}].dh.d"))
-        elif j.origin is not None:
-            n = float(np.linalg.norm(j.origin.xyz))
-            if n > 0:
-                contrib.append((n, f"joints[{i}].origin.xyz"))
-    en = float(np.linalg.norm(spec.ee.origin.xyz))
-    if en > 0:
-        contrib.append((en, "ee.origin.xyz"))
-    top = [p for _, p in sorted(contrib, reverse=True)[:4]]
-    lengths = ", ".join(top) if top else "the link offsets"
+            params += [(f"joints[{i}].dh.{f}", scale_dh(i, f)) for f in ("a", "d") if abs(getattr(j.dh, f)) > 0]
+        elif j.origin is not None and float(np.linalg.norm(j.origin.xyz)) > 0:
+            params.append((f"joints[{i}].origin.xyz", scale_xyz(lambda s, i=i: s.joints[i].origin)))
+    if float(np.linalg.norm(spec.ee.origin.xyz)) > 0:
+        params.append(("ee.origin.xyz", scale_xyz(lambda s: s.ee.origin)))
+    out = []
+    for path, bump in params:
+        s2 = spec.model_copy(deep=True)
+        bump(s2)
+        eff = (_reach_metric_spec(s2, reach, shoulder_i, q, qhome) - base) / h
+        if abs(eff) > 1e-3 * max(base, 1e-9):
+            out.append((path, float(eff)))
+    out.sort(key=lambda pe: -abs(pe[1]))
+    return out
+
+
+def _reach_hint(ctx: CheckContext, too_long: bool, lengths: list[str], def_est: bool, value_est: bool) -> str:
+    spec = ctx.spec
+    assert spec is not None and spec.reach is not None
     r = spec.reach
+    names = ", ".join(lengths) if lengths else "the link offsets"
+    first = (f"Reach is too {'long' if too_long else 'short'}: re-check the lengths that set the measured reach "
+             f"({names}; largest effect first) against the datasheet")
+    if not too_long:
+        extra = []
+        if r.measured_to == "ee_site" and "ee.origin.xyz" not in lengths:
+            extra.append("a missing EE/flange offset (ee.origin.xyz)")
+        if spec.convention != "offset":
+            extra.append("DH signs/offsets (joints[*].dh.alpha, theta_offset)")
+        extra.append("joint limits that may prevent stretching out (joints[*].limits)")
+        first += ", " + ", ".join(extra)
+    parts = [first + ". Also check `units.length` (mm vs m)."]
+    if value_est:
+        parts.append("reach.value is itself an estimate: re-check it, or find a source for it.")
     other_to = "wrist_center" if r.measured_to == "ee_site" else "ee_site"
-    if too_long:
-        s = (f"Reach is too long: re-check the link lengths ({lengths}) against the datasheet, the EE offset "
-             f"(ee.origin.xyz), and whether the rated reach is measured to the {other_to.replace('_', ' ')} "
-             f"rather than the {r.measured_to.replace('_', ' ')} (reach.measured_to) or from a different point "
-             f"(reach.measured_from = {r.measured_from}). Also check `units.length` (mm vs m).")
+    if def_est:
+        parts.append(f"The reach definition (measured_from = {r.measured_from}, measured_to = {r.measured_to}) is "
+                     "assumed, so this is only a warning.")
     else:
-        s = (f"Reach is too short: re-check the link lengths ({lengths}) against the datasheet, a missing EE/flange "
-             f"offset (ee.origin.xyz), DH signs/offsets (joints[*].dh.alpha, theta_offset), joint limits that may "
-             f"prevent stretching out (joints[*].limits), and the reach definition (reach.measured_from = "
-             f"{r.measured_from}, reach.measured_to = {r.measured_to}). Also check `units.length` (mm vs m).")
-    return s
+        parts.append(f"Confirm the source's reach definition: reach.measured_to = {r.measured_to} (vs {other_to}), "
+                     f"reach.measured_from = {r.measured_from}.")
+    parts.append("If the source does not state the reach definition, list reach.measured_from/measured_to in "
+                 "`estimates` instead of switching endpoints until it passes.")
+    return " ".join(parts)
 
 
 # --------------------------------------------------------------------------- #

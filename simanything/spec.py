@@ -623,8 +623,20 @@ def uncovered_fields(spec: Spec) -> list[str]:
     return out
 
 
+def _specificity(key: str) -> tuple[int, int]:
+    toks = _parse_path(key)
+    return len(toks), sum(t != "*" for t in toks)
+
+
 def is_estimate(spec: Spec, path: str) -> bool:
-    return any(path_covers(k, path) for k in spec.estimates)
+    """True if ``path`` is covered by ``estimates`` and no ``sources`` key covers it at least as
+    specifically (e.g. ``sources: {reach.value: url}`` with ``estimates: [reach]`` makes
+    ``reach.value`` sourced but ``reach.measured_to`` estimated)."""
+    est = [_specificity(k) for k in spec.estimates if path_covers(k, path)]
+    if not est:
+        return False
+    src = [_specificity(k) for k in spec.sources if path_covers(k, path)]
+    return not src or max(est) > max(src)
 
 
 __all__ = [
