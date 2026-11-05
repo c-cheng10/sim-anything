@@ -13,7 +13,7 @@ only, for now.
 A separate evaluator scores generated models against reference models, which is
 how we measure whether it works.
 
-![Six arms generated blind from public specs (round 1, home poses)](docs/img/dev_set.png)
+![Eight arms generated blind from public specs (home poses; bottom right two are the holdout set)](docs/img/robots.png)
 
 ## How it works
 
@@ -146,21 +146,36 @@ models (an external reference; not redistributed here — clone it into
 [benchmark/RESULTS.md](benchmark/RESULTS.md).
 
 <!-- RESULTS:BEGIN -->
-Dev set, latest round (round 1, fresh blind runs):
+**Dev set, final tool (round 2, fresh blind runs):**
 
-| Robot | Public kinematic source | Checks | Iterations | EE pos p95 (mm) | Limit MAE (deg) | Score |
+| Robot | Public kinematic source the agent used | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score |
 |---|---|---|---|---|---|---|
-| UR5e | DH table | all pass | 2 | 1.4 | 30.0 | 82.2 |
+| UR5e | DH table | all pass | 1 | 1.4 | 30.0 | 82.2 |
 | Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 | 0.0 | 97.2 |
-| Kinova Gen3 (7-DOF) | DH table (third-party quote) | all pass | 2 | 0.4 | 0.2 | 98.7 |
+| Kinova Gen3 (7-DOF) | official link-length table, lateral offsets omitted | all pass | 1 | 24.5 | 0.2 | 68.3 |
 | UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 | 0.7 | 92.5 |
 | KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 | 0.0 | 98.9 |
-| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 | 3.0 | 91.2 |
+| Trossen ViperX 300 S | reach/offset tables, shoulder height estimated | all pass | 1 | 7.6 | 3.0 | 74.1 |
 
-6/6 pass all error-severity checks (round 0: 5/6). Median p95 EE error on the
-robots with published DH tables: 0.2 mm (target was < 10 mm).
+**Holdout set (run once, never used during development):**
 
-Holdout set: not run yet.
+| Robot | Public kinematic source | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score |
+|---|---|---|---|---|---|---|
+| UR10e | DH table | all pass | 1 | 17.2* | 30.0 | 60.0 |
+| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.3 | 0.0 | 94.9 |
+
+\* The UR10e model follows UR's published flange distance (d6 = 116.55 mm); the
+reference model's flange site is 16.55 mm shorter. Measured at UR's published
+flange distance (diagnostic only) the error is 1.1 mm p95.
+
+* 6/6 dev robots and 2/2 holdout robots pass all error-severity checks.
+* Median p95 EE error over dev robots whose makers publish DH tables: 0.7 mm
+  (round 2); 0.2 mm in rounds 0 and 1. In rounds 0-1 Kinova (0.4 mm) and
+  ViperX (0.3 mm) were built from tables the round-2 agents did not find or
+  chose not to trust; run-to-run variance in finding the right public source is
+  the dominant error. History: [benchmark/RESULTS.md](benchmark/RESULTS.md).
+* Gallery: built by `python gallery/build.py` and deployed by
+  `.github/workflows/pages.yml` once GitHub Pages is enabled for the repository.
 <!-- RESULTS:END -->
 
 Read these numbers with care: the kinematic error is tiny when a manufacturer
@@ -174,11 +189,32 @@ yaw), which RESULTS.md lists per robot.
 * Primitive geoms only (capsules, cylinders, boxes, spheres): collision shapes
   and inertias are approximations; no meshes.
 * Serial arms only; no grippers, closed chains, mobile bases or humanoids.
-* Accuracy is bounded by public data. Masses, inertias, joint torques and
-  housing sizes are often unpublished; the tool then estimates (and says so).
-* Reach checks depend on how a datasheet defines "reach", which is often unstated.
-* The benchmark is small (6 dev + 2 holdout arms) and its references are
-  themselves models, not measurements of real robots.
+* Accuracy is bounded by public data, and by whether the agent finds it: the
+  same robot came out at 0.4 mm in one run and 24.5 mm in another depending on
+  which kinematic source the agent found and trusted. Masses, inertias, joint
+  torques and housing sizes are often unpublished; the tool then estimates
+  (and says so).
+* "Verified" means the model passes the tool's own checks (structure,
+  kinematics vs spec, limits, reach, mass, inertia, collisions, stability,
+  sources). A self-consistent but wrong spec (e.g. a misread DH row) passes; only
+  a reference comparison catches it.
+* Reach checks depend on how a datasheet defines "reach", which is often
+  unstated; then they only warn.
+* The benchmark is small (6 dev + 2 holdout arms), its references are
+  themselves models (with their own errors, e.g. the UR10e flange distance), and
+  the agents in this run could not open manufacturer websites (blocked network),
+  so most values came from search-result excerpts.
+
+## Gates (usable-draft criteria)
+
+| Gate | Status |
+|---|---|
+| 1. pytest green, CI green | met |
+| 2. Fresh-clone quickstart works | met (verified by a new-user tester, rounds 1 and 2: 23-24 s) |
+| 3. Plugin installs; `/sim-anything <robot>` runs gather -> loop -> report | met (tester installed it in an isolated config and ran `/sim-anything Trossen WidowX 250 6DOF` end to end: 128 s) |
+| 4. >= 5 of 6 dev robots pass all checks | met (6/6 in rounds 1 and 2; 5/6 in round 0) |
+| 5. Eval works for every robot; median p95 < 10 mm where DH is published | met (0.7 mm round 2; 0.2 mm rounds 0-1) |
+| 6. Holdout reported separately | met (above) |
 
 ## Roadmap
 
