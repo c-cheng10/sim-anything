@@ -4,8 +4,12 @@
 
 Give it a robot's name. A Claude Code agent collects the public specs
 (datasheets, manuals, published DH tables), writes them into a `spec.yaml` in
-which every number cites its source, and deterministic code turns that into a
-MuJoCo model, checks it, fixes it in a loop, renders it and writes a report.
+which every number either cites a source URL or is explicitly marked as an
+estimate, and deterministic code turns that into a MuJoCo model, checks it,
+fixes it in a loop, renders it and writes a report. "Verified" means the model
+passes the tool's own checks (section below); how close it is to the real robot
+is measured separately by the evaluator. Serial arms with primitive geometry
+only, for now.
 A separate evaluator scores generated models against reference models, which is
 how we measure whether it works.
 
@@ -15,9 +19,9 @@ how we measure whether it works.
 
 ```mermaid
 flowchart LR
-    A["GATHER<br/>agent reads datasheets,<br/>cites every number"] --> S[spec.yaml]
+    A["GATHER<br/>agent reads datasheets,<br/>cites or flags every number"] --> S[spec.yaml]
     S --> B["BUILD<br/>deterministic code<br/>spec -> MJCF"]
-    B --> C["CHECK<br/>11 kinematic + physical checks<br/>with fix hints"]
+    B --> C["CHECK<br/>14 kinematic + physical checks<br/>with fix hints"]
     C -- "fail: fix hints" --> F["FIX<br/>agent edits the spec"]
     F --> S
     C -- pass --> R["REPORT<br/>3-view renders,<br/>HTML + Markdown"]
@@ -32,10 +36,13 @@ flowchart LR
   modified) or offset chains, primitive geoms (capsule/cylinder/box/sphere),
   inertia from link mass and shape, position actuators sized to hold the arm
   under gravity, an end-effector site, a `home` keyframe. The LLM never writes XML.
-* **CHECK** — `simanything/check/`: compiles, joint structure, EE site, joint
-  limits, reach vs rated reach (5,000 samples), total mass, inertia validity,
-  self-collision at home, 2 s stable hold, actuators, and source coverage. Each
-  failure is machine-readable JSON with a concrete `fix_hint`.
+* **CHECK** — `simanything/check/`: compiles, joint structure, EE site,
+  kinematics match the spec, joint limits, reach vs rated reach (5,000 samples),
+  total mass, mass plausibility, inertia validity, self-collision at home,
+  reported collision exclusions, 2 s stable hold, actuators, and source
+  coverage (URLs, typo-free paths, estimate share). Each failure is
+  machine-readable JSON with a severity (error blocks, warning informs) and a
+  concrete `fix_hint`.
 * **LOOP** — `sim-anything loop` runs one build+check iteration, records it,
   and re-renders and rewrites the report every time, so the report always shows
   the latest iteration; the agent edits the spec between calls (max 8 iterations).
