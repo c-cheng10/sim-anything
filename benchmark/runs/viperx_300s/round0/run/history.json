@@ -1,0 +1,18 @@
+{
+  "robot": "viperx_300s",
+  "spec": "benchmark/runs/viperx_300s/round0/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-05T07:50:18+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 0,
+      "failed_ids": [],
+      "note": "initial spec: chain from Trossen vx300s PoE table, EE at gripper-mount face (drawing 70 mm), firmware limits",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

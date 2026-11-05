@@ -1,0 +1,100 @@
+name: viperx_300s
+manufacturer: Trossen Robotics
+model: ViperX 300 S (Interbotix ViperX-300 6DOF, vx300s), arm joints only
+description: >
+  6-DOF Dynamixel arm. Chain from the manufacturer's product-of-exponentials table
+  (space frame at the waist axis, zero pose = upper arm vertical, forearm horizontal along +x).
+  EE site at the gripper-mount face (point D of the docs' reach diagram), 70 mm past the wrist-angle axis.
+dof: 6
+units: {length: mm, angle: deg}
+convention: offset
+base:
+  link:
+    geometry:
+      - {shape: cylinder, radius: 75, fromto: [0, 0, 0, 0, 0, 70]}
+joints:
+  - name: waist
+    origin: {xyz: [0, 0, 0]}
+    axis: [0, 0, 1]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry:
+        - {shape: box, size: [30, 40, 30], pos: [0, 0, 100]}
+  - name: shoulder
+    origin: {xyz: [0, 0, 127.05]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 101}
+    link:
+      geometry:
+        - {shape: capsule, radius: 22, fromto: [0, 0, 0, 0, 0, 300]}
+        - {shape: capsule, radius: 22, fromto: [0, 0, 300, 59.55, 0, 300]}
+  - name: elbow
+    origin: {xyz: [59.55, 0, 300]}
+    axis: [0, 1, 0]
+    limits: {lower: -101, upper: 92}
+    link:
+      geometry:
+        - {shape: capsule, radius: 20}
+  - name: forearm_roll
+    origin: {xyz: [196.38, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry:
+        - {shape: capsule, radius: 24}
+  - name: wrist_angle
+    origin: {xyz: [103.62, 0, 0]}
+    axis: [0, 1, 0]
+    limits: {lower: -107, upper: 130}
+    link:
+      geometry:
+        - {shape: capsule, radius: 22}
+  - name: wrist_rotate
+    origin: {xyz: [70, 0, 0]}
+    axis: [1, 0, 0]
+    limits: {lower: -180, upper: 180}
+    link:
+      geometry:
+        - {shape: cylinder, radius: 25, fromto: [-6, 0, 0, 0, 0, 0]}
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 0]}
+payload: 0.75
+repeatability: 1
+sources:
+  joints[0].origin: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[1].origin: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[2].origin: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[*].axis: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[*].limits: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  joints[5].origin: https://docs.trossenrobotics.com/interbotix_xsarms_docs/_downloads/ViperX-300s.pdf
+  joints[1].link.geometry[*].fromto: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  payload: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+  repeatability: https://docs.trossenrobotics.com/interbotix_xsarms_docs/specifications/vx300s.html
+estimates:
+  - joints[3].origin
+  - joints[4].origin
+  - base.link.geometry
+  - joints[*].link.geometry[*].radius
+  - joints[*].link.geometry[*].size
+  - joints[*].link.geometry[*].pos
+  - joints[5].link.geometry
+notes: >
+  Chain: the vx300s page publishes a product-of-exponentials model (Slist, M, metres). Decoded axis
+  points: shoulder (0,0,127.05) +y, elbow (59.55,0,427.05) +y, forearm_roll along +x at z=427.05,
+  wrist_angle (359.55,0,427.05) +y, wrist_rotate along +x at z=427.05. joints[2].origin = elbow minus
+  shoulder = (59.55, 0, 300). The forearm_roll and wrist_angle origins split the 300 mm elbow->wrist
+  distance (PoE: 359.55 - 59.55) into 196.38 + 103.62; 103.62 is the drawing's dimension from the start
+  of the forearm-roll housing to the wrist-angle axis, but which point of that housing the roll joint
+  sits at is my reading, so both are listed as estimates (where a roll joint sits along its own axis
+  does not change the kinematics; the 300 mm sum is sourced). wrist_rotate origin (70 mm past the
+  wrist-angle axis along +x) is the drawing's "70" / the reach table's "C~D Wrist Tilt to Rotate 70",
+  which ends at point D, the gripper-mount face; the joint frame is put there and the EE site
+  coincides with it (no tool flange standard on this arm; the gripper is not modelled).
+  Joint limits are the firmware default limits ("degrees from Zero (servo centered)"); axis signs taken
+  as published in the PoE screw axes. Reach (750 mm) is omitted: the docs' cumulative table gives 676 mm
+  from the shoulder to point D, 745 to the gripper rail and 812 to the finger tip, so the advertised
+  750 mm refers to the gripper, which is not modelled. Total mass, joint speeds and torques are not
+  published for the arm; omitted (builder default density is used). Link radii, the base turret
+  cylinder and the waist bracket box are rough estimates from the drawing's proportions (the drawing
+  gives the 299.46 x 110 mm base plate and 84.5 mm turret flats, not housing diameters).
