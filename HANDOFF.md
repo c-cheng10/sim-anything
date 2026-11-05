@@ -5,7 +5,8 @@ Resume from this file and BUDGET.md alone. Updated at every phase boundary and r
 ## State
 - Phases 1-3 complete: all components merged (cherry-picked from agent worktrees), pytest green, `loop` verified end to end on a toy spec (fail -> fix -> pass, renders + report written and inspected).
 - Phase 4 complete: 6 dev robots generated blind into benchmark/runs/<id>/round0/, evaluated (benchmark/RESULTS.md). 5/6 pass all checks (xArm7 fails reach: unstated reach definition). Median p95 EE error on DH-published robots 0.2 mm; all six robots <= 1.4 mm p95.
-- Next: Phase 5 round 1 (review: new-user tester, code reviewer, benchmark auditor; triage; fix; blind re-run into round1/).
+- Phase 5 round 1: reviews done (3), triage below, fixes merged (fixer A: 7, fixer B: 7, orchestrator: end-cap exclusion rule, friendly check errors, README/RESULTS framing). Blind re-run into round1/ in progress (3 agents x 2 robots).
+- While generation agents run, Menagerie is moved OUT of the repo to /tmp/claude-0/-home-user-sim-anything/a95fd57d-4f5a-5b98-a53c-0a6678d950af/scratchpad/.refs/third_party (move back with `mv <that>/third_party .` before evaluating; if the container was recycled, re-clone it).
 
 ## How to run
 - `pip install -e ".[dev]"`; run tests with `python -m pytest` (the bare `pytest` on PATH in the dev container is a uv tool without numpy).
