@@ -525,6 +525,12 @@ def render_views(model_path: str | Path, out_dir: str | Path, *, width: int = 64
         raise ValueError(f"unknown render backend {backend!r} (auto | mujoco | matplotlib)")
     if not model_path.is_file():
         raise FileNotFoundError(model_path)
+    try:  # a model that does not load is the caller's error, not a backend failure to fall back from
+        import mujoco
+
+        mujoco.MjModel.from_xml_path(str(model_path))
+    except Exception as e:  # noqa: BLE001
+        raise ValueError(f"{model_path} does not load in MuJoCo: {str(e).strip()}") from e
     out_dir.mkdir(parents=True, exist_ok=True)
     chosen = detect_backend() if backend == "auto" else backend
     paths: dict[str, str] | None = None

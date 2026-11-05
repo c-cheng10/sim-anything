@@ -9,6 +9,8 @@ from typing import Optional
 
 import typer
 
+from .errors import describe_exception
+
 app = typer.Typer(add_completion=False, no_args_is_help=True,
                   help="Reverse-engineer a robot arm into a verified MuJoCo simulation.")
 
@@ -22,7 +24,7 @@ def build(spec: Path = typer.Argument(..., exists=True, dir_okay=False, help="sp
     try:
         out = build_file(spec, output)
     except Exception as e:  # noqa: BLE001 - report any build failure cleanly
-        typer.echo(f"build failed: {e}", err=True)
+        typer.echo(f"build failed: {describe_exception(e)}", err=True)
         raise typer.Exit(1)
     typer.echo(str(out))
 
@@ -35,6 +37,13 @@ def check(model: Path = typer.Argument(..., exists=True, dir_okay=False, help="M
     """Run kinematic and physical checks. Exit code 0 if no error-severity check failed."""
     from .check import run_checks
 
+    if spec is not None:
+        from .spec import load_spec
+
+        try:
+            load_spec(spec)
+        except Exception as e:  # noqa: BLE001 - explain it here; the checks report it as failures too
+            typer.echo(f"{spec}: {describe_exception(e)}", err=True)
     report = run_checks(model, spec, seed=seed)
     if as_json:
         typer.echo(json.dumps(report.to_json_dict(), indent=2))
@@ -55,7 +64,11 @@ def render(model: Path = typer.Argument(..., exists=True, dir_okay=False),
     """Render front/side/top views of the model at its home pose."""
     from .render import render_views
 
-    result = render_views(model, output, backend=backend)
+    try:
+        result = render_views(model, output, backend=backend)
+    except Exception as e:  # noqa: BLE001 - a clean message instead of a traceback
+        typer.echo(f"render failed: {describe_exception(e)}", err=True)
+        raise typer.Exit(1)
     typer.echo(json.dumps({k: str(v) for k, v in result.items()}, indent=2))
 
 
@@ -79,7 +92,16 @@ def eval_cmd(candidate: Path = typer.Argument(..., exists=True, dir_okay=False),
     """Score a candidate model against a reference model."""
     from .evaluate import evaluate, load_mapping
 
-    res = evaluate(candidate, reference, load_mapping(mapping), n_samples=n_samples, seed=seed)
+    try:
+        mp = load_mapping(mapping)
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"eval failed: {mapping}: {describe_exception(e, 'mapping')}", err=True)
+        raise typer.Exit(1)
+    try:
+        res = evaluate(candidate, reference, mp, n_samples=n_samples, seed=seed)
+    except Exception as e:  # noqa: BLE001
+        typer.echo(f"eval failed: {describe_exception(e)}", err=True)
+        raise typer.Exit(1)
     data = res.model_dump(mode="json")
     if output:
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -130,13 +152,16 @@ def validate(spec: Path = typer.Argument(..., exists=True, dir_okay=False)) -> N
     try:
         s = load_spec(spec)
     except Exception as e:  # noqa: BLE001
-        typer.echo(f"invalid spec: {e}", err=True)
+        typer.echo(f"FAILED: {spec}: {describe_exception(e)}", err=True)
         raise typer.Exit(1)
     missing = uncovered_fields(s)
     for m in missing:
         typer.echo(f"no source/estimate: {m}")
-    typer.echo(f"ok: {s.name}, {s.dof} DOF, {len(missing)} uncovered numbers")
-    raise typer.Exit(0 if not missing else 1)
+    if missing:
+        typer.echo(f"FAILED: {s.name}, {s.dof} DOF, {len(missing)} number(s) without a source or estimate "
+                   "(add each path to `sources` with a URL, or to `estimates` with the reasoning in `notes`)")
+        raise typer.Exit(1)
+    typer.echo(f"ok: {s.name}, {s.dof} DOF, every number has a source or estimate")
 
 
 def main() -> None:  # pragma: no cover

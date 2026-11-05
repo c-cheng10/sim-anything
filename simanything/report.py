@@ -101,9 +101,11 @@ def _load_spec(run_dir: Path, notes: list[str]) -> dict[str, Any] | None:
 
         Spec.model_validate(raw)
     except Exception as e:  # noqa: BLE001
-        first = str(e).strip().splitlines()
-        notes.append("spec.yaml does not validate against the schema"
-                     + (f": {' '.join(first[:3])}" if first else "."))
+        from .errors import describe_exception
+
+        lines = describe_exception(e).splitlines()
+        notes.append("spec.yaml does not validate against the schema: "
+                     + "; ".join(ln.strip().lstrip("- ") for ln in lines[1:] or lines))
     return raw
 
 

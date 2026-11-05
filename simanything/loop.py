@@ -270,15 +270,17 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
         if not it_model.exists():
             raise RuntimeError(f"builder did not write {it_model}")
     except Exception as e:  # noqa: BLE001 - any build failure is a failed `compiles` check
-        build_error = f"{type(e).__name__}: {e}"
+        from .errors import describe_exception
+
+        build_error = describe_exception(e)
 
     if build_error is not None:
         it_model.unlink(missing_ok=True)
         run_model.unlink(missing_ok=True)
         report = _failed_report(
             it_model, it_spec, f"build failed: {build_error}",
-            "The spec could not be built into MJCF. Run `sim-anything validate spec.yaml`, fix the field "
-            "named in the error message (schema errors name the field path), and loop again.")
+            f"The spec could not be built into MJCF. Fix the field(s) named in the message (run "
+            f"`sim-anything validate {spec_path}` to recheck), then run `loop` again.")
     else:
         _copy(it_model, run_model)
         try:
@@ -288,7 +290,7 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
         except Exception as e:  # noqa: BLE001
             report = _failed_report(
                 it_model, it_spec, f"checks could not run on the built model: {type(e).__name__}: {e}",
-                "The built MJCF could not be checked. Run `sim-anything check model.xml --spec spec.yaml` "
+                f"The built MJCF could not be checked. Run `sim-anything check {run_model} --spec {spec_path}` "
                 "to see the error; it usually points at a degenerate value in the spec (zero-size geometry, "
                 "non-finite numbers).")
 

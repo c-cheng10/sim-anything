@@ -29,15 +29,27 @@ All commands are subcommands of the `sim-anything` console script
 |---|---|---|
 | `sim-anything build spec.yaml -o model.xml` | Validate spec, write MJCF. | 0 ok, 1 invalid spec / build error (message on stderr) |
 | `sim-anything check model.xml --spec spec.yaml --json` | Run all checks. `--json` prints the check report (section 4). Without `--spec`, spec-dependent checks are reported as `info` and pass. `--seed N` (default 0). | 0 if `passed` (no failed `error`-severity check), else 1 |
-| `sim-anything render model.xml -o renders/` | Writes `front.png`, `side.png`, `top.png` (home pose) and prints a JSON map view->path plus `"backend"`. `--backend auto|mujoco|matplotlib`. | 0 |
+| `sim-anything render model.xml -o renders/` | Writes `front.png`, `side.png`, `top.png` (home pose) and prints a JSON map view->path plus `"backend"`. `--backend auto|mujoco|matplotlib`. | 0, 1 if the model does not load or rendering fails (message on stderr) |
 | `sim-anything report run_dir/` | Writes `run_dir/report.html` (self-contained, images base64-embedded) and `run_dir/report.md`. | 0 |
-| `sim-anything eval candidate.xml --reference ref.xml --map map.yaml --json` | Score candidate vs reference (section 5). `--samples N` (default 2000), `--seed`, `-o eval.json` also writes the file. | 0 |
+| `sim-anything eval candidate.xml --reference ref.xml --map map.yaml --json` | Score candidate vs reference (section 5). `--samples N` (default 2000), `--seed`, `-o eval.json` also writes the file. | 0, 1 on an invalid map, a model that does not load or a mapped joint/site/body that does not exist (message on stderr) |
 | `sim-anything loop spec.yaml --run-dir runs/x --max-iter 8 [--note "what changed"] [--json]` | ONE build+check iteration, recorded in the run dir (section 3). Every new iteration (pass, fail or build failure) re-renders and rewrites the report, so they always match `check.json`. | 0 passed, 1 checks failed (agent should edit the spec and run `loop` again), 2 max iterations reached without passing, or the spec changed but the cap kept it from being built and checked |
-| `sim-anything validate spec.yaml` | Schema validation + list numbers lacking a source/estimate. | 0 ok, 1 otherwise |
+| `sim-anything validate spec.yaml` | Schema validation + list numbers lacking a source/estimate. Last line `ok: ...` on success, `FAILED: ...` otherwise. | 0 ok, 1 otherwise |
 | `sim-anything schema [-o file]` | Print/write the spec JSON schema (`docs/spec.schema.json`). | 0 |
 
 `loop` is deliberately a single step: the FIX step is the agent reading
 `check.json` fix hints and editing `spec.yaml` between calls.
+
+**Errors.** No command prints a Python traceback for bad input; it prints a
+message to stderr (`build failed: ...`, `eval failed: ...`, `render failed:
+...`, `FAILED: ...`) and exits 1. Schema errors (spec in `validate`, `build`,
+`check`, `loop`; mapping file in `eval`) list *every* error, one per line, as
+`<path>: <message>` with the repo's bracket field paths
+(`joints[2].effort_limit`, `sources['joints[0].dh']`), no pydantic URLs, and
+for an unknown key the closest valid field names (`joints[2].efort_limit:
+unknown field; did you mean 'effort_limit'?`). `check` also prints them to
+stderr before running (the spec-dependent checks then fail); in `loop` they
+are the message of the failed `compiles` check, and the fix hint names the
+spec file that was passed in. Formatter: `simanything.errors.describe_exception`.
 
 ## 3. Run directory layout (`loop`)
 
