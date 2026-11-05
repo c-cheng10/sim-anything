@@ -58,8 +58,11 @@ def fakes(monkeypatch):
         calls["report"] += 1
         run_dir = Path(run_dir)
         assert (run_dir / "history.json").exists()  # history is written before the report
+        passed = json.loads((run_dir / "check.json").read_text())["passed"]
+        n = len(json.loads((run_dir / "history.json").read_text())["iterations"])
+        renders = sorted(p.name for p in (run_dir / "renders").glob("*.png"))
         (run_dir / "report.html").write_text("<html/>")
-        (run_dir / "report.md").write_text("# report")
+        (run_dir / "report.md").write_text(f"# report iter {n} {'PASSED' if passed else 'FAILED'} {renders}")
         return run_dir / "report.html", run_dir / "report.md"
 
     monkeypatch.setattr(simanything.builder, "build_file", build_file, raising=False)
@@ -102,7 +105,9 @@ def test_fail_then_pass(tmp_path, fakes):
     assert out.failed_ids == ["reach"]
     assert out.fix_hints[0].id == "reach" and "joints[1].dh.a" in out.fix_hints[0].fix_hint
     assert "reach" in out.summary and "joints[1].dh.a" in out.summary
-    assert not (run / "report.html").exists() and fakes["render"] == 0
+    # the report is written on every iteration, failing ones included
+    assert (run / "report.html").exists() and fakes["render"] == 1 and fakes["report"] == 1
+    assert "iter 1 FAILED" in (run / "report.md").read_text()
 
     spec.write_text(SPEC_OK)
     out = loop_step(spec, run, note="fixed a2")
@@ -113,7 +118,49 @@ def test_fail_then_pass(tmp_path, fakes):
     assert (run / "iterations/iter_02/spec.yaml").read_text() == SPEC_OK
     assert (run / "iterations/iter_01/spec.yaml").read_text() == SPEC_BAD_REACH
     assert (run / "spec.yaml").read_text() == SPEC_OK
-    assert (run / "report.html").exists()
+    assert "iter 2 PASSED" in (run / "report.md").read_text()
+
+
+def test_report_follows_a_pass_then_a_failure(tmp_path, fakes):
+    """A failing iteration after a passing one must not leave the PASSED report and renders behind."""
+    spec = tmp_path / "spec.yaml"
+    run = tmp_path / "run"
+    spec.write_text(SPEC_OK)
+    assert loop_step(spec, run).exit_code == 0
+    assert "iter 1 PASSED" in (run / "report.md").read_text()
+
+    spec.write_text(SPEC_BAD_REACH)
+    out = loop_step(spec, run)
+    assert (out.iteration, out.exit_code) == (2, 1)
+    assert "iter 2 FAILED" in (run / "report.md").read_text()
+    assert fakes["render"] == 2 and fakes["report"] == 2
+
+    # a build failure: report rewritten, renders removed (no model to draw)
+    spec.write_text(SPEC_BROKEN)
+    out = loop_step(spec, run)
+    assert (out.iteration, out.exit_code, out.failed_ids) == (3, 1, ["compiles"])
+    assert (run / "report.md").read_text() == "# report iter 3 FAILED []"
+    assert not (run / "renders").exists() and not (run / "model.xml").exists()
+    assert fakes["render"] == 2 and fakes["report"] == 3
+    assert "renders: skipped" in out.summary
+
+
+def test_render_failure_leaves_no_stale_renders(tmp_path, fakes, monkeypatch):
+    spec = tmp_path / "spec.yaml"
+    run = tmp_path / "run"
+    spec.write_text(SPEC_OK)
+    loop_step(spec, run)
+    assert (run / "renders/front.png").exists()
+
+    def broken_render(*a, **k):
+        raise RuntimeError("no GL")
+
+    monkeypatch.setattr(simanything.render, "render_views", broken_render)
+    spec.write_text(SPEC_BAD_REACH)
+    out = loop_step(spec, run)
+    assert "render failed" in out.summary
+    assert not (run / "renders/front.png").exists()
+    assert "iter 2 FAILED" in (run / "report.md").read_text()
 
 
 def test_build_error_is_failed_compiles(tmp_path, fakes):
@@ -197,3 +244,25 @@ def test_cli_loop_json(tmp_path, fakes):
     assert set(data) == {"iteration", "status", "passed", "exit_code", "n_errors", "failed_ids", "run_dir",
                          "summary", "fix_hints"}
     assert data["fix_hints"] == [{"id": "reach", "fix_hint": "check joints[1].dh.a and reach.measured_to"}]
+
+
+def test_real_pipeline_report_matches_latest_iteration(tmp_path, monkeypatch, examples_dir):
+    """End to end (real build/check/render/report): pass, then a build failure."""
+    import simanything.render as render
+
+    monkeypatch.setattr(render, "detect_backend", lambda: "matplotlib")
+    spec = tmp_path / "robot.yaml"
+    text = (examples_dir / "toy_2link.yaml").read_text()
+    spec.write_text(text)
+    run = tmp_path / "run"
+    out = loop_step(spec, run)
+    assert out.exit_code == 0
+    assert "PASSED" in (run / "report.md").read_text() and (run / "renders/front.png").exists()
+
+    spec.write_text(text.replace("dof: 2", "dof: 3"))
+    out = loop_step(spec, run)
+    assert (out.iteration, out.exit_code, out.failed_ids) == (2, 1, ["compiles"])
+    md = (run / "report.md").read_text()
+    assert "FAILED" in md and "PASSED" not in md and "build failed" in md
+    assert not (run / "renders").exists() and not (run / "model.xml").exists()
+    assert json.loads((run / "check.json").read_text())["passed"] is False

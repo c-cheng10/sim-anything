@@ -6,7 +6,11 @@ edits ``spec.yaml`` and calls it again. State lives in the run directory::
     run_dir/
       spec.yaml model.xml check.json history.json
       iterations/iter_NN/{spec.yaml, model.xml, check.json}
-      renders/{front,side,top}.png  report.html  report.md   (on pass or at max iter)
+      renders/{front,side,top}.png  report.html  report.md   (rewritten every iteration)
+
+The renders and the report are rewritten after every new iteration, so they
+always describe the same iteration as ``check.json`` (a build failure removes
+the renders, since there is no model to draw).
 
 Exit codes: 0 passed, 1 checks failed (edit the spec and loop again), 2 max
 iterations reached without passing.
@@ -102,9 +106,16 @@ def _warnings(report: CheckReport) -> list[CheckResult]:
 
 
 def _finalize(run_dir: Path) -> list[str]:
-    """Render the latest model and write the report. Returns summary lines."""
+    """Render the latest model and write the report. Returns summary lines.
+
+    Old renders are removed first so that neither a build failure (no model)
+    nor a render failure leaves images of an earlier iteration behind.
+    """
     lines: list[str] = []
     model = run_dir / "model.xml"
+    renders = run_dir / "renders"
+    if renders.is_dir():
+        shutil.rmtree(renders)
     if model.exists():
         try:
             from .render import render_views
@@ -289,7 +300,7 @@ def loop_step(spec_path: str | Path, run_dir: str | Path, *, max_iter: int = 8,
         history.status = "running"
     _save_history(run_dir, history)
 
-    extra = _finalize(run_dir) if history.status != "running" else []
+    extra = _finalize(run_dir)  # every iteration: report and renders always match check.json
     return _outcome(history, report, run_dir, _head(n, max_iter, report, history.status), extra)
 
 

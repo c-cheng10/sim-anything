@@ -32,7 +32,7 @@ All commands are subcommands of the `sim-anything` console script
 | `sim-anything render model.xml -o renders/` | Writes `front.png`, `side.png`, `top.png` (home pose) and prints a JSON map view->path plus `"backend"`. `--backend auto|mujoco|matplotlib`. | 0 |
 | `sim-anything report run_dir/` | Writes `run_dir/report.html` (self-contained, images base64-embedded) and `run_dir/report.md`. | 0 |
 | `sim-anything eval candidate.xml --reference ref.xml --map map.yaml --json` | Score candidate vs reference (section 5). `--samples N` (default 2000), `--seed`, `-o eval.json` also writes the file. | 0 |
-| `sim-anything loop spec.yaml --run-dir runs/x --max-iter 8 [--note "what changed"] [--json]` | ONE build+check iteration, recorded in the run dir (section 3). On pass it also renders and writes the report. | 0 passed, 1 checks failed (agent should edit the spec and run `loop` again), 2 max iterations reached without passing |
+| `sim-anything loop spec.yaml --run-dir runs/x --max-iter 8 [--note "what changed"] [--json]` | ONE build+check iteration, recorded in the run dir (section 3). Every new iteration (pass, fail or build failure) re-renders and rewrites the report, so they always match `check.json`. | 0 passed, 1 checks failed (agent should edit the spec and run `loop` again), 2 max iterations reached without passing |
 | `sim-anything validate spec.yaml` | Schema validation + list numbers lacking a source/estimate. | 0 ok, 1 otherwise |
 | `sim-anything schema [-o file]` | Print/write the spec JSON schema (`docs/spec.schema.json`). | 0 |
 
@@ -50,9 +50,16 @@ run_dir/
   iterations/
     iter_01/ spec.yaml model.xml check.json   # model.xml absent if the build failed
     iter_02/ ...
-  renders/ front.png side.png top.png         # written when checks pass (or at max iter)
-  report.html report.md                       # written when checks pass (or at max iter)
+  renders/ front.png side.png top.png         # rewritten every iteration; removed when the build failed
+  report.html report.md                       # rewritten every iteration
 ```
+
+After every new iteration (passed, failed, or build failure) `loop` deletes
+`renders/`, re-renders `model.xml` if one was built, and rewrites
+`report.html`/`report.md`, so the run directory never shows the result of an
+earlier iteration: renders, report and `check.json` always describe the
+latest iteration. To start over, delete the run directory (or pass a new
+`--run-dir`); numbering then starts again at 1.
 
 Iteration numbering starts at 1. Calling `loop` again after `status` is
 `passed` or `max_iter_reached` starts no new iteration unless the spec

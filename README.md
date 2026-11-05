@@ -37,8 +37,8 @@ flowchart LR
   self-collision at home, 2 s stable hold, actuators, and source coverage. Each
   failure is machine-readable JSON with a concrete `fix_hint`.
 * **LOOP** — `sim-anything loop` runs one build+check iteration, records it,
-  and on success renders and reports; the agent edits the spec between calls
-  (max 8 iterations).
+  and re-renders and rewrites the report every time, so the report always shows
+  the latest iteration; the agent edits the spec between calls (max 8 iterations).
 * **EVAL** — `simanything/evaluate.py`: end-effector position/orientation
   error over 2,000 random configurations, joint-limit and mass differences,
   DOF match, and a 0–100 score.
