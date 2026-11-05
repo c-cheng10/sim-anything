@@ -40,7 +40,11 @@ def check_reach(ctx: CheckContext, *, seed: int = 0, n_samples: int = 5000) -> C
     m, d, spec = ctx.model, ctx.data, ctx.spec
     assert m is not None and d is not None and spec is not None
     if spec.reach is None:
-        return result("reach", True, severity="info", message="spec has no reach; not checked")
+        return result("reach", False, severity="warning",
+                      message="no rated reach: the chain is not checked against any external dimension",
+                      fix_hint="Add `reach` (value, measured_from, measured_to) from the datasheet with a source; it "
+                               "is the main cross-check of the link lengths. If the source gives no reach, keep it "
+                               "absent and say so in `notes`.")
     reach = spec.reach
     matched = ctx.matched()
     if not matched:

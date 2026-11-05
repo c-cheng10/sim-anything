@@ -19,8 +19,9 @@ from simanything.check import CHECK_IDS, inertia_problems, run_checks
 from simanything.spec import load_spec
 
 CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
-                "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
+                "mass_plausibility", "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
                 "sources_complete"]
+WARNING_CHECKS = {"mass_plausibility", "collision_exclusions"}
 SPEC_CHECKS = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass", "actuators",
                "sources_complete"}
 
@@ -172,7 +173,7 @@ def test_no_spec_skips_spec_checks(tmp_path):
         if c.id in SPEC_CHECKS:
             assert c.passed and c.severity == "info" and c.message == "skipped: no spec"
         else:
-            assert c.passed and c.severity == ("warning" if c.id == "collision_exclusions" else "error"), c
+            assert c.passed and c.severity == ("warning" if c.id in WARNING_CHECKS else "error"), c
 
 
 def test_reach_metric_definitions(tmp_path):
@@ -395,6 +396,39 @@ def test_mass_mismatch(tmp_path):
     c = assert_fails(report, "total_mass")
     assert "total_mass" in c.fix_hint and "joints[*].link.mass" in c.fix_hint
     assert error_failures(report) == {"total_mass"}
+
+
+def test_no_reach_is_warning(tmp_path):
+    s = spec_with()
+    del s["reach"]
+    model, spec = write_case(tmp_path, mjcf(), s)
+    report = run_checks(model, spec)
+    c = by_id(report)["reach"]
+    assert not c.passed and c.severity == "warning" and report.passed
+    assert "no rated reach" in c.message and "reach" in c.fix_hint
+
+
+def test_mass_plausibility_density(tmp_path):
+    # 50 kg in a 2.5 cm x 25 cm capsule: ~ 50,000 kg/m^3
+    heavy = mjcf(elbow_inertial='<inertial pos="0.125 0 0" mass="50" diaginertia="0.02 0.3 0.3"/>')
+    model, spec = write_case(tmp_path, heavy, spec_with(total_mass=52.0))
+    report = run_checks(model, spec)
+    c = by_id(report)["mass_plausibility"]
+    assert not c.passed and c.severity == "warning"
+    assert "density" in c.message and "'elbow_link' (joints[1].link)" in c.message
+    assert "joints[1].link" in c.fix_hint and c.details["density"]["elbow_link"] > 20000
+
+
+def test_mass_plausibility_light_link_and_light_arm(tmp_path):
+    # 50 g in total for a 0.55 m reach, and a 0.2 g forearm (0.4% of it)
+    light = mjcf(elbow_inertial='<inertial pos="0.125 0 0" mass="0.0002" diaginertia="1e-7 2e-6 2e-6"/>',
+                 base_mass=0.01).replace('mass="1.0" diaginertia="0.0005 0.008 0.008"',
+                                         'mass="0.04" diaginertia="0.00004 0.0006 0.0006"')
+    model, spec = write_case(tmp_path, light, spec_with(total_mass=0.0502))
+    c = by_id(run_checks(model, spec))["mass_plausibility"]
+    assert not c.passed and c.severity == "warning"
+    assert "< 0.5% of the total mass" in c.message and "'elbow_link'" in c.message
+    assert "per metre of reach" in c.message and c.details["kg_per_m_reach"] < 0.1
 
 
 def test_inertia_problems_function():

@@ -1,4 +1,5 @@
-"""Physical checks: total_mass, inertia_valid, self_collision_home, collision_exclusions, stable_hold."""
+"""Physical checks: total_mass, mass_plausibility, inertia_valid, self_collision_home, collision_exclusions,
+stable_hold."""
 
 from __future__ import annotations
 
@@ -16,6 +17,9 @@ MASS_TOL = 0.05  # relative
 INERTIA_SLACK = 1e-9
 PENETRATION_TOL = 1e-3  # m
 ZERO_LEN = 1e-6  # m; body offsets shorter than this count as zero-length links
+DENSITY_MIN, DENSITY_MAX = 100.0, 20000.0  # kg/m^3, plausible apparent link density
+MIN_LINK_FRACTION = 0.005  # a moving link below 0.5% of the total mass is suspicious
+MIN_KG_PER_M_REACH = 0.1  # kg of total mass per metre of rated reach
 HOLD_SECONDS = 2.0
 DRIFT_TOL_HINGE = 0.05  # rad
 DRIFT_TOL_SLIDE = 0.005  # m
@@ -73,6 +77,87 @@ def check_total_mass(ctx: CheckContext) -> CheckResult:
     return result("total_mass", False, measured=measured, expected=expected, tolerance=MASS_TOL,
                   message=f"model mass {measured:.3f} kg is {abs(rel) * 100:.1f}% {word} spec {expected:.3f} kg",
                   fix_hint=hint, details=details)
+
+
+# --------------------------------------------------------------------------- #
+def geom_volume(m: mujoco.MjModel, g: int) -> Optional[float]:
+    """Volume of a primitive geom (m^3); None for meshes, planes and height fields."""
+    t, s = int(m.geom_type[g]), m.geom_size[g]
+    G = mujoco.mjtGeom
+    if t == int(G.mjGEOM_SPHERE):
+        return 4.0 / 3.0 * np.pi * s[0] ** 3
+    if t == int(G.mjGEOM_CAPSULE):
+        return np.pi * s[0] ** 2 * 2 * s[1] + 4.0 / 3.0 * np.pi * s[0] ** 3
+    if t == int(G.mjGEOM_CYLINDER):
+        return np.pi * s[0] ** 2 * 2 * s[1]
+    if t == int(G.mjGEOM_BOX):
+        return 8.0 * s[0] * s[1] * s[2]
+    if t == int(G.mjGEOM_ELLIPSOID):
+        return 4.0 / 3.0 * np.pi * s[0] * s[1] * s[2]
+    return None
+
+
+def _link_paths(ctx: CheckContext, bodies) -> str:
+    paths = sorted({ctx.body_spec_path(b) or f"body '{ctx.body_name(b)}'" for b in bodies})
+    return ", ".join(paths)
+
+
+def check_mass_plausibility(ctx: CheckContext) -> CheckResult:
+    cid = "mass_plausibility"
+    m = ctx.model
+    assert m is not None
+    total = float(np.sum(m.body_mass))
+    problems, hints = [], []
+    details: dict = {"density_range_kg_m3": [DENSITY_MIN, DENSITY_MAX], "min_link_fraction": MIN_LINK_FRACTION,
+                     "min_kg_per_m_reach": MIN_KG_PER_M_REACH, "total_mass": total}
+    # 1. apparent density of each body: mass / volume of its primitives
+    dens, odd = {}, []
+    for b in range(1, m.nbody):
+        geoms = [g for g in range(m.ngeom) if int(m.geom_bodyid[g]) == b]
+        vols = [geom_volume(m, g) for g in geoms]
+        if not geoms or any(v is None for v in vols) or float(m.body_mass[b]) <= 0:
+            continue
+        rho = float(m.body_mass[b]) / max(float(sum(vols)), 1e-12)  # type: ignore[arg-type]
+        dens[ctx.body_name(b)] = rho
+        if not DENSITY_MIN <= rho <= DENSITY_MAX:
+            odd.append((b, rho))
+    details["density"] = dens
+    if odd:
+        problems.append("implausible density (mass / geometry volume): " + ", ".join(
+            f"{ctx.body_label(b)} {rho:.0f} kg/m^3" for b, rho in odd))
+        hints.append(f"Bodies {_link_paths(ctx, [b for b, _ in odd])} have a density outside "
+                     f"[{DENSITY_MIN:g}, {DENSITY_MAX:g}] kg/m^3 (aluminium ~2700, steel ~7800; hollow arm links "
+                     "are lighter): check that link.mass belongs to that link and that link.geometry sizes are in "
+                     "`units.length` and roughly match the real link.")
+    # 2. moving links (grouped by weld) with a negligible share of the total mass
+    if total > 0:
+        groups: dict[int, float] = {}
+        for b in range(1, m.nbody):
+            w = int(m.body_weldid[b])
+            if w != 0:
+                groups[w] = groups.get(w, 0.0) + float(m.body_mass[b])
+        light = [(w, mw) for w, mw in groups.items() if mw < MIN_LINK_FRACTION * total]
+        details["link_fraction"] = {ctx.body_name(w): mw / total for w, mw in groups.items()}
+        if light:
+            problems.append("moving link(s) with < {:.1f}% of the total mass: ".format(MIN_LINK_FRACTION * 100)
+                            + ", ".join(f"{ctx.body_label(w)} {mw / total * 100:.2f}%" for w, mw in light))
+            hints.append(f"Links {_link_paths(ctx, [w for w, _ in light])} are almost massless next to the rest of "
+                         "the arm: give them a realistic link.mass (an estimate is fine) or check whether a heavy "
+                         "neighbour carries mass that belongs to them.")
+    # 3. total mass vs reach
+    spec = ctx.spec
+    if spec is not None and spec.reach is not None and total > 0:
+        per_m = total / float(spec.reach.value)
+        details["kg_per_m_reach"] = per_m
+        if per_m < MIN_KG_PER_M_REACH:
+            problems.append(f"total mass {total:.3f} kg is only {per_m:.3f} kg per metre of reach")
+            hints.append("The arm is implausibly light for its reach: check total_mass / joints[*].link.mass "
+                         "(kg, not g?) and reach.value / `units.length` (mm vs m).")
+    if not problems:
+        return result(cid, True, severity="warning", message="link densities, mass shares and mass per reach are "
+                                                               "plausible", details=details)
+    return result(cid, False, severity="warning", measured=len(problems), expected=0, message="; ".join(problems),
+                  fix_hint=" ".join(hints), details=details)
 
 
 # --------------------------------------------------------------------------- #
