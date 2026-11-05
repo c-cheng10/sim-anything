@@ -31,7 +31,16 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 | 22 | 5 r2 | fixer C: evaluator | done: multi-move fit + limit-aware tie-break merged (resumed once after a usage-limit stop); re-scored rounds 0-1, numbers unchanged |
 | 24 | 5 r2 | blind round2: ur5e + franka_panda + kinova_gen3 | done: all pass |
 | 25 | 5 r2 | blind round2: xarm7 + kuka_iiwa14 + viperx_300s | done: all pass |
-| 26 | 6 | holdout (once): ur10e + ufactory_lite6 | running |
+| 26 | 6 | holdout (once): ur10e + ufactory_lite6 | done: both pass all error checks; UR10e 17.2 mm (reference flange discrepancy), Lite 6 1.3 mm |
 | 23 | 5 r2 | fixer D: CLI/loop/check/builder/spec/skill | done: 9 fixes merged (resumed once after a usage-limit stop) |
 
 ## Refinement rounds used: 2 / 3 (round 1: checks 5/6 -> 6/6; round 2 improved no metric (Kinova and ViperX accuracy regressed from stricter/less available sources) -> loop stopped). Spawn 26 reached -> Phase 6.
+
+## Final tally
+- Subagent spawns: 26 / 30 (Phase 2: 5, Phase 4: 6, round 1: 8, round 2: 6, Phase 6: 1). Two fixers were resumed once (SendMessage) after an account usage-limit stop; resumes are not new spawns.
+- Max concurrent: 5 (Phase 2 and Phase 4).
+- Refinement rounds: 2 / 3 (stopped: round 2 improved no metric; spawn 26 reached).
+- Build/check iterations per robot per run: max 2 used (cap 8).
+- Phase 6 optional work skipped at the 26-spawn mark: in-browser 3D viewer.
+- Outside the spawn count: one `claude -p "/sim-anything Trossen WidowX 250 6DOF"` session run by the round-2 tester to verify gate 3 ($0.79 reported).
+

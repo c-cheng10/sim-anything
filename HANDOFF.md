@@ -1,18 +1,46 @@
 # HANDOFF
 
-Resume from this file and BUDGET.md alone. Updated at every phase boundary and round.
+Final state of the autonomous build. Resume from this file and BUDGET.md alone.
 
 ## State
-- Phases 1-3 complete: all components merged (cherry-picked from agent worktrees), pytest green, `loop` verified end to end on a toy spec (fail -> fix -> pass, renders + report written and inspected).
-- Phase 4 complete: 6 dev robots generated blind into benchmark/runs/<id>/round0/, evaluated (benchmark/RESULTS.md). 5/6 pass all checks (xArm7 fails reach: unstated reach definition). Median p95 EE error on DH-published robots 0.2 mm; all six robots <= 1.4 mm p95.
-- Phase 5 round 1: reviews done (3), triage below, fixes merged (fixer A: 7, fixer B: 7, orchestrator: end-cap exclusion rule, friendly check errors, README/RESULTS framing). Blind re-run into round1/ done: 6/6 pass all error checks, kinematic metrics unchanged (RESULTS.md round-over-round table). Orchestrator fixes after the re-run: gross reach mismatch (>30%) stays an error; .gitignore `runs/` anchored to root.
-- Phase 5 round 2: reviews done, fixers C (evaluator) and D (CLI/check/builder/skill) merged; rounds 0-1 re-scored with the fixed evaluator (unchanged). Blind round2 re-run in progress (2 agents x 3 robots). Menagerie hidden at /root/.cache/simrefs/third_party during generation.
-- Menagerie is back in third_party/. While generation agents run, Menagerie is moved OUT of the repo to /tmp/claude-0/-home-user-sim-anything/a95fd57d-4f5a-5b98-a53c-0a6678d950af/scratchpad/.refs/third_party (move back with `mv <that>/third_party .` before evaluating; if the container was recycled, re-clone it).
+- All phases complete (1 contracts, 2 parallel build, 3 integrate, 4 blind dev benchmark, 5 refinement x2 rounds, 6 holdout + gallery + ship). Main is pushed; pytest green locally (182+ tests incl. Menagerie-dependent ones) and in CI.
+- Final metrics (details: benchmark/RESULTS.md, README):
+  - Dev set, final tool (round 2): 6/6 pass all error checks. p95 EE error: UR5e 1.4, Panda 0.0, Kinova Gen3 24.5, xArm 7 0.0, KUKA iiwa 0.0, ViperX 7.6 mm. Median over DH-publishing robots 0.7 mm (rounds 0-1: 0.2 mm; Kinova 0.4 mm and ViperX 0.3 mm in rounds 0-1 with sources the round-2 agents didn't find/trust).
+  - Holdout (once): UR10e 17.2 mm p95 (reference flange 16.55 mm shorter than UR's published d6; 1.1 mm diagnostic at the published flange), Lite 6 1.3 mm. Both pass all error checks.
+- Gates: all 6 met (see README "Gates").
+- Gallery: builds locally (`python gallery/build.py`); Pages deploy needs the owner to enable GitHub Pages (Settings -> Pages -> Source: GitHub Actions), then re-run the "Gallery" workflow. The deploy job is non-blocking until then.
 
-## How to run
-- `pip install -e ".[dev]"`; run tests with `python -m pytest` (the bare `pytest` on PATH in the dev container is a uv tool without numpy).
-- Menagerie (ground truth, gitignored): `git clone --depth 1 https://github.com/google-deepmind/mujoco_menagerie third_party/mujoco_menagerie`
-- Rendering: `MUJOCO_GL=osmesa` works in the dev container after `apt-get install libosmesa6`; EGL does not. Fallback: matplotlib.
+## Verified by running vs untested
+Verified by running:
+- Unit/integration tests (spec/DH conversion vs textbook FK, builder inertia vs MuJoCo, every check incl. mutation-killing tests, loop states, CLI exit codes, evaluator incl. re-conventioned Menagerie arms, render both backends, report).
+- CLI end to end on examples; quickstart from a fresh clone (orchestrator once, new-user testers twice); plugin install + `/sim-anything Trossen WidowX 250 6DOF` end to end in an isolated Claude config (round-2 tester).
+- Benchmark: 3 dev rounds + holdout generated blind by agents, scored by run_eval.py; round-0 metrics independently re-derived by the auditor; renders and HTML reports looked at.
+Untested:
+- `pip install git+https://github.com/c-cheng10/sim-anything` and `/plugin marketplace add c-cheng10/sim-anything` from GitHub (only local-clone installs were tested; the round-1 tester did test the GitHub marketplace form once).
+- GitHub Pages deployment (Pages not enabled).
+- MuJoCo interactive viewer (no display), EGL rendering, Windows/macOS.
+- Manufacturer pages themselves: blocked network; values came from search excerpts.
+
+## Known bugs / limitations
+- Source discovery varies run to run and dominates error (Kinova 0.4 -> 24.5 mm, ViperX 0.3 -> 7.6 mm between rounds).
+- Self-consistent but wrong specs pass the checks by design; only a reference eval catches them.
+- Evaluator: ties needing >= 4 simultaneous joint changes or > 128 tie solutions are best-effort; near-ties on imperfect candidates are decided by EE error only.
+- Collinear capsules meeting end to end look like a short middle link to the end-cap exclusion rule.
+- Matplotlib fallback renderer only depth-sorts whole geoms.
+- Agents running `pip install -e .` in a worktree hijack the shared editable install (prompt now forbids it; re-run `pip install -e .` in the main checkout if imports point into .claude/worktrees).
+- Score: ~25% (aligned orientation, DOF) is nearly free; limit/mass terms penalise sourced datasheet values where the reference chose differently (UR elbow ±360 vs ±180, datasheet masses).
+
+## Next 10 tasks (priority order)
+1. Allow manufacturer hosts in the environment network policy and re-gather inputs from primary documents (Kinova user guide DH table, Trossen docs, KUKA spec PDF).
+2. Make source discovery robust: a curated "where to look" list per manufacturer type in the skill, and a requirement to try >= 2 independent sources for kinematics before falling back to dimension tables.
+3. Run each benchmark robot 3x per round and report mean/variance, since single runs are noisy.
+4. Split the score into a kinematics score and a "datasheet vs reference" disagreement report so sourced values aren't penalised.
+5. Enable GitHub Pages and verify the gallery deploy; optionally add an in-browser 3D viewer (MuJoCo WASM or three.js from the MJCF primitives).
+6. Test the GitHub install paths (pip git+ URL, `/plugin marketplace add c-cheng10/sim-anything`) in a clean environment.
+7. Add a check that compares the zero-pose EE position with a published drawing dimension when the spec provides one (catches misread DH rows that self-consistency can't).
+8. Grippers/end-effector modules and closed-chain/parallel mechanisms (hand-edited MJCF path with `kinematics_match` explanations).
+9. Mesh import from manufacturer CAD downloads where licences allow, with primitive fallback.
+10. Expand the benchmark (Fanuc CRX, Flexiv Rizon, Unitree Z1, SO-100) and add a measured-hardware reference.
 
 ## Decisions
 - D1: Push straight to `main` as instructed by the user (session default branch ignored).
@@ -28,17 +56,18 @@ Resume from this file and BUDGET.md alone. Updated at every phase boundary and r
 - D12: `loop` never starts a new iteration when the spec is unchanged (also after a failure), so agents can't burn iterations.
 - D13: MuJoCo front render uses a 3/4 camera; matplotlib fallback keeps orthographic front/side/top.
 - D14: Eval mapping (orchestrator-written via benchmark/make_map.py) compares the candidate in world coordinates and the reference in its mounting-base body frame (removes Menagerie's xArm pedestal). Convention fitting is multi-start steepest descent preferring the simplest equivalent conventions; fitted conventions are reported per robot in RESULTS.md.
-- D15: ViperX reference EE = `gripper_link` body origin, chosen to match the agent's stated EE (gripper-mount face) after reading its NOTES.md.
+- D15: ViperX reference EE = `gripper_link` body origin, fixed in reference_sides.yaml before the ViperX run; the generating agent was told to put the EE at the gripper-mount face.
 - D10: ViperX reference includes gripper finger joints; they are unmapped and held at qpos0; reference mass includes the gripper.
+- D16: A reach mismatch is a warning when the reach definition or value is an estimate (or the definition is not written in the spec), but always an error beyond ±30% (units/structure slips).
+- D17: Builder auto-excludes only parent/child, coincident-origin chains, and capsule end caps of links k/k+2 meeting around a short middle link (closest points at the segment ends, depth <= r1+r2-gap); every exclusion is reported as a `collision_exclusions` warning.
+- D18: Evaluator ties between kinematically indistinguishable conventions resolve to the lowest joint-limit MAE, then the simplest; it never trades EE error for limits.
+- D19: Refinement stopped after round 2 (improved no metric) and spawn 26 was reached; Phase 6 followed. Round 3 not used.
+- D20: Reference models were moved outside the repository (round 1: scratchpad, rounds 2/holdout: /root/.cache/simrefs) while generation agents ran.
+- D21: Fixers C and D and orchestrator fixes were made generically; no robot-specific code or constants exist in simanything/.
+- D22: The UR10e holdout number is reported as measured (17.2 mm p95); the reference-flange diagnostic (1.1 mm) is labelled as diagnostic only and the mapping was not changed after seeing the result.
 
-## Known issues
-- GitHub Pages is not enabled on the repo and the Actions token cannot enable it. Owner action needed once: Settings -> Pages -> Build and deployment -> Source: GitHub Actions. Then re-run the Gallery workflow. The gallery builds locally with `python gallery/build.py`.
-- Network: manufacturer sites (universal-robots.com, frankaemika.github.io, kinovarobotics.com, ufactory.cc, trossenrobotics.com, kuka.com, even wikipedia) are unreachable from the shell and from WebFetch; only WebSearch works. Benchmark inputs are built from search excerpts. Kinova (DH values) and KUKA (link lengths) inputs have the largest gaps.
-- Evaluator: when a reference base frame is yawed 180 deg relative to the datasheet frame, the fitted joint-1 offset of pi also shifts the joint-limit comparison by 180 deg (limit MAE inflated). Watch in results.
-- Matplotlib fallback renderer only depth-sorts whole geoms.
-- Agents that run `pip install -e .` inside their worktree hijack the shared editable install. After merging, run `pip install -e .` in the main checkout again. Benchmark agents should use `PYTHONPATH=.` instead.
 
-## Fix list (Phase 5 triage)
+## Round triage history
 
 ### Round 1 (from new-user tester, code reviewer, benchmark auditor + round0 eval)
 Ranked by impact on the gates (4: checks pass on dev robots; 2/3: quickstart + plugin; honest reporting).
