@@ -511,11 +511,22 @@ def dh_to_offset(rows: list[DH], types: list[str], convention: str
     return body_tfs, offsets, tail
 
 
-def _motion_tf(jtype: str, axis: list[float], value: float) -> np.ndarray:
+def motion_tf(jtype: str, axis: list[float], value: float) -> np.ndarray:
+    """4x4 transform of a hinge (rotation by ``value`` about ``axis``) or slide (translation along it)."""
     if jtype == "hinge":
         return make_tf(axis_angle_mat(np.asarray(axis, dtype=float), value))
     a = np.asarray(axis, dtype=float)
     return make_tf(None, a / np.linalg.norm(a) * value)
+
+
+def sample_configs(spec: Spec, n: int, seed: int = 0) -> np.ndarray:
+    """Home plus ``n - 1`` seeded uniform configurations within the limits of an SI spec.
+    Unlimited hinges use [-pi, pi], unlimited slides [-0.1, 0.1] m."""
+    rng = np.random.default_rng(seed)
+    lo = np.array([j.limits.lower if j.limits else (-math.pi if j.type == "hinge" else -0.1) for j in spec.joints])
+    hi = np.array([j.limits.upper if j.limits else (math.pi if j.type == "hinge" else 0.1) for j in spec.joints])
+    home = np.array([j.home for j in spec.joints], dtype=float)
+    return np.vstack([home[None, :], rng.uniform(lo, hi, size=(max(n - 1, 0), len(lo)))])
 
 
 def build_chain(spec: Spec) -> Chain:
@@ -545,7 +556,7 @@ def build_chain(spec: Spec) -> Chain:
     # fold constant joint offsets into the child transform
     for i in range(len(tfs)):
         if offs[i] != 0.0:
-            M = _motion_tf(types[i], axes[i], offs[i])
+            M = motion_tf(types[i], axes[i], offs[i])
             if i + 1 < len(tfs):
                 tfs[i + 1] = M @ tfs[i + 1]
             else:
@@ -823,7 +834,7 @@ def is_estimate(spec: Spec, path: str) -> bool:
 __all__ = [
     "Spec", "Joint", "Link", "GeometryHint", "DH", "Limits", "Pose", "Units", "EndEffector", "Base",
     "Reach", "Chain", "ChainJoint", "load_spec", "dump_spec", "json_schema", "write_json_schema",
-    "build_chain", "dh_to_offset", "dh_fk", "iter_numeric_fields", "uncovered_fields", "path_covers",
+    "build_chain", "sample_configs", "motion_tf", "dh_to_offset", "dh_fk", "iter_numeric_fields", "uncovered_fields", "path_covers",
     "is_estimate", "bad_source_values", "unmatched_keys", "suggest_key", "describe_key", "duplicate_keys", "estimate_counts", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
     "rot_x", "rot_y", "rot_z", "SCHEMA_VERSION",
 ]

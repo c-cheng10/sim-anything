@@ -9,7 +9,7 @@ import mujoco
 import numpy as np
 
 from ..schemas import CheckResult
-from ..spec import is_estimate
+from ..spec import is_estimate, sample_configs
 from .context import HINGE, JOINT_TYPE_NAMES, CheckContext, result, skipped_no_spec
 
 REACH_TOL = 0.05  # relative
@@ -335,16 +335,6 @@ def _vec_angle(a: np.ndarray, b: np.ndarray) -> float:
     return 2.0 * math.asin(min(1.0, float(np.linalg.norm(a - b)) / 2.0))
 
 
-def kinematic_configs(spec, n: int, seed: int) -> np.ndarray:
-    """Home plus ``n - 1`` seeded uniform configurations within the spec limits (SI).
-    Unlimited hinges use [-pi, pi], unlimited slides [-0.1, 0.1] m."""
-    rng = np.random.default_rng(seed)
-    lo = np.array([j.limits.lower if j.limits else (-math.pi if j.type == "hinge" else -0.1) for j in spec.joints])
-    hi = np.array([j.limits.upper if j.limits else (math.pi if j.type == "hinge" else 0.1) for j in spec.joints])
-    home = np.array([j.home for j in spec.joints], dtype=float)
-    return np.vstack([home[None, :], rng.uniform(lo, hi, size=(max(n - 1, 0), len(lo)))])
-
-
 def check_kinematics_match(ctx: CheckContext, *, seed: int = 0, n_samples: int = KIN_SAMPLES) -> CheckResult:
     """EE site pose and every joint axis (direction and, for hinges, its line) of the model vs
     ``spec.chain()`` on ``n_samples`` configurations."""
@@ -367,7 +357,7 @@ def check_kinematics_match(ctx: CheckContext, *, seed: int = 0, n_samples: int =
     chain = spec.chain()
     jids = [int(j) for j in ctx.joint_ids]  # type: ignore[arg-type]
     qadr = np.array([m.jnt_qposadr[j] for j in jids], dtype=int)
-    Q = kinematic_configs(spec, n_samples, seed)
+    Q = sample_configs(spec, n_samples, seed)
     ee_pos = ee_rot = 0.0
     axis_err = np.zeros(len(jids))   # rad, joint axis direction (sign included)
     line_err = np.zeros(len(jids))   # m, hinge anchor distance from the spec axis line

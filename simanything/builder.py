@@ -81,7 +81,7 @@ from typing import Optional
 import numpy as np
 
 from .spec import (Chain, GeometryHint, Link, Spec, axis_angle_mat, build_chain, dh_to_offset, load_spec,
-                   make_tf, mat_to_quat, quat_to_mat, rot_x, rpy_to_mat)
+                   make_tf, mat_to_quat, motion_tf, quat_to_mat, rot_x, rpy_to_mat, sample_configs)
 
 TIMESTEP = 0.002
 DEFAULT_DENSITY = 1000.0          # kg/m^3, for links of unknown mass (before total_mass scaling)
@@ -134,13 +134,6 @@ def _rot_z_to(d: np.ndarray) -> np.ndarray:
         return rot_x(math.pi)
     axis = np.cross(z, d)
     return axis_angle_mat(axis, math.atan2(np.linalg.norm(axis), c))
-
-
-def _motion_tf(jtype: str, axis, value: float) -> np.ndarray:
-    if jtype == "hinge":
-        return make_tf(axis_angle_mat(np.asarray(axis, dtype=float), value))
-    a = np.asarray(axis, dtype=float)
-    return make_tf(None, a / np.linalg.norm(a) * value)
 
 
 def _quat_attr(R: np.ndarray) -> Optional[str]:
@@ -225,7 +218,7 @@ def _link_frames(si: Spec, chain: Chain) -> list[np.ndarray]:
     _, offs, _ = dh_to_offset([j.dh for j in si.joints], types, si.convention)  # type: ignore[misc]
     frames = []
     for i, cj in enumerate(chain.joints):
-        M = _motion_tf(cj.type, cj.axis, offs[i])
+        M = motion_tf(cj.type, cj.axis, offs[i])
         if si.convention == "dh_modified":
             frames.append(M)
         elif i + 1 < n:  # dh_standard: DH frame i is where body i+1 sits (offset already folded in)
@@ -527,14 +520,6 @@ def _to_xml(spec: Spec, si: Spec, chain: Chain, bodies: list[BodyPlan], dyn: _Dy
 # --------------------------------------------------------------------------- #
 
 
-def _sample_configs(si: Spec, n: int) -> list[np.ndarray]:
-    rng = np.random.default_rng(0)
-    home = np.array([j.home for j in si.joints], dtype=float)
-    lo = np.array([j.limits.lower if j.limits else (-math.pi if j.type == "hinge" else -0.1) for j in si.joints])
-    hi = np.array([j.limits.upper if j.limits else (math.pi if j.type == "hinge" else 0.1) for j in si.joints])
-    return [home] + [rng.uniform(lo, hi) for _ in range(n - 1)]
-
-
 def _geom_thickness(model, g: int) -> float:
     """Cross-section half-size of a primitive (radius, or the largest box half-size)."""
     import mujoco
@@ -620,7 +605,7 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
         return []
     home_depth = {pr: 0.0 for pr in cand}
     data = mujoco.MjData(model)
-    for s, q in enumerate(_sample_configs(si, N_CONTACT_SAMPLES)):  # sample 0 is home
+    for s, q in enumerate(sample_configs(si, N_CONTACT_SAMPLES)):  # sample 0 is home
         data.qpos[:] = q
         mujoco.mj_forward(model, data)
         touched: set[frozenset] = set()
