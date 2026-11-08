@@ -1,6 +1,6 @@
 # sim-anything
 
-**Reverse-engineer any robot arm into a verified MuJoCo simulation.**
+**Turn a robot arm's public datasheets into a checked MuJoCo simulation.**
 
 Give it a robot's name. A Claude Code agent collects the public specs
 (datasheets, manuals, published DH tables), writes them into a `spec.yaml` in
@@ -129,12 +129,27 @@ Then inside Claude Code:
 /sim-anything UR5e
 ```
 
-The agent gathers sources into `runs/<robot>/sources.md`, writes
-`runs/<robot>/spec.yaml`, loops in `runs/<robot>/run/` until the checks pass,
-and reports the paths to the model, renders and `report.html`. The plugin has
-the `/sim-anything` command and the `robot-to-mujoco` skill it follows (the
-skill also triggers on its own when you ask for a MuJoCo model of a robot arm).
-Details: [plugin/README.md](plugin/README.md).
+`/sim-anything` runs a small agent team. Each agent does one job and hands off
+through files in `runs/<robot>/`:
+
+| Agent | Job | Writes |
+|---|---|---|
+| `source-scout` | finds the datasheet, manual and kinematic table; quotes every number | `sources.md` |
+| `spec-writer` | picks the convention, transcribes tables exactly, flags every inference as an estimate, validates | `spec.yaml` |
+| `loop-fixer` | runs build/check up to 8 times, fixes interpretations (never sourced numbers), checks the renders | `run/` |
+| `source-auditor` | read-only second opinion: traces every number to a quote, checks transcription and loop honesty | verdict |
+
+If the auditor says "not ready", the lead sends its findings back for one
+rework round, then reports. `/sim-anything-audit <slug>` runs the auditor alone
+on an existing model. The `robot-to-mujoco` skill holds the shared rules; it
+also works on its own (single agent) and triggers when you ask for a MuJoCo
+model of a robot arm.
+
+Measured on one real run (`/sim-anything Trossen WidowX 250 6DOF`, network
+without manufacturer sites): all four agents ran, 14/14 checks passed on the
+first iteration, auditor verdict "ready with caveats", 7 minutes, about $2.20.
+The single-agent flow did the same robot in 2 minutes for about $0.80, without
+the independent audit. Details: [plugin/README.md](plugin/README.md).
 
 ## Results
 
@@ -194,10 +209,12 @@ yaw), which RESULTS.md lists per robot.
   which kinematic source the agent found and trusted. Masses, inertias, joint
   torques and housing sizes are often unpublished; the tool then estimates
   (and says so).
-* "Verified" means the model passes the tool's own checks (structure,
-  kinematics vs spec, limits, reach, mass, inertia, collisions, stability,
-  sources). A self-consistent but wrong spec (e.g. a misread DH row) passes; only
-  a reference comparison catches it.
+* "Verified" means the model passes the tool's own checks. For a model the
+  builder wrote, five of them (joint structure, joint limits, kinematics match,
+  total mass, actuators) only guard against hand edits of the XML; the ones that
+  test the robot itself are reach, plausibility, inertia, collisions, stability
+  and sources. A self-consistent but wrong spec (e.g. a misread DH row) passes;
+  the auditor agent and a reference comparison are what catch it.
 * Reach checks depend on how a datasheet defines "reach", which is often
   unstated; then they only warn.
 * The benchmark is small (6 dev + 2 holdout arms), its references are
@@ -227,11 +244,11 @@ yaw), which RESULTS.md lists per robot.
 
 ```
 simanything/   spec.py builder.py check/ evaluate.py render.py report.py loop.py cli.py
-plugin/        Claude Code plugin: skill, /sim-anything command
+plugin/        Claude Code plugin: skill, 4 agents, /sim-anything and /sim-anything-audit
 benchmark/     robots.yaml, inputs/<robot>/, runs/<robot>/<round>/, RESULTS.md
 gallery/       static gallery site
 examples/      fictional example specs
-docs/          CONTRACTS.md, spec.schema.json
+docs/          CONTRACTS.md, spec.schema.json, dev/ (build logs)
 ```
 
 ## License
