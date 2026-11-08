@@ -1,54 +1,46 @@
 ---
-description: Build a verified MuJoCo model of a real robot arm from its public datasheets (gather -> spec -> loop -> report)
+description: Build a verified MuJoCo model of a real robot arm from its public datasheets, with a four-agent team (scout -> spec writer -> loop fixer -> auditor)
 argument-hint: <robot name, e.g. "UR5e" or "Franka Emika Panda">
 ---
 
 Build a verified MuJoCo simulation of this robot arm: **$ARGUMENTS**
 
-Follow the `robot-to-mujoco` skill exactly (load it now if it is not already loaded). Summary:
+You are the lead. The `robot-to-mujoco` skill holds the rules (load it). Four team agents do the
+work in order and hand off through files in `runs/<slug>/`. Use the plugin's agents through the
+Agent tool (`subagent_type`: `sim-anything:source-scout`, `sim-anything:spec-writer`,
+`sim-anything:loop-fixer`, `sim-anything:source-auditor`; drop the `sim-anything:` prefix if the
+agents were installed by hand). If agents are unavailable in this harness, do each step yourself
+by the skill.
 
-1. Pick a slug for the robot (lowercase, underscores, e.g. `ur5e`, `kuka_iiwa14`). All paths are
-   relative to the current project root: the robot's files go in `runs/<slug>/` (create it) and the
-   loop run directory is `runs/<slug>/run/`. If `runs/<slug>/spec.yaml` already exists, continue
-   from it. To start over, delete `runs/<slug>/run/` (or use a new `--run-dir`); iteration
-   numbering then restarts at 1.
-2. **Gather**: find the manufacturer datasheet, manual and any published DH / kinematic table for
-   the exact model variant; prefer the most authoritative primary source. Write
-   `runs/<slug>/sources.md` with each URL, access date and the exact quoted values, and mark any
-   second-hand source (forum, reseller copy, third-party page, search excerpt) as such. Never use
-   URDF/MJCF/SDF/xacro files, MuJoCo Menagerie or ROS description packages as sources, and never
-   invent numbers: unknown -> omit, or an estimate listed in `estimates` with the reasoning in
-   `notes`. Generated outputs are not sources: while gathering, never read other runs (`runs/`,
-   `benchmark/runs/`), HANDOFF/RESULTS files, eval outputs or the git history of this repository;
-   sources are external public documents only (your own `runs/<slug>/` files are fine).
-3. **Spec**: classify the kinematic source and state it first in `notes`: published DH table
-   (`dh_standard`/`dh_modified`, rows copied verbatim) / published screw-axis or "home
-   configuration + joint axes" table (converted exactly to `offset` as the skill explains) /
-   dimension drawing (`offset`) / inferred (`offset`, all estimates). Write
-   `runs/<slug>/spec.yaml`:
-   * `sources` values are http(s) URLs (or `doc:<path>` for a local document); `sources` keys and
-     `estimates` entries must be exact spec field paths.
-   * Anything inferred (unlabelled drawing dimensions mapped to links, axis directions read off
-     pictures, letter-to-dimension mappings) goes in `estimates`, not `sources`, even if the raw
-     numbers are sourced; explain it in `notes`.
-   * Set `reach.measured_from` / `reach.measured_to` only from what the source states; if it does
-     not say, pick the most likely definition and list both paths in `estimates`. Never switch
-     reach endpoints just to make the check pass.
+## Setup
 
-   Run `sim-anything validate runs/<slug>/spec.yaml` until it exits 0 (`ok: ...`).
-4. **Loop**: run
-   `sim-anything loop runs/<slug>/spec.yaml --run-dir runs/<slug>/run --max-iter 8 --note "<what changed>"`.
-   On exit 1, read every failed check's fix hint (stdout or `runs/<slug>/run/check.json`), fix the
-   spec's interpretation (not sourced numbers), and run `loop` again. Stop on exit 0 (passed: a
-   one-line summary; details in `check.json`) or exit 2 (max iterations reached, or a changed spec
-   the cap kept from being checked). The renders and report are rewritten after every iteration,
-   so they always show the latest one.
-5. **Inspect**: look at `runs/<slug>/run/renders/front.png`, `side.png`, `top.png` and compare
-   with product photos/drawings; fix and loop again if the shape is wrong.
-6. **Report** to the user in a few lines: kinematic source class, convention and its source (and
-   any second-hand sources), sourced vs estimated values, check status (errors and warnings) and
-   iteration count, known gaps, and the paths to `runs/<slug>/spec.yaml`, `runs/<slug>/sources.md`,
-   `runs/<slug>/run/report.html` and the renders.
+Pick a slug (lowercase, underscores: `ur5e`, `kuka_iiwa14`) and create `runs/<slug>/`. All paths
+are relative to the project root. If `runs/<slug>/spec.yaml` already exists, start at step 3. If
+the `sim-anything` CLI is missing: `pip install git+https://github.com/c-cheng10/sim-anything`
+(`python -m simanything.cli` also works).
 
-If the `sim-anything` CLI is missing, install it with `pip install git+https://github.com/c-cheng10/sim-anything`
-(or `pip install -e .` inside a clone); `python -m simanything.cli` works as a fallback.
+Give every agent the robot name, the slug and the paths below. Never paste file contents from
+other runs into a prompt: generated outputs are not sources.
+
+## Steps
+
+1. **source-scout** writes `runs/<slug>/sources.md`.
+2. **spec-writer** writes `runs/<slug>/spec.yaml` from it and gets `sim-anything validate` to exit 0.
+   If it reports missing facts that matter (no kinematic table and no drawing), send the scout back
+   once with exactly those gaps, then the writer again.
+3. **loop-fixer** runs `sim-anything loop runs/<slug>/spec.yaml --run-dir runs/<slug>/run
+   --max-iter 8` until exit 0 or 2, then checks the renders.
+4. **source-auditor** audits `runs/<slug>/`. If its verdict is "not ready", send its findings once
+   to spec-writer (source or transcription problems) or loop-fixer (loop problems), then audit
+   again. One rework round only; report whatever is left.
+
+Run the steps one after another; each needs the previous one's files. Don't redo an agent's work
+yourself; you may read its files to decide the next step.
+
+## Report to the user (a few lines)
+
+- Kinematic source class and its URL; any second-hand sources.
+- Check result: errors and warnings, iterations used.
+- The auditor's verdict and open caveats.
+- Paths: `runs/<slug>/spec.yaml`, `runs/<slug>/sources.md`, `runs/<slug>/run/report.html`,
+  `runs/<slug>/run/renders/`.
