@@ -427,7 +427,6 @@ class ChainJoint(BaseModel):
     pos: list[float]
     quat: list[float]  # w x y z
     axis: list[float]
-    qpos_offset: float = 0.0  # added to q before applying the joint motion (DH theta/d offsets)
 
     def parent_tf(self) -> np.ndarray:
         return make_tf(quat_to_mat(np.array(self.quat)), self.pos)
@@ -450,11 +449,7 @@ class Chain(BaseModel):
             T = T @ j.parent_tf()
             if upto is not None and i == upto:
                 return T
-            v = q[i] + j.qpos_offset
-            if j.type == "hinge":
-                T = T @ make_tf(axis_angle_mat(np.array(j.axis), v))
-            else:
-                T = T @ make_tf(None, np.asarray(j.axis, dtype=float) / np.linalg.norm(j.axis) * v)
+            T = T @ motion_tf(j.type, j.axis, q[i])
         return T @ make_tf(quat_to_mat(np.array(self.ee_quat)), self.ee_pos)
 
 
@@ -534,8 +529,7 @@ def build_chain(spec: Spec) -> Chain:
 
     DH theta/d offsets are folded into the next body's pose (a joint's motion
     about/along a fixed axis commutes with a constant motion about/along the same
-    axis), so the MJCF joint value equals the spec joint value and every
-    ``qpos_offset`` in the result is 0.
+    axis), so the MJCF joint value equals the spec joint value.
     """
     s = spec.to_si() if (spec.units.length != "m" or spec.units.angle != "rad") else spec
     base_pos, base_quat = _tf_to_pos_quat(pose_to_tf(s.base.origin))
@@ -564,7 +558,7 @@ def build_chain(spec: Spec) -> Chain:
     joints = []
     for j, T, ax in zip(s.joints, tfs, axes):
         pos, quat = _tf_to_pos_quat(T)
-        joints.append(ChainJoint(name=j.name, type=j.type, pos=pos, quat=quat, axis=ax, qpos_offset=0.0))
+        joints.append(ChainJoint(name=j.name, type=j.type, pos=pos, quat=quat, axis=ax))
     ee_pos, ee_quat = _tf_to_pos_quat(ee_tf)
     return Chain(base_pos=base_pos, base_quat=base_quat, joints=joints, ee_pos=ee_pos, ee_quat=ee_quat)
 

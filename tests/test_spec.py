@@ -25,7 +25,6 @@ def test_dh_chain_matches_textbook_fk(conv, slide_at):
     spec = Spec(name="t", dof=6, units=Units(angle="rad"), convention=conv,
                 joints=[Joint(name=f"j{i}", type=t, dh=r) for i, (t, r) in enumerate(zip(types, rows))])
     ch = spec.chain()
-    assert all(j.qpos_offset == 0.0 for j in ch.joints)
     rng = np.random.default_rng(1)
     for _ in range(20):
         q = rng.uniform(-2, 2, 6)
