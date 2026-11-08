@@ -50,7 +50,7 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-end runs and $15 combined
 `total_cost_usd`; soft stop at 75% of any cap; P2 skipped once any cap passes 50%.
 
-**Running tally:** subagents 0 / 12 (0 tokens) | e2e runs 0 / 8 | e2e cost $0.00 / $15 | other `claude -p` $0.10
+**Running tally:** subagents 0 / 12 (0 tokens) | e2e runs 1 / 8 | e2e cost $2.31 / $15 | other `claude -p` $0.10
 
 ## Subagent spawns
 | # | Purpose | Outcome | Tokens |
@@ -59,5 +59,6 @@ Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-e
 ## End-to-end runs
 | # | Command | Result | Time | Cost (USD) |
 |---|---|---|---|---|
+| 1 | P0.1 `/sim-anything UR3e` (plugin + CLI 0.2.0 installed from GitHub, isolated config) | all four agents ran; 2 iterations, both passed (0 errors, 2 warnings: unlimited wrist 3, reach definition unstated); auditor "ready with caveats"; UR host blocked, values from search excerpts | 416 s | 2.31 |
 
 Other: one `claude -p "Reply with the single word: ok"` auth smoke test in the isolated config, $0.10.
