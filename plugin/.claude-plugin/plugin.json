@@ -1,6 +1,6 @@
 {
   "name": "sim-anything",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reverse-engineer a robot arm into a verified MuJoCo simulation from public datasheets, with a four-agent team (scout, spec writer, loop fixer, auditor).",
   "author": {
     "name": "c-cheng10"
