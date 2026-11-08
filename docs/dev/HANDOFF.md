@@ -4,6 +4,11 @@ Final state of the autonomous build (internal development log). Resume from this
 
 ## State
 
+## Session 3 (in progress; resume from here)
+- Done: ponytail installed and audit done (no must-fix bugs; findings = plan items 2, 4, 7 plus a dead package-data entry, removed). P0.1 GitHub install: `pip install git+...` in a clean venv 15.6 s, toy loop passes; plugin marketplace add/install from `c-cheng10/sim-anything` works in an isolated config. P0.2 `tests/test_plugin.py`. P1.4 `drawing` spec field + check (15 checks).
+- In progress: P0.1 real `/sim-anything UR3e` run from the GitHub install.
+- Next: P0.3 known-bugs re-check, P1.5 scout, P1.7 split score, P1.6 variance runs (trimmed to fit the 8-run / $15 cap).
+
 ## Session 2 update (0.2.0)
 - Ponytail-style audit done; fixed: world-fixed base vs first-link contacts now count as self-collisions; one shared config sampler + motion transform (spec.py `sample_configs`, `motion_tf`); removed always-zero `ChainJoint.qpos_offset`; internal logs moved to docs/dev/.
 - Plugin 0.2.0: four agents in plugin/agents/ (source-scout, spec-writer, loop-fixer, source-auditor), `/sim-anything` orchestrates them with one rework round, `/sim-anything-audit` runs the auditor alone. Verified once: `/sim-anything Trossen WidowX 250 6DOF` via `claude -p` in an isolated CLAUDE_CONFIG_DIR, all four agents ran, 14/14 checks, auditor "ready with caveats", 7 min, ~$2.20 (single-agent: 2 min, ~$0.80).
