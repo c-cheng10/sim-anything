@@ -167,5 +167,9 @@
     "mass": 0.7175395798254839,
     "dof": 1.0
   },
+  "kinematics_score": 99.99999999999946,
+  "disagreements": [
+    "total mass: candidate 17.80 kg vs reference 16.69 kg (+7%)"
+  ],
   "notes": []
 }

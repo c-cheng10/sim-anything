@@ -248,7 +248,15 @@ limits = exp(-joint_limit_mae_deg / 10)
 mass   = exp(-|mass_rel_diff| / 0.2)
 dof    = 1 if dof_match else 0
 score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
+kinematics_score = 100 * (5 pos + 2 orient) / 7
 ```
+
+`kinematics_score` measures the model: EE position and aligned orientation only. Joint limits and
+mass are often sourced datasheet values against a different choice in the reference, so they are
+also listed in `disagreements` (strings) instead of being read as model error: every mapped joint
+whose bounds differ by more than 1 deg (hinge) / 1 mm (slide) in reference coordinates, and the total
+mass when it differs by more than 5%. `score` keeps the original formula for comparison with earlier
+rounds.
 
 ### Eval JSON example
 
@@ -264,7 +272,7 @@ score  = 100 * (0.5 pos + 0.2 orient + 0.15 limits + 0.1 mass + 0.05 dof)
  "joint_limit_mae_deg": 0.0, "mass_candidate": 20.6, "mass_reference": 21.0,
  "mass_diff": -0.4, "mass_rel_diff": -0.019, "score": 97.3,
  "score_breakdown": {"pos": 0.92, "orient": 0.98, "limits": 1.0, "mass": 0.91, "dof": 1.0},
- "notes": []}
+ "kinematics_score": 93.7, "disagreements": [], "notes": []}
 ```
 
 ## 6. Python API (module boundaries)

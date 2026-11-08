@@ -138,9 +138,11 @@ def eval_cmd(candidate: Path = typer.Argument(..., exists=True, dir_okay=False),
         typer.echo(json.dumps(data, indent=2))
     else:
         p = res.ee_position_error_mm
-        typer.echo(f"score {res.score:.1f}/100  EE pos err mean {p.mean:.1f} p95 {p.p95:.1f} max {p.max:.1f} mm  "
+        typer.echo(f"kinematics score {res.kinematics_score:.1f}/100  score {res.score:.1f}/100  EE pos err mean {p.mean:.1f} p95 {p.p95:.1f} max {p.max:.1f} mm  "
                    f"orient p95 {res.ee_orientation_error_aligned_deg.p95:.1f} deg (aligned)  "
                    f"mass diff {res.mass_diff:+.2f} kg  dof match {res.dof_match}")
+        for line in res.disagreements:
+            typer.echo(f"datasheet vs reference: {line}")
 
 
 @app.command()

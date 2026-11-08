@@ -149,6 +149,10 @@
     "mass": 0.9102402990643308,
     "dof": 1.0
   },
+  "kinematics_score": 96.1496264788548,
+  "disagreements": [
+    "elbow limits: candidate [-360, 360] deg vs reference elbow_joint [-180, 180] deg"
+  ],
   "notes": [
     "fitted candidate base yaw +180 deg (mounting-frame convention)"
   ]

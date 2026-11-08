@@ -142,6 +142,8 @@ class EvalResult(BaseModel):
     mass_rel_diff: float
     score: float  # 0..100
     score_breakdown: dict[str, float]
+    kinematics_score: float = 0.0  # 0..100 from EE position and aligned orientation only
+    disagreements: list[str] = Field(default_factory=list)  # limits/mass where candidate and reference differ
     notes: list[str] = Field(default_factory=list)
 
 

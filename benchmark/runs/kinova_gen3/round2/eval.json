@@ -167,6 +167,8 @@
     "mass": 0.9926383519437568,
     "dof": 1.0
   },
+  "kinematics_score": 55.39228105100536,
+  "disagreements": [],
   "notes": [
     "fitted candidate base yaw +180 deg (mounting-frame convention)",
     "fitted non-identity conventions: actuator_1: sign -1, offset +0 deg; actuator_2: sign -1, offset +0 deg; actuator_3: sign -1, offset +0 deg; actuator_4: sign -1, offset +0 deg; actuator_5: sign -1, offset +0 deg; actuator_6: sign -1, offset +0 deg; actuator_7: sign -1, offset +0 deg"

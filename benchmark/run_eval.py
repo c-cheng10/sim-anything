@@ -37,9 +37,10 @@ def main() -> int:
 
     robots = yaml.safe_load((ROOT / "benchmark/robots.yaml").read_text())[args.set]
     header = ("| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | "
-              "Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |")
+              "Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |")
     print(header)
-    print("|" + "---|" * 10)
+    print("|" + "---|" * 11)
+    disagreements = []
     p95s_dh = []
     for r in robots:
         rd = ROOT / "benchmark/runs" / r["id"] / args.round
@@ -55,7 +56,7 @@ def main() -> int:
             hj = json.loads((rd / "run/history.json").read_text())
             iters = str(len(hj.get("iterations", [])))
         if not model.exists() or not mp.exists():
-            print(f"| {r['name']} | {r.get('kinematic_source_by_round', {}).get(args.round, r.get('kinematic_source', '?'))} | {checks} | {iters} | no model or map | - | - | - | - | - |")
+            print(f"| {r['name']} | {r.get('kinematic_source_by_round', {}).get(args.round, r.get('kinematic_source', '?'))} | {checks} | {iters} | no model or map | - | - | - | - | - | - |")
             continue
         res = evaluate(model, ROOT / r["reference"], load_mapping(mp), n_samples=args.samples, seed=0)
         (rd / "eval.json").write_text(json.dumps(res.model_dump(mode="json"), indent=2) + "\n")
@@ -68,7 +69,11 @@ def main() -> int:
         print(f"| {r['name']} | {r.get('kinematic_source_by_round', {}).get(args.round, r.get('kinematic_source', '?'))} | {checks} | {iters} | "
               f"{p.mean:.1f} / {p.p95:.1f} / {p.max:.1f} | {res.ee_orientation_error_aligned_deg.p95:.1f} | "
               f"{res.joint_limit_mae_deg:.1f} | {res.mass_candidate:.2f} / {res.mass_reference:.2f} | "
-              f"{conv} | {res.score:.1f} |")
+              f"{conv} | {res.score:.1f} | {res.kinematics_score:.1f} |")
+        disagreements += [f"* {r['name']}: {d}" for d in res.disagreements]
+    if disagreements:
+        print("\nDatasheet vs reference disagreements (reported, not model error):")
+        print("\n".join(disagreements))
     if p95s_dh:
         print(f"\nMedian p95 EE position error, robots with published DH: {statistics.median(p95s_dh):.1f} mm "
               f"(n={len(p95s_dh)})")

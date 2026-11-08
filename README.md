@@ -49,7 +49,10 @@ flowchart LR
   the latest iteration; the agent edits the spec between calls (max 8 iterations).
 * **EVAL** — `simanything/evaluate.py`: end-effector position/orientation
   error over 2,000 random configurations, joint-limit and mass differences,
-  DOF match, and a 0–100 score.
+  DOF match, a 0–100 kinematics score (EE position and orientation only), the
+  original 0–100 score (which also weighs limits and mass), and a list of
+  "datasheet vs reference" disagreements (limits, mass) that are reported
+  rather than counted as model error.
 
 Contracts (CLI, JSON formats, mapping file): [docs/CONTRACTS.md](docs/CONTRACTS.md).
 Spec schema: [docs/spec.schema.json](docs/spec.schema.json).
@@ -102,9 +105,10 @@ fixture arm against a variant with flipped joint conventions and a rotated tool)
 sim-anything eval tests/fixtures/eval/arm_cand.xml --reference tests/fixtures/eval/arm_ref.xml --map tests/fixtures/eval/arm_map.yaml
 ```
 
-It prints `score 85.0/100` with 0.0 mm position error: the kinematics match
-exactly once the evaluator has fitted the joint conventions, but the fixture's
-joint ranges deliberately differ from the reference's (e.g. the candidate's
+It prints `kinematics score 100.0/100  score 85.0/100` with 0.0 mm position
+error, then one `datasheet vs reference:` line per joint whose limits differ:
+the kinematics match exactly once the evaluator has fitted the joint
+conventions, but the fixture's joint ranges deliberately differ from the reference's (e.g. the candidate's
 first joint keeps ±3 rad around a zero shifted by 90 deg), so the limits score
 low (joint-limit MAE about 34 deg, limits term 0.03), and the reference has an
 extra 0.05 kg finger (mass term 0.95). Add `--json` to see the fitted

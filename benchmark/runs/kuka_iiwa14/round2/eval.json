@@ -167,5 +167,7 @@
     "mass": 0.8904973414523389,
     "dof": 1.0
   },
+  "kinematics_score": 99.99999999999753,
+  "disagreements": [],
   "notes": []
 }

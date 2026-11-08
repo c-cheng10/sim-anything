@@ -40,7 +40,7 @@ import yaml
 
 from .schemas import EESpec, ErrorStats, EvalResult, JointConvention, JointLimitDiff, Mapping
 
-__all__ = ["load_mapping", "evaluate", "compute_score", "sampling_interval", "default_range", "fit_conventions",
+__all__ = ["load_mapping", "evaluate", "compute_score", "kinematics_score", "sampling_interval", "default_range", "fit_conventions",
            "N_FIT_CONFIGS", "OFFSET_CHOICES"]
 
 N_FIT_CONFIGS = 256
@@ -599,6 +599,35 @@ def compute_score(p95_pos_mm: float, p95_orient_aligned_deg: float, joint_limit_
     return score, b
 
 
+def kinematics_score(breakdown: dict[str, float]) -> float:
+    """0-100 from the EE position and aligned orientation terms only, in the weights of ``score``."""
+    return 100.0 * (5.0 * breakdown["pos"] + 2.0 * breakdown["orient"]) / 7.0
+
+
+LIMIT_DISAGREE_DEG = 1.0
+LIMIT_DISAGREE_M = 0.001
+MASS_DISAGREE_REL = 0.05
+
+
+def _disagreements(diffs: list[JointLimitDiff], jtypes: list[int], mass_c: float, mass_r: float,
+                   mass_rel: float) -> list[str]:
+    """Joint limits and total mass where candidate and reference differ: often a sourced datasheet
+    value against a choice the reference made, so they are listed rather than scored as model error."""
+    out = []
+    for d, t in zip(diffs, jtypes):
+        if t == _HINGE:
+            if max(abs(d.lower_diff), abs(d.upper_diff)) > math.radians(LIMIT_DISAGREE_DEG):
+                c, r = np.degrees(d.candidate_range), np.degrees(d.reference_range)
+                out.append(f"{d.candidate} limits: candidate [{c[0]:.0f}, {c[1]:.0f}] deg vs reference "
+                           f"{d.reference} [{r[0]:.0f}, {r[1]:.0f}] deg")
+        elif max(abs(d.lower_diff), abs(d.upper_diff)) > LIMIT_DISAGREE_M:
+            out.append(f"{d.candidate} limits: candidate [{d.candidate_range[0]:.3f}, {d.candidate_range[1]:.3f}] m "
+                       f"vs reference {d.reference} [{d.reference_range[0]:.3f}, {d.reference_range[1]:.3f}] m")
+    if abs(mass_rel) > MASS_DISAGREE_REL:
+        out.append(f"total mass: candidate {mass_c:.2f} kg vs reference {mass_r:.2f} kg ({mass_rel * 100:+.0f}%)")
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # Evaluate
 # --------------------------------------------------------------------------- #
@@ -709,5 +738,6 @@ def evaluate(candidate_path: PathLike, reference_path: PathLike, mapping: Union[
         ee_orientation_error_aligned_deg=aligned_stats,
         joint_limits=limit_diffs, joint_limit_mae_deg=limit_mae,
         mass_candidate=mass_c, mass_reference=mass_r, mass_diff=mass_diff, mass_rel_diff=mass_rel,
-        score=score, score_breakdown=breakdown, notes=notes,
+        score=score, score_breakdown=breakdown, kinematics_score=kinematics_score(breakdown),
+        disagreements=_disagreements(limit_diffs, list(cand.jtypes), mass_c, mass_r, mass_rel), notes=notes,
     )

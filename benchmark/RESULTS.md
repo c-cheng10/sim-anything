@@ -16,10 +16,15 @@ agent generated both with the final tool (reference models hidden outside the
 repository while it ran), and they were scored exactly once. These are the
 honest generalisation numbers.
 
-| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
-|---|---|---|---|---|---|---|---|---|---|
-| UR10e | DH table | all pass | 1 | 16.6 / 17.2 / 17.7 | 0.0 | 30.0 | 33.30 / 32.70 | yaw +180°, 0 sign flip(s), 0 offset(s) | 60.0 |
-| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.0 / 1.3 / 1.4 | 0.0 | 0.0 | 8.00 / 7.58 | yaw +0°, 0 sign flip(s), 0 offset(s) | 94.9 |
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| UR10e | DH table | all pass | 1 | 16.6 / 17.2 / 17.7 | 0.0 | 30.0 | 33.30 / 32.70 | yaw +180°, 0 sign flip(s), 0 offset(s) | 60.0 | 64.5 |
+| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.0 / 1.3 / 1.4 | 0.0 | 0.0 | 8.00 / 7.58 | yaw +0°, 0 sign flip(s), 0 offset(s) | 94.9 | 96.3 |
+
+Datasheet vs reference disagreements (listed, not counted in the kinematics score):
+
+* UR10e: elbow limits: candidate [-360, 360] deg vs reference elbow_joint [-180, 180] deg
+* UFactory Lite 6: total mass: candidate 8.00 kg vs reference 7.58 kg (+6%)
 
 Median p95 EE position error, robots with published DH: 9.3 mm (n=2)
 
@@ -47,17 +52,21 @@ Median p95 EE position error, robots with published DH: 9.3 mm (n=2)
 ## Round-over-round (dev set)
 
 All rounds scored with the final evaluator (rounds 0 and 1 were re-scored after
-the round-2 evaluator fix; their numbers did not change).
+the round-2 evaluator fix; their numbers did not change). Session 3 re-scored
+every round once more to add the kinematics score (EE position and orientation
+only; docs/CONTRACTS.md section 5); no other number changed. The re-run picks a
+different but kinematically equivalent convention for Kinova rounds 0-1 (1 sign
+flip, 1 offset instead of none; same error, limits and score).
 
-| Robot | Checks R0 / R1 / R2 | p95 EE error (mm) R0 / R1 / R2 | Score R0 / R1 / R2 | R2 warnings |
-|---|---|---|---|---|
-| UR5e | pass / pass / pass | 1.4 / 1.4 / 1.4 | 82.2 / 82.2 / 82.2 | reach (definition estimated) |
-| Franka Emika Panda | pass / pass / pass | 0.0 / 0.0 / 0.0 | 97.2 / 97.2 / 97.2 | collision_exclusions |
-| Kinova Gen3 (7-DOF) | pass / pass / pass | 0.4 / 0.4 / **24.5** | 98.7 / 98.7 / 68.3 | joint_limits (continuous joints) |
-| UFactory xArm 7 | **fail: reach** / pass / pass | 0.0 / 0.0 / 0.0 | 92.5 / 92.5 / 92.5 | reach (definition estimated), collision_exclusions |
-| KUKA LBR iiwa 14 R820 | pass / pass / pass | 0.0 / 0.0 / 0.0 | 98.9 / 98.9 / 98.9 | estimate share 51% |
-| Trossen ViperX 300 S | pass / pass / pass | 0.3 / 0.3 / **7.6** | 88.6 / 91.2 / 74.1 | reach (rated reach includes gripper), estimate share 61% |
-| **All error checks pass** | **5/6 / 6/6 / 6/6** | median p95 over DH-publishing robots: 0.2 / 0.2 / 0.7 | | |
+| Robot | Checks R0 / R1 / R2 | p95 EE error (mm) R0 / R1 / R2 | Score R0 / R1 / R2 | Kin. score R0 / R1 / R2 | R2 warnings |
+|---|---|---|---|---|---|
+| UR5e | pass / pass / pass | 1.4 / 1.4 / 1.4 | 82.2 / 82.2 / 82.2 | 96.1 / 96.1 / 96.1 | reach (definition estimated) |
+| Franka Emika Panda | pass / pass / pass | 0.0 / 0.0 / 0.0 | 97.2 / 97.2 / 97.2 | 100.0 / 100.0 / 100.0 | collision_exclusions |
+| Kinova Gen3 (7-DOF) | pass / pass / pass | 0.4 / 0.4 / **24.5** | 98.7 / 98.7 / 68.3 | 98.7 / 98.7 / 55.4 | joint_limits (continuous joints) |
+| UFactory xArm 7 | **fail: reach** / pass / pass | 0.0 / 0.0 / 0.0 | 92.5 / 92.5 / 92.5 | 100.0 / 100.0 / 100.0 | reach (definition estimated), collision_exclusions |
+| KUKA LBR iiwa 14 R820 | pass / pass / pass | 0.0 / 0.0 / 0.0 | 98.9 / 98.9 / 98.9 | 100.0 / 100.0 / 100.0 | estimate share 51% |
+| Trossen ViperX 300 S | pass / pass / pass | 0.3 / 0.3 / **7.6** | 88.6 / 91.2 / 74.1 | 99.3 / 99.3 / 81.3 | reach (rated reach includes gripper), estimate share 61% |
+| **All error checks pass** | **5/6 / 6/6 / 6/6** | median p95 over DH-publishing robots: 0.2 / 0.2 / 0.7 | | | |
 
 **What the rounds show.**
 * Round 1 changed the tool, not the models: 14 checks instead of 11, stricter
@@ -87,14 +96,25 @@ the round-2 evaluator fix; their numbers did not change).
 
 ## Round 0 (dev set, first blind run)
 
-| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
-|---|---|---|---|---|---|---|---|---|---|
-| UR5e | DH table | all pass | 2 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 |
-| Franka Emika Panda | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 |
-| Kinova Gen3 (7-DOF) | DH table (via third-party quote) | all pass | 1 | 0.4 / 0.4 / 0.5 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.7 |
-| UFactory xArm 7 | DH table (modified) | fail: reach | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 |
-| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 1 sign flip(s), 0 offset(s) | 98.9 |
-| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 / 0.3 / 0.3 | 0.0 | 3.0 | 2.85 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 88.6 |
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| UR5e | DH table | all pass | 2 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 | 96.1 |
+| Franka Emika Panda | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 | 100.0 |
+| Kinova Gen3 (7-DOF) | DH table (via third-party quote) | all pass | 1 | 0.4 / 0.4 / 0.5 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +0°, 1 sign flip(s), 1 offset(s) | 98.7 | 98.7 |
+| UFactory xArm 7 | DH table (modified) | fail: reach | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 | 100.0 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 1 sign flip(s), 0 offset(s) | 98.9 | 100.0 |
+| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 / 0.3 / 0.3 | 0.0 | 3.0 | 2.85 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 88.6 | 99.3 |
+
+Datasheet vs reference disagreements (listed, not counted in the kinematics score):
+
+* UR5e: elbow limits: candidate [-360, 360] deg vs reference elbow_joint [-180, 180] deg
+* Franka Emika Panda: total mass: candidate 17.80 kg vs reference 16.69 kg (+7%)
+* UFactory xArm 7: joint2 limits: candidate [-117, 116] deg vs reference joint2 [-118, 120] deg
+* UFactory xArm 7: joint4 limits: candidate [-6, 225] deg vs reference joint4 [-11, 225] deg
+* UFactory xArm 7: total mass: candidate 13.70 kg vs reference 11.32 kg (+21%)
+* Trossen ViperX 300 S: shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg
+* Trossen ViperX 300 S: wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg
+* Trossen ViperX 300 S: total mass: candidate 2.85 kg vs reference 3.74 kg (-24%)
 
 Median p95 EE position error, robots with published DH: 0.2 mm (n=4)
 
@@ -112,6 +132,9 @@ Median p95 EE position error, robots with published DH: 0.2 mm (n=4)
   references, e.g. 0.163 vs the published 0.1625 m for UR5e). They do not say
   primitive geoms are accurate shapes; geometry, inertia and collision shapes
   are not scored beyond total mass.
+* **Kinematics score** (0-100) counts only EE position and aligned orientation,
+  so it measures the model; limits and mass are listed under "datasheet vs
+  reference disagreements" instead.
 * **Score** (0-100) also counts joint limits and mass, where the candidate's
   value is the sourced datasheet value and the reference may have made a
   different choice: UR5e loses ~14 points because the datasheet gives ±360°
@@ -175,14 +198,25 @@ number, and confirmed with an independent FK script and sensitivity tests
 
 ## Round 1 (dev set, fresh blind runs with the round-1 tool)
 
-| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
-|---|---|---|---|---|---|---|---|---|---|
-| UR5e | DH table | all pass | 2 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 |
-| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 |
-| Kinova Gen3 (7-DOF) | DH table (via third-party quote) | all pass | 2 | 0.4 / 0.4 / 0.5 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.7 |
-| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 |
-| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.9 |
-| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 / 0.3 / 0.3 | 0.0 | 3.0 | 3.31 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 91.2 |
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| UR5e | DH table | all pass | 2 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 | 96.1 |
+| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 | 100.0 |
+| Kinova Gen3 (7-DOF) | DH table (via third-party quote) | all pass | 2 | 0.4 / 0.4 / 0.5 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +0°, 1 sign flip(s), 1 offset(s) | 98.7 | 98.7 |
+| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 | 100.0 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.9 | 100.0 |
+| Trossen ViperX 300 S | screw-axis (PoE) table | all pass | 1 | 0.3 / 0.3 / 0.3 | 0.0 | 3.0 | 3.31 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 91.2 | 99.3 |
+
+Datasheet vs reference disagreements (listed, not counted in the kinematics score):
+
+* UR5e: elbow limits: candidate [-360, 360] deg vs reference elbow_joint [-180, 180] deg
+* Franka Emika Panda: total mass: candidate 17.80 kg vs reference 16.69 kg (+7%)
+* UFactory xArm 7: joint2 limits: candidate [-117, 116] deg vs reference joint2 [-118, 120] deg
+* UFactory xArm 7: joint4 limits: candidate [-6, 225] deg vs reference joint4 [-11, 225] deg
+* UFactory xArm 7: total mass: candidate 13.70 kg vs reference 11.32 kg (+21%)
+* Trossen ViperX 300 S: shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg
+* Trossen ViperX 300 S: wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg
+* Trossen ViperX 300 S: total mass: candidate 3.31 kg vs reference 3.74 kg (-12%)
 
 Median p95 EE position error, robots with published DH: 0.2 mm (n=4)
 
@@ -202,14 +236,25 @@ Median p95 EE position error, robots with published DH: 0.2 mm (n=4)
 
 ## Round 2 (dev set, fresh blind runs with the final tool)
 
-| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score |
-|---|---|---|---|---|---|---|---|---|---|
-| UR5e | DH table | all pass | 1 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 |
-| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 |
-| Kinova Gen3 (7-DOF) | dimension table (official guide lengths, lateral offsets omitted) | all pass | 1 | 15.6 / 24.5 / 24.8 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +180°, 7 sign flip(s), 0 offset(s) | 68.3 |
-| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 |
-| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.9 |
-| Trossen ViperX 300 S | reach/offset tables (shoulder height estimated) | all pass | 1 | 7.0 / 7.6 / 7.7 | 0.0 | 3.0 | 2.09 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 74.1 |
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| UR5e | DH table | all pass | 1 | 1.0 / 1.4 / 1.5 | 0.0 | 30.0 | 20.60 / 20.99 | yaw +180°, 0 sign flip(s), 0 offset(s) | 82.2 | 96.1 |
+| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 17.80 / 16.69 | yaw +0°, 0 sign flip(s), 0 offset(s) | 97.2 | 100.0 |
+| Kinova Gen3 (7-DOF) | dimension table (official guide lengths, lateral offsets omitted) | all pass | 1 | 15.6 / 24.5 / 24.8 | 0.0 | 0.2 | 8.20 / 8.19 | yaw +180°, 7 sign flip(s), 0 offset(s) | 68.3 | 55.4 |
+| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.7 | 13.70 / 11.32 | yaw +0°, 0 sign flip(s), 0 offset(s) | 92.5 | 100.0 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 / 0.0 / 0.0 | 0.0 | 0.0 | 29.90 / 30.61 | yaw +0°, 0 sign flip(s), 0 offset(s) | 98.9 | 100.0 |
+| Trossen ViperX 300 S | reach/offset tables (shoulder height estimated) | all pass | 1 | 7.0 / 7.6 / 7.7 | 0.0 | 3.0 | 2.09 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 74.1 | 81.3 |
+
+Datasheet vs reference disagreements (listed, not counted in the kinematics score):
+
+* UR5e: elbow limits: candidate [-360, 360] deg vs reference elbow_joint [-180, 180] deg
+* Franka Emika Panda: total mass: candidate 17.80 kg vs reference 16.69 kg (+7%)
+* UFactory xArm 7: joint2 limits: candidate [-117, 116] deg vs reference joint2 [-118, 120] deg
+* UFactory xArm 7: joint4 limits: candidate [-6, 225] deg vs reference joint4 [-11, 225] deg
+* UFactory xArm 7: total mass: candidate 13.70 kg vs reference 11.32 kg (+21%)
+* Trossen ViperX 300 S: shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg
+* Trossen ViperX 300 S: wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg
+* Trossen ViperX 300 S: total mass: candidate 2.09 kg vs reference 3.74 kg (-44%)
 
 Median p95 EE position error, robots with published DH: 0.7 mm (n=4)
 

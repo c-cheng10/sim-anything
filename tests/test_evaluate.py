@@ -497,3 +497,14 @@ def test_unlimited_slide_uses_a_sane_default_range(tmp_path):
     fd = res.joint_limits[-1]
     assert (fd.lower_diff, fd.upper_diff) == pytest.approx((-0.1, 0.06))
     assert any("[-0.1, 0.1] m (slide)" in n for n in res.notes)
+
+
+def test_kinematics_score_and_disagreements_are_separate():
+    # exact kinematics, deliberately different limits and a 0.05 kg finger: only limits are listed
+    res = evaluate(CAND, REF, load_mapping(FIX / "arm_map.yaml"), n_samples=200)
+    assert res.kinematics_score == pytest.approx(100.0, abs=1e-6) and res.score < 90
+    assert [d.split(" ")[0] for d in res.disagreements] == ["a1", "a2", "a3"]
+    assert not any("mass" in d for d in res.disagreements)
+    b = dict(res.score_breakdown, pos=math.exp(-1))
+    from simanything.evaluate import kinematics_score
+    assert kinematics_score(b) == pytest.approx(100 * (5 * math.exp(-1) + 2) / 7)

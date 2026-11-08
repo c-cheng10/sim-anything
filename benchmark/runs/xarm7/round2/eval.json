@@ -167,5 +167,11 @@
     "mass": 0.348956229479465,
     "dof": 1.0
   },
+  "kinematics_score": 99.99999999999955,
+  "disagreements": [
+    "joint2 limits: candidate [-117, 116] deg vs reference joint2 [-118, 120] deg",
+    "joint4 limits: candidate [-6, 225] deg vs reference joint4 [-11, 225] deg",
+    "total mass: candidate 13.70 kg vs reference 11.32 kg (+21%)"
+  ],
   "notes": []
 }

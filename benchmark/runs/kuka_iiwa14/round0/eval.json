@@ -167,6 +167,8 @@
     "mass": 0.8904973501798531,
     "dof": 1.0
   },
+  "kinematics_score": 99.99999999999753,
+  "disagreements": [],
   "notes": [
     "fitted non-identity conventions: A4: sign -1, offset +0 deg"
   ]

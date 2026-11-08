@@ -149,6 +149,12 @@
     "mass": 0.3034406343886133,
     "dof": 1.0
   },
+  "kinematics_score": 99.27230359287266,
+  "disagreements": [
+    "shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg",
+    "wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg",
+    "total mass: candidate 2.85 kg vs reference 3.74 kg (-24%)"
+  ],
   "notes": [
     "reference has 2 unmapped joint(s) held at qpos0: left_finger, right_finger",
     "reference mass includes the bodies of its unmapped joints"

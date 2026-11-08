@@ -167,6 +167,8 @@
     "mass": 0.9926382792043493,
     "dof": 1.0
   },
+  "kinematics_score": 98.72686681077708,
+  "disagreements": [],
   "notes": [
     "fitted non-identity conventions: actuator_5: sign +1, offset +180 deg; actuator_6: sign -1, offset +0 deg"
   ]
