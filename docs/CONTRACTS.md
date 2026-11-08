@@ -103,7 +103,7 @@ fix_hints: [{id, fix_hint}]}`.
   "model": "runs/ur5e/model.xml",
   "spec": "runs/ur5e/spec.yaml",
   "passed": false,
-  "n_checks": 14, "n_failed": 1, "n_errors": 1,
+  "n_checks": 15, "n_failed": 1, "n_errors": 1,
   "mujoco_version": "3.3.0",
   "checks": [
     {"id": "reach", "pass": false, "measured": 0.951, "expected": 0.85, "tolerance": 0.05,
@@ -118,9 +118,9 @@ fix_hints: [{id, fix_hint}]}`.
 and `info` checks never block. Every failed check MUST carry a concrete
 `fix_hint` naming spec field paths where possible.
 
-### Check ids (in this order; 14 checks, `simanything.check.CHECK_IDS`)
+### Check ids (in this order; 15 checks, `simanything.check.CHECK_IDS`)
 
-Spec-dependent checks (`joint_structure`, `ee_site`, `kinematics_match`, `joint_limits`, `reach`,
+Spec-dependent checks (`joint_structure`, `ee_site`, `kinematics_match`, `joint_limits`, `reach`, `drawing`,
 `total_mass`, `actuators`, `sources_complete`) pass as `info` without `--spec`. `mass_plausibility`
 and `collision_exclusions` are model checks (the mass-per-reach part needs the spec).
 
@@ -132,6 +132,7 @@ and `collision_exclusions` are model checks (the mass-per-reach part needs the s
 | `kinematics_match` | model vs `spec.chain().fk(q)` on 20 seeded configurations (home + 19 uniform within the spec limits): EE site position and orientation, every joint's world axis direction and (hinges) the distance of its anchor from the spec axis line | all within 1e-6 m / 1e-6 rad (measured: the max of each) | error (info + fail, non-blocking, while `joint_structure`/`ee_site` problems prevent it from running) |
 | `joint_limits` | MJCF `range` vs spec limits (SI) | all limited joints match within 1e-3 rad / 1e-4 m; a joint without spec limits -> warning | error |
 | `reach` | max of the reach metric over 5,000 uniform random configurations within limits, the best 8 polished by a short local search, vs `spec.reach` | within ±5% (relative) | error; warning when `reach.value`, `reach.measured_from` or `reach.measured_to` is an estimate (`is_estimate`: covered by `estimates` and not more specifically by `sources`), or when `reach.measured_from` / `reach.measured_to` is not written in the spec (left at its default: an assumed definition, message `reach definition not stated in the spec; assumed shoulder -> ee_site`, also on a pass; `details.definition_unstated`), with the message saying the definition is assumed / the value is estimated; a mismatch beyond ±30% always stays an error (no definition explains it; usually a units or structure slip), and its message and fix hint say so (never "only a warning"). Lengths below 0.1 m are printed with 3 significant digits (`0.0009 m`), others with 3 decimals. A spec without `reach` gives a failed warning ("no rated reach: the chain is not checked against any external dimension"). The fix hint names the spec lengths that change the measured quantity, ranked by d(reach)/d(ln length) at the arg-max configuration (`details.length_sensitivity`) |
+| `drawing` | each `spec.drawing[i]` (a dimension read off a published drawing): the model at the drawn pose `q` (spec units, omitted = all zero), point `ee_site` or `wrist_center` (as for reach), measured as `height` (along base z above the `base.origin` frame) or `horizontal` (distance from the 1st joint's axis line) | every dimension within its `tolerance` (default 2 mm) | error; warning when every failing dimension's `value` is an estimate (`is_estimate`); info + pass without `drawing`. The fix hint ranks the spec lengths that change the failing dimension (`details.dimensions[i].length_sensitivity`) |
 | `total_mass` | sum of body masses vs `spec.total_mass` | within ±5% | error (info + pass if absent) |
 | `mass_plausibility` | apparent density of every body (mass / volume of its primitive geoms; bodies with meshes or no geoms skipped); mass share of every moving link (bodies grouped by weld); total mass per metre of `spec.reach.value` (when the spec has a reach) | density in [100, 20000] kg/m^3, every moving link >= 0.5% of the total mass, >= 0.1 kg per metre of reach | warning |
 | `inertia_valid` | every non-world body: mass > 0, principal inertias > 0, triangle inequality `A+B >= C` (1e-9 slack) | all bodies | error |

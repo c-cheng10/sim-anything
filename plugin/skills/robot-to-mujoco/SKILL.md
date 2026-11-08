@@ -143,6 +143,30 @@ drawing (e.g. arm straight up or stretched out, flange height/offset). A quick
 check: `python -c "from simanything.spec import load_spec; import numpy as np; s=load_spec('runs/<slug>/spec.yaml'); print(np.round(s.chain().fk([0]*s.dof)[:3,3],4))"`
 (the flange position in metres at q = 0).
 
+**Drawing cross-check (`drawing`).** A misread table row leaves the spec
+self-consistent, so every other check passes. When a dimension drawing (or a
+spec-sheet figure) states where the flange or wrist sits at a stated pose, copy
+up to a few such dimensions into `drawing`, each sourced like any number:
+
+```yaml
+drawing:                      # lengths in the spec's units
+  - {measure: height, value: 1192.5}                 # flange height above the base mounting face at q = 0
+  - {measure: horizontal, value: 1001.3, point: wrist_center, q: [0, -90, 0, -90, 0, 0]}   # drawn pose
+sources:
+  drawing: https://acme.example/docs/a6-dimensions.pdf
+```
+
+`height` is measured along the base z axis from the `base.origin` frame (put
+that frame on the mounting face); `horizontal` is the distance from joint 1's
+axis. `q` is the drawn pose in the spec's joint values (omit it for q = 0;
+if the drawing's pose differs from your table's zero, work out `q` and list
+`drawing[i].q` in `estimates`). Only use dimensions the drawing labels
+unambiguously; one you had to map to the arm yourself goes in `estimates`
+(the check then only warns). The check fails with an error beyond 2 mm (set
+`tolerance` for a rounded figure) and names the lengths that move it: that
+points at the misread row. Never fit the table to the drawing; find which one
+you misread.
+
 **Pitfalls**
 
 * **Row shift.** In a modified table, row i holds `a_{i-1}, alpha_{i-1}`.

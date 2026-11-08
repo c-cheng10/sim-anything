@@ -18,6 +18,9 @@ choose the convention, write the spec, validate. The rules that matter most:
   reasoning in `notes`. Anything that needed your judgement is an estimate, even if the raw
   numbers are sourced: unlabelled drawing dimensions mapped to links, axis signs read off
   pictures, a reach definition the source does not state.
+- If `sources.md` quotes drawing dimensions (flange or wrist height / horizontal distance at a stated
+  pose), copy the unambiguous ones into `drawing` (skill section (b), "Drawing cross-check") so the
+  loop compares the built zero pose against them.
 - Never change a sourced number to make a check pass later.
 - State the kinematic source class first in `notes`.
 

@@ -43,6 +43,70 @@
       "title": "DH",
       "type": "object"
     },
+    "DrawingDim": {
+      "additionalProperties": false,
+      "description": "A dimension read off a published drawing of the arm at a stated pose (docs/CONTRACTS.md section 4,\ncheck ``drawing``): ``height`` = the point's height above the base frame origin (along base z),\n``horizontal`` = its distance from the first joint's axis. Catches misread table rows that leave\nthe spec self-consistent.",
+      "properties": {
+        "measure": {
+          "enum": [
+            "height",
+            "horizontal"
+          ],
+          "title": "Measure",
+          "type": "string"
+        },
+        "value": {
+          "description": "length unit",
+          "title": "Value",
+          "type": "number"
+        },
+        "point": {
+          "default": "ee_site",
+          "enum": [
+            "ee_site",
+            "wrist_center"
+          ],
+          "title": "Point",
+          "type": "string"
+        },
+        "q": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "joint values of the drawn pose (spec units); omitted = all zero",
+          "title": "Q"
+        },
+        "tolerance": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "length unit; default 2 mm",
+          "title": "Tolerance"
+        }
+      },
+      "required": [
+        "measure",
+        "value"
+      ],
+      "title": "DrawingDim",
+      "type": "object"
+    },
     "EndEffector": {
       "additionalProperties": false,
       "properties": {
@@ -580,6 +644,13 @@
         }
       ],
       "default": null
+    },
+    "drawing": {
+      "items": {
+        "$ref": "#/$defs/DrawingDim"
+      },
+      "title": "Drawing",
+      "type": "array"
     },
     "repeatability": {
       "anyOf": [

@@ -9,7 +9,7 @@ import mujoco
 import numpy as np
 
 from ..schemas import CheckResult
-from ..spec import is_estimate, sample_configs
+from ..spec import is_estimate, make_tf, rpy_to_mat, sample_configs
 from .context import HINGE, JOINT_TYPE_NAMES, CheckContext, result, skipped_no_spec
 
 REACH_TOL = 0.05  # relative
@@ -244,15 +244,20 @@ def _reach_metric_spec(spec, reach, shoulder_i: int, q: np.ndarray, qhome: np.nd
 
 def _reach_sensitivities(spec, reach, shoulder_i: int, best_q: np.ndarray, n_matched: int
                          ) -> list[tuple[str, float]]:
-    """(spec length path, effect), largest |effect| first, where effect = d(reach metric)/d(ln length)
-    at the configuration of maximum reach (to first order the argmax does not move). Lengths that do
-    not change the measured quantity (e.g. an offset along the first axis for base_axis_horizontal,
-    or anything before the shoulder) are left out."""
+    """Spec lengths ranked by their effect on the reach metric at the configuration of maximum reach
+    (to first order the argmax does not move); see ``_length_sensitivities``."""
     if n_matched != spec.dof:
         return []
     qhome = np.array([j.home for j in spec.joints], dtype=float)
     q = np.asarray(best_q, dtype=float)
-    base = _reach_metric_spec(spec, reach, shoulder_i, q, qhome)
+    return _length_sensitivities(spec, lambda s: _reach_metric_spec(s, reach, shoulder_i, q, qhome))
+
+
+def _length_sensitivities(spec, metric: Callable) -> list[tuple[str, float]]:
+    """(spec length path, effect), largest |effect| first, where effect = d(metric)/d(ln length) and
+    ``metric(spec_si) -> float``. Lengths that do not change the metric (e.g. an offset along the
+    first axis for a horizontal distance, or anything before the shoulder) are left out."""
+    base = metric(spec)
     h = 1e-4
 
     def scale_dh(i: int, f: str) -> Callable:
@@ -273,8 +278,8 @@ def _reach_sensitivities(spec, reach, shoulder_i: int, best_q: np.ndarray, n_mat
     for path, bump in params:
         s2 = spec.model_copy(deep=True)
         bump(s2)
-        eff = (_reach_metric_spec(s2, reach, shoulder_i, q, qhome) - base) / h
-        if abs(eff) > 1e-3 * max(base, 1e-9):
+        eff = (metric(s2) - base) / h
+        if abs(eff) > 1e-3 * max(abs(base), 1e-9):
             out.append((path, float(eff)))
     out.sort(key=lambda pe: -abs(pe[1]))
     return out
@@ -419,3 +424,96 @@ def check_kinematics_match(ctx: CheckContext, *, seed: int = 0, n_samples: int =
                  "express), explain it in the spec's `notes`.")
     return result(cid, False, measured=measured, expected=0.0, tolerance=tol, message="; ".join(parts),
                   fix_hint=" ".join(hints), details=details)
+
+
+# --------------------------------------------------------------------------- #
+# drawing: the model at a drawn pose vs dimensions read off a published drawing
+# --------------------------------------------------------------------------- #
+
+DRAWING_TOL = 0.002  # m, default per dimension
+
+
+def _drawing_measure(measure: str, p: np.ndarray, T_base: np.ndarray, anchor: np.ndarray, axis: np.ndarray
+                     ) -> float:
+    if measure == "height":
+        return float((T_base[:3, :3].T @ (p - T_base[:3, 3]))[2])
+    v = p - anchor
+    return float(np.linalg.norm(v - np.dot(v, axis) * axis))
+
+
+def check_drawing(ctx: CheckContext) -> CheckResult:
+    """The model's EE site (or wrist centre) at each drawn pose vs ``spec.drawing``."""
+    cid = "drawing"
+    if not ctx.has_spec:
+        return skipped_no_spec(cid)
+    m, d, spec = ctx.model, ctx.data, ctx.spec
+    assert m is not None and d is not None and spec is not None
+    if not spec.drawing:
+        return result(cid, True, severity="info",
+                      message="no drawing dimensions in the spec; the zero pose is not checked against a drawing")
+    if any(jid is None for jid in ctx.joint_ids):
+        return result(cid, False, severity="info", message="skipped: not every spec joint is in the model",
+                      fix_hint="Fix the joint_structure failure first.")
+    sid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SITE, spec.ee.name)
+    qadr = np.array([m.jnt_qposadr[j] for j in ctx.joint_ids], dtype=int)  # type: ignore[misc]
+    jw = ctx.joint_ids[spec.dof - 2] if spec.dof >= WRIST_MIN_DOF else None
+    T_base = make_tf(rpy_to_mat(spec.base.origin.rpy), spec.base.origin.xyz)
+    raw = ctx.spec_raw if ctx.spec_raw is not None else spec
+    rows, failed = [], []
+    for i, dim in enumerate(spec.drawing):
+        q = np.zeros(spec.dof) if dim.q is None else np.asarray(dim.q, dtype=float)
+        mujoco.mj_resetData(m, d)
+        d.qpos[:] = ctx.home_qpos
+        d.qpos[qadr] = q
+        mujoco.mj_kinematics(m, d)
+        if dim.point == "wrist_center" and jw is not None:
+            p = d.xpos[int(m.jnt_bodyid[jw])].copy()
+        elif sid >= 0:
+            p = d.site_xpos[sid].copy()
+        else:
+            return result(cid, False, severity="info", message=f"skipped: no site '{spec.ee.name}' (see ee_site)",
+                          fix_hint="Fix the ee_site failure first.")
+        j0 = int(ctx.joint_ids[0])  # type: ignore[arg-type]
+        measured = _drawing_measure(dim.measure, p, T_base, d.xanchor[j0].copy(), d.xaxis[j0].copy())
+        tol = dim.tolerance or DRAWING_TOL
+        estimated = is_estimate(raw, f"drawing[{i}].value")
+        row = {"index": i, "measure": dim.measure, "point": dim.point, "measured": measured, "expected": dim.value,
+               "tolerance": tol, "estimated": estimated}
+        rows.append(row)
+        if abs(measured - dim.value) > tol:
+            failed.append(row)
+    details = {"dimensions": rows}
+    if not failed:
+        return result(cid, True, measured=[r["measured"] for r in rows], expected=[r["expected"] for r in rows],
+                      message=f"{len(rows)} drawing dimension(s) match within tolerance", details=details)
+    msgs, hints = [], []
+    for r in failed:
+        dim = spec.drawing[r["index"]]
+        msgs.append(f"drawing[{r['index']}] {r['measure']} of {r['point']}: model {r['measured'] * 1000:.1f} mm vs "
+                    f"drawing {r['expected'] * 1000:.1f} mm (tolerance {r['tolerance'] * 1000:.1f} mm)")
+        q = np.zeros(spec.dof) if dim.q is None else np.asarray(dim.q, dtype=float)
+
+        def metric(s, dim=dim, q=q) -> float:
+            ch = s.chain()
+            T = ch.fk(q, upto=s.dof - 2) if dim.point == "wrist_center" and s.dof >= WRIST_MIN_DOF else ch.fk(q)
+            T0 = ch.fk(q, upto=0)
+            ax = T0[:3, :3] @ np.asarray(ch.joints[0].axis, dtype=float)
+            return _drawing_measure(dim.measure, T[:3, 3], T_base, T0[:3, 3], ax / np.linalg.norm(ax))
+
+        try:
+            lengths = [p for p, _ in _length_sensitivities(spec, metric)[:4]]
+        except Exception:  # noqa: BLE001 - the hint must not crash the check
+            lengths = []
+        r["length_sensitivity"] = lengths
+        hints.append(f"drawing[{r['index']}]: re-check the lengths that set it ({', '.join(lengths) or 'link offsets'};"
+                     " largest effect first)")
+    hint = ("; ".join(hints) + ". A mismatch here with a passing reach usually means a misread table row (row shift "
+            "a_{i-1} vs a_i, a missing offset, a wrong sign or theta offset) or a drawing pose that is not q = 0 "
+            "(set drawing[i].q to the drawn pose). Check `units.length` too. Never change a sourced number to pass: "
+            "fix the interpretation, or list the dimension in `estimates` if its mapping to the arm was your "
+            "inference.")
+    severity = "warning" if all(r["estimated"] for r in failed) else "error"
+    return result(cid, False, severity=severity, measured=[r["measured"] for r in rows],
+                  expected=[r["expected"] for r in rows], message="; ".join(msgs)
+                  + ("; warning only: the dimension(s) are estimates" if severity == "warning" else ""),
+                  fix_hint=hint, details=details)

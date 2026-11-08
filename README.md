@@ -21,7 +21,7 @@ how we measure whether it works.
 flowchart LR
     A["GATHER<br/>agent reads datasheets,<br/>cites or flags every number"] --> S[spec.yaml]
     S --> B["BUILD<br/>deterministic code<br/>spec -> MJCF"]
-    B --> C["CHECK<br/>14 kinematic + physical checks<br/>with fix hints"]
+    B --> C["CHECK<br/>15 kinematic + physical checks<br/>with fix hints"]
     C -- "fail: fix hints" --> F["FIX<br/>agent edits the spec"]
     F --> S
     C -- pass --> R["REPORT<br/>3-view renders,<br/>HTML + Markdown"]
@@ -38,7 +38,8 @@ flowchart LR
   under gravity, an end-effector site, a `home` keyframe. The LLM never writes XML.
 * **CHECK** — `simanything/check/`: compiles, joint structure, EE site,
   kinematics match the spec, joint limits, reach vs rated reach (5,000 samples),
-  total mass, mass plausibility, inertia validity, self-collision at home,
+  published drawing dimensions (e.g. flange height at the zero pose) when the
+  spec has them, total mass, mass plausibility, inertia validity, self-collision at home,
   reported collision exclusions, 2 s stable hold, actuators, and source
   coverage (URLs, typo-free paths, estimate share). Each failure is
   machine-readable JSON with a severity (error blocks, warning informs) and a
@@ -71,7 +72,7 @@ Build, check, render and report a (fictional) 6-DOF arm described by a DH table:
 sim-anything loop examples/toy_6dof_dh.yaml --run-dir runs/toy --note "first run"
 ```
 
-On a pass `loop` prints a one-line summary (`iteration 1/8: PASSED (14 checks,
+On a pass `loop` prints a one-line summary (`iteration 1/8: PASSED (15 checks,
 0 errors, 1 warning(s))`), the non-blocking warnings (here `sources_complete`:
 every number of the toy arm is an estimate), then the renders directory
 (`runs/toy/renders`, with the views and the render backend), the report
@@ -212,9 +213,11 @@ yaw), which RESULTS.md lists per robot.
 * "Verified" means the model passes the tool's own checks. For a model the
   builder wrote, five of them (joint structure, joint limits, kinematics match,
   total mass, actuators) only guard against hand edits of the XML; the ones that
-  test the robot itself are reach, plausibility, inertia, collisions, stability
-  and sources. A self-consistent but wrong spec (e.g. a misread DH row) passes;
-  the auditor agent and a reference comparison are what catch it.
+  test the robot itself are reach, drawing, plausibility, inertia, collisions, stability
+  and sources. A self-consistent but wrong spec (e.g. a misread DH row) passes
+  unless the spec also carries a published drawing dimension it contradicts
+  (the `drawing` check); otherwise the auditor agent and a reference
+  comparison are what catch it.
 * Reach checks depend on how a datasheet defines "reach", which is often
   unstated; then they only warn.
 * The benchmark is small (6 dev + 2 holdout arms), its references are

@@ -189,6 +189,20 @@ class Reach(_Base):
     measured_to: Literal["ee_site", "wrist_center"] = "ee_site"
 
 
+class DrawingDim(_Base):
+    """A dimension read off a published drawing of the arm at a stated pose (docs/CONTRACTS.md section 4,
+    check ``drawing``): ``height`` = the point's height above the base frame origin (along base z),
+    ``horizontal`` = its distance from the first joint's axis. Catches misread table rows that leave
+    the spec self-consistent."""
+
+    measure: Literal["height", "horizontal"]
+    value: float = Field(description="length unit")
+    point: Literal["ee_site", "wrist_center"] = "ee_site"
+    q: Optional[list[float]] = Field(default=None, description="joint values of the drawn pose (spec units); "
+                                                               "omitted = all zero")
+    tolerance: Optional[float] = Field(default=None, gt=0, description="length unit; default 2 mm")
+
+
 class Spec(_Base):
     schema_version: int = SCHEMA_VERSION
     name: str
@@ -204,6 +218,7 @@ class Spec(_Base):
     total_mass: Optional[float] = Field(default=None, gt=0)
     payload: Optional[float] = Field(default=None, ge=0)
     reach: Optional[Reach] = None
+    drawing: list[DrawingDim] = Field(default_factory=list)
     repeatability: Optional[float] = Field(default=None, gt=0)
     sources: dict[str, str] = Field(default_factory=dict)
     estimates: list[str] = Field(default_factory=list)
@@ -230,6 +245,9 @@ class Spec(_Base):
                 if [float(x) for x in j.axis] != [0.0, 0.0, 1.0]:
                     raise ValueError(f"joints[{i}] ({j.name}): DH joints always move along/about local z; "
                                      "remove 'axis' or encode a reversed direction with the DH parameters")
+        for i, dim in enumerate(self.drawing):
+            if dim.q is not None and len(dim.q) != self.dof:
+                raise ValueError(f"drawing[{i}].q has {len(dim.q)} values for {self.dof} joints")
         for key in list(self.sources) + list(self.estimates):
             _parse_path(key)  # raises on malformed paths
         return self
@@ -325,6 +343,12 @@ def _to_si(spec: Spec) -> Spec:
     pose(s.ee.origin)
     if s.reach is not None:
         s.reach.value *= L
+    for dim in s.drawing:
+        dim.value *= L
+        if dim.tolerance is not None:
+            dim.tolerance *= L
+        if dim.q is not None:
+            dim.q = [v * (A if j.type == "hinge" else L) for v, j in zip(dim.q, s.joints)]
     if s.repeatability is not None:
         s.repeatability *= L
     s.units = Units(length="m", angle="rad")
@@ -827,7 +851,7 @@ def is_estimate(spec: Spec, path: str) -> bool:
 
 __all__ = [
     "Spec", "Joint", "Link", "GeometryHint", "DH", "Limits", "Pose", "Units", "EndEffector", "Base",
-    "Reach", "Chain", "ChainJoint", "load_spec", "dump_spec", "json_schema", "write_json_schema",
+    "Reach", "DrawingDim", "Chain", "ChainJoint", "load_spec", "dump_spec", "json_schema", "write_json_schema",
     "build_chain", "sample_configs", "motion_tf", "dh_to_offset", "dh_fk", "iter_numeric_fields", "uncovered_fields", "path_covers",
     "is_estimate", "bad_source_values", "unmatched_keys", "suggest_key", "describe_key", "duplicate_keys", "estimate_counts", "rpy_to_mat", "mat_to_quat", "quat_to_mat", "make_tf", "pose_to_tf", "axis_angle_mat",
     "rot_x", "rot_y", "rot_z", "SCHEMA_VERSION",

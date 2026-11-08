@@ -18,11 +18,11 @@ import yaml
 from simanything.check import CHECK_IDS, inertia_problems, run_checks
 from simanything.spec import load_spec
 
-CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
+CONTRACT_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "drawing", "total_mass",
                 "mass_plausibility", "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
                 "sources_complete"]
 WARNING_CHECKS = {"mass_plausibility", "collision_exclusions"}
-SPEC_CHECKS = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass", "actuators",
+SPEC_CHECKS = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "drawing", "total_mass", "actuators",
                "sources_complete"}
 
 R150 = 2.6179939  # 150 deg in rad
@@ -782,3 +782,56 @@ def test_world_fixed_base_overlapping_first_link_is_a_self_collision(tmp_path):
     mp.write_text(xml)
     c = {c.id: c for c in run_checks(mp, sp, n_reach_samples=200).checks}
     assert not c["self_collision_home"].passed and "base" in c["self_collision_home"].message
+
+
+# --------------------------------------------------------------------------- #
+# drawing
+# --------------------------------------------------------------------------- #
+
+# EE at q = 0 is (0.55, 0, 0.1); joint 1 turns about y through (0, 0, 0.1)
+DRAWN = [{"measure": "height", "value": 0.1}, {"measure": "horizontal", "value": 0.55},
+         {"measure": "height", "value": -0.45, "q": [90, 0]}]
+
+
+def test_drawing_dimensions_match(tmp_path):
+    s = spec_with(drawing=DRAWN, sources={**SPEC["sources"], "drawing": URL})
+    c = by_id(run_checks(*write_case(tmp_path, mjcf(), s)))["drawing"]
+    assert c.passed and c.severity == "error"
+    assert c.measured == pytest.approx([0.1, 0.55, -0.45], abs=1e-9)
+
+
+def test_drawing_catches_a_misread_length(tmp_path):
+    # the spec (and model) are self-consistent, but the drawing says the flange sits 20 mm higher
+    s = spec_with(drawing=[{"measure": "height", "value": 0.12}, DRAWN[1]], sources={**SPEC["sources"], "drawing": URL})
+    report = run_checks(*write_case(tmp_path, mjcf(), s))
+    c = assert_fails(report, "drawing")
+    assert "drawing[0] height" in c.message and "120.0 mm" in c.message and "100.0 mm" in c.message
+    assert "joints[0].origin.xyz" in c.fix_hint and "drawing[1]" not in c.message
+    assert error_failures(report) == {"drawing"}
+
+
+def test_estimated_drawing_dimension_only_warns(tmp_path):
+    s = spec_with(drawing=[{"measure": "height", "value": 0.12}], estimates=SPEC["estimates"] + ["drawing"])
+    report = run_checks(*write_case(tmp_path, mjcf(), s))
+    c = by_id(report)["drawing"]
+    assert not c.passed and c.severity == "warning" and report.passed
+
+
+def test_drawing_uses_spec_units(tmp_path):
+    s = spec_with(units={"length": "mm", "angle": "deg"}, drawing=[{"measure": "height", "value": 100, "tolerance": 1}])
+    s["joints"][0]["origin"]["xyz"] = [0, 0, 100]
+    s["joints"][1]["origin"]["xyz"] = [300, 0, 0]
+    s["ee"]["origin"]["xyz"] = [250, 0, 0]
+    s["reach"]["value"] = 550
+    for g in s["base"]["link"]["geometry"]:
+        g.update(radius=60, half_length=30, pos=[0, 0, 30])
+    for j, r in zip(s["joints"], (30, 25)):
+        j["link"]["geometry"][0]["radius"] = r
+    c = by_id(run_checks(*write_case(tmp_path, mjcf(), s)))["drawing"]
+    assert c.passed and c.measured == pytest.approx([0.1])
+
+
+def test_drawing_pose_needs_one_value_per_joint():
+    from simanything.spec import Spec
+    with pytest.raises(ValueError, match="drawing"):
+        Spec.model_validate(spec_with(drawing=[{"measure": "height", "value": 0.1, "q": [0]}]))

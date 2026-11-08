@@ -16,16 +16,16 @@ from ..schemas import CheckReport, CheckResult
 from ..spec import (bad_source_values, describe_key, duplicate_keys, estimate_counts, uncovered_fields,
                     unmatched_keys)
 from .context import CheckContext, result, skipped_no_spec
-from .kinematics import check_kinematics_match, check_reach
+from .kinematics import check_drawing, check_kinematics_match, check_reach
 from .physics import (check_collision_exclusions, check_inertia_valid, check_mass_plausibility,
                       check_self_collision_home, check_stable_hold, check_total_mass, inertia_problems)
 from .structure import check_actuators, check_compiles, check_ee_site, check_joint_limits, check_joint_structure
 
-CHECK_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
-             "mass_plausibility", "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
+CHECK_IDS = ["compiles", "joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "drawing",
+             "total_mass", "mass_plausibility", "inertia_valid", "self_collision_home", "collision_exclusions", "stable_hold", "actuators",
              "sources_complete"]
 MAX_ESTIMATE_FRACTION = 0.5  # above this share of estimated numbers, sources_complete warns
-SPEC_DEPENDENT = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "total_mass",
+SPEC_DEPENDENT = {"joint_structure", "ee_site", "kinematics_match", "joint_limits", "reach", "drawing", "total_mass",
                   "actuators", "sources_complete"}
 
 
@@ -115,6 +115,7 @@ def run_checks(model_path: str | Path, spec_path: str | Path | None = None, *, s
         "kinematics_match": lambda: check_kinematics_match(ctx, seed=seed),
         "joint_limits": lambda: check_joint_limits(ctx),
         "reach": lambda: check_reach(ctx, seed=seed, n_samples=n_reach_samples),
+        "drawing": lambda: check_drawing(ctx),
         "total_mass": lambda: check_total_mass(ctx),
         "mass_plausibility": lambda: check_mass_plausibility(ctx),
         "inertia_valid": lambda: check_inertia_valid(ctx),

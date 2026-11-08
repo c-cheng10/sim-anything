@@ -19,7 +19,10 @@ Check, with evidence for each finding:
 3. **Forbidden sources:** no URDF/MJCF/SDF/xacro, Menagerie, ROS description repos, other runs or
    results files among the sources.
 4. **Transcription:** DH rows match the quoted table (row shift a_{i-1} vs a_i, signs, theta
-   offsets, units); the zero-pose flange position agrees with any drawing dimension quoted.
+   offsets, units). Every drawing dimension quoted in sources.md that fixes where the flange or
+   wrist sits at a stated pose should be in `drawing` (so the `drawing` check tests it); flag ones
+   that are missing, and read the `drawing` result in check.json. A dimension listed as an estimate
+   only warns: say whether that was justified.
 5. **Loop honesty:** history.json shows no sourced number changed between iterations to pass a
    check, and no reach endpoint switched without a source.
 6. **Second-hand sources:** kinematics resting only on forum posts, reseller copies or search
