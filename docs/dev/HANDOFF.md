@@ -3,6 +3,13 @@
 Final state of the autonomous build (internal development log). Resume from this file and docs/dev/BUDGET.md alone. The benchmark agent prompt is docs/dev/AGENT_PROMPT.md.
 
 ## State
+
+## Session 2 update (0.2.0)
+- Ponytail-style audit done; fixed: world-fixed base vs first-link contacts now count as self-collisions; one shared config sampler + motion transform (spec.py `sample_configs`, `motion_tf`); removed always-zero `ChainJoint.qpos_offset`; internal logs moved to docs/dev/.
+- Plugin 0.2.0: four agents in plugin/agents/ (source-scout, spec-writer, loop-fixer, source-auditor), `/sim-anything` orchestrates them with one rework round, `/sim-anything-audit` runs the auditor alone. Verified once: `/sim-anything Trossen WidowX 250 6DOF` via `claude -p` in an isolated CLAUDE_CONFIG_DIR, all four agents ran, 14/14 checks, auditor "ready with caveats", 7 min, ~$2.20 (single-agent: 2 min, ~$0.80).
+- README headline toned down; "verified" explained (5 checks only guard hand edits for builder output); CHANGELOG.md added.
+- Next-session prompt: docs/dev/NEXT_SESSION.md.
+
 - All phases complete (1 contracts, 2 parallel build, 3 integrate, 4 blind dev benchmark, 5 refinement x2 rounds, 6 holdout + gallery + ship). Main is pushed; pytest green locally (182+ tests incl. Menagerie-dependent ones) and in CI.
 - Final metrics (details: benchmark/RESULTS.md, README):
   - Dev set, final tool (round 2): 6/6 pass all error checks. p95 EE error: UR5e 1.4, Panda 0.0, Kinova Gen3 24.5, xArm 7 0.0, KUKA iiwa 0.0, ViperX 7.6 mm. Median over DH-publishing robots 0.7 mm (rounds 0-1: 0.2 mm; Kinova 0.4 mm and ViperX 0.3 mm in rounds 0-1 with sources the round-2 agents didn't find/trust).
