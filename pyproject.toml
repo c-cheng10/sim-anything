@@ -29,7 +29,7 @@ sim-anything = "simanything.cli:main"
 include = ["simanything*"]
 
 [tool.setuptools.package-data]
-simanything = ["templates/*", "data/*"]
+simanything = ["templates/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

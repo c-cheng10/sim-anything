@@ -44,3 +44,20 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 - Phase 6 optional work skipped at the 26-spawn mark: in-browser 3D viewer.
 - Outside the spawn count: one `claude -p "/sim-anything Trossen WidowX 250 6DOF"` session run by the round-2 tester to verify gate 3 ($0.79 reported).
 
+
+# Session 3
+
+Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-end runs and $15 combined
+`total_cost_usd`; soft stop at 75% of any cap; P2 skipped once any cap passes 50%.
+
+**Running tally:** subagents 0 / 12 (0 tokens) | e2e runs 0 / 8 | e2e cost $0.00 / $15 | other `claude -p` $0.10
+
+## Subagent spawns
+| # | Purpose | Outcome | Tokens |
+|---|---|---|---|
+
+## End-to-end runs
+| # | Command | Result | Time | Cost (USD) |
+|---|---|---|---|---|
+
+Other: one `claude -p "Reply with the single word: ok"` auth smoke test in the isolated config, $0.10.
