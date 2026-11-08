@@ -1,6 +1,6 @@
 # HANDOFF
 
-Final state of the autonomous build. Resume from this file and BUDGET.md alone.
+Final state of the autonomous build (internal development log). Resume from this file and docs/dev/BUDGET.md alone. The benchmark agent prompt is docs/dev/AGENT_PROMPT.md.
 
 ## State
 - All phases complete (1 contracts, 2 parallel build, 3 integrate, 4 blind dev benchmark, 5 refinement x2 rounds, 6 holdout + gallery + ship). Main is pushed; pytest green locally (182+ tests incl. Menagerie-dependent ones) and in CI.
