@@ -210,14 +210,16 @@ def _set_home(ctx: CheckContext) -> None:
     mujoco.mj_forward(m, d)
 
 
-def _related(m: mujoco.MjModel, b1: int, b2: int) -> bool:
-    """True if MuJoCo would treat the bodies as the same rigid body or parent/child (incl. welded bodies)."""
+def _related(m: mujoco.MjModel, b1: int, b2: int, *, count_world_parent: bool = False) -> bool:
+    """True if MuJoCo filters contacts between the bodies: same rigid body, or parent/child where the
+    parent is not welded to the world (MuJoCo still collides a world-fixed base with its child).
+    ``count_world_parent`` also counts that world-fixed parent/child pair (structural relation)."""
     w1, w2 = int(m.body_weldid[b1]), int(m.body_weldid[b2])
     if w1 == w2:
         return True
     p1 = int(m.body_weldid[int(m.body_parentid[w1])])
     p2 = int(m.body_weldid[int(m.body_parentid[w2])])
-    return p1 == w2 or p2 == w1
+    return (p1 == w2 and (w2 != 0 or count_world_parent)) or (p2 == w1 and (w1 != 0 or count_world_parent))
 
 
 def _excluded(m: mujoco.MjModel, b1: int, b2: int) -> bool:
@@ -314,7 +316,7 @@ def check_collision_exclusions(ctx: CheckContext) -> CheckResult:
     for sig in (int(s) for s in m.exclude_signature):
         b1, b2 = sorted((sig >> 16, sig & 0xFFFF))
         n1, n2 = ctx.body_name(b1), ctx.body_name(b2)
-        if _related(m, b1, b2):
+        if _related(m, b1, b2, count_world_parent=True):
             kind = "parent/child"
         elif _zero_length_between(m, b1, b2):
             kind = "zero-length links between"

@@ -764,3 +764,21 @@ def test_gross_reach_mismatch_stays_error_even_if_definition_estimated(tmp_path)
     mp.write_text(build_mjcf(spec))
     c = {c.id: c for c in run_checks(mp, sp, n_reach_samples=300).checks}["reach"]
     assert not c.passed and c.severity == "error" and "stays an error" in c.message
+
+
+def test_world_fixed_base_overlapping_first_link_is_a_self_collision(tmp_path):
+    """MuJoCo does not filter contacts between a world-fixed base and its child, so a hand-edited
+    model without the builder's <exclude> must fail self_collision_home when they overlap."""
+    import re
+
+    from simanything.builder import build_mjcf
+    from simanything.check import run_checks
+    from simanything.spec import dump_spec, load_spec
+
+    spec = load_spec(Path(__file__).resolve().parents[1] / "examples" / "toy_6dof_mdh.yaml")
+    xml = re.sub(r'\s*<exclude body1="base" body2="%s_link"\s*/>' % spec.joints[0].name, "", build_mjcf(spec), count=1)
+    sp, mp = tmp_path / "spec.yaml", tmp_path / "model.xml"
+    dump_spec(spec, sp)
+    mp.write_text(xml)
+    c = {c.id: c for c in run_checks(mp, sp, n_reach_samples=200).checks}
+    assert not c["self_collision_home"].passed and "base" in c["self_collision_home"].message
