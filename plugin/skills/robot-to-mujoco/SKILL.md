@@ -76,6 +76,12 @@ repository root, or the user's project root): the robot's files live in
    * Housing diameters / link outer dimensions (for collision geometry).
 4. If two sources disagree, prefer the newer manufacturer document for that
    exact product variant and note the conflict.
+   Search for a kinematic table at least twice, with different wording and
+   document types (user guide kinematics appendix, support article, SDK docs),
+   before falling back to a drawing. A search excerpt that runs a table into
+   one line or loses headers, signs or units is garbled: never transcribe it.
+   A second-hand table that agrees with the lengths a primary document gives
+   beats a primary length list that leaves offsets out.
 5. **Prefer the most authoritative primary source**: the manufacturer's own
    document for the exact variant > a peer-reviewed paper quoting it > anything
    else. A **second-hand** source (forum post, reseller/distributor copy of a
