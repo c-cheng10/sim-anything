@@ -1,0 +1,95 @@
+name: kinova_gen3_7dof
+manufacturer: Kinova
+model: Gen3 7-DoF (spherical wrist), bare arm, EE = interface module frame
+dof: 7
+units: {length: mm, angle: deg}
+convention: offset
+# Zero pose (q = 0) modelled as the arm pointing straight up; every joint frame is kept
+# parallel to the base frame (rpy all zero), so origins/axes are in base coordinates.
+base:
+  link:
+    geometry: [{shape: cylinder, radius: 45, fromto: [0, 0, 0, 0, 0, 156.4]}]
+joints:
+  - name: joint_1
+    origin: {xyz: [0, 0, 156.4], rpy: [0, 0, 0]}      # base mounting face -> actuator 1
+    axis: [0, 0, 1]
+    link: {geometry: [{shape: capsule, radius: 45}]}
+  - name: joint_2
+    origin: {xyz: [0, -5.4, 128.4], rpy: [0, 0, 0]}   # 284.8 - 156.4 up, 5.4 lateral (J1-2 offset)
+    axis: [0, 1, 0]
+    limits: {lower: -126, upper: 126}
+    link: {geometry: [{shape: capsule, radius: 45}]}
+  - name: joint_3
+    origin: {xyz: [0, -6.4, 210.4], rpy: [0, 0, 0]}   # upper-arm half 1, 6.4 lateral (J2-3 offset)
+    axis: [0, 0, 1]
+    link: {geometry: [{shape: capsule, radius: 45}]}
+  - name: joint_4
+    origin: {xyz: [0, 0, 210.4], rpy: [0, 0, 0]}      # upper-arm half 2
+    axis: [0, 1, 0]
+    limits: {lower: -147, upper: 147}
+    link: {geometry: [{shape: capsule, radius: 45}]}
+  - name: joint_5
+    origin: {xyz: [0, 0, 208.4], rpy: [0, 0, 0]}      # forearm, elbow to wrist
+    axis: [0, 0, 1]
+    link: {geometry: [{shape: capsule, radius: 35}]}
+  - name: joint_6
+    origin: {xyz: [0, 0, 105.9], rpy: [0, 0, 0]}      # wrist segment 1
+    axis: [0, 1, 0]
+    limits: {lower: -117, upper: 117}
+    link: {geometry: [{shape: capsule, radius: 35}]}
+  - name: joint_7
+    origin: {xyz: [0, 0, 105.9], rpy: [0, 0, 0]}      # wrist segment 2
+    axis: [0, 0, 1]
+    link: {geometry: [{shape: capsule, radius: 35}]}
+ee:
+  name: ee_site
+  origin: {xyz: [0, 0, 61.5], rpy: [0, 0, 0]}        # last actuator -> interface module
+total_mass: 8.2
+payload: 2.0
+reach: {value: 902, measured_from: shoulder, measured_to: ee_site}
+sources:
+  joints[1].limits: https://www.scribd.com/document/624143328/gen3
+  joints[3].limits: https://www.scribd.com/document/624143328/gen3
+  joints[5].limits: https://www.scribd.com/document/624143328/gen3
+  total_mass: https://www.kinovarobotics.com/uploads/Kinova_Onepager_Gen3_2024_EN.pdf
+  payload: https://www.kinovarobotics.com/uploads/Kinova_Onepager_Gen3_2024_EN.pdf
+  reach.value: https://www.kinovarobotics.com/uploads/Kinova_Onepager_Gen3_2024_EN.pdf
+  reach.measured_from: https://manualmachine.com/kinova/gen3/2576994-user-manual/
+  reach.measured_to: https://manualmachine.com/kinova/gen3/2576994-user-manual/
+estimates:
+  - joints[*].origin
+  - joints[*].axis
+  - ee.origin
+  - joints[*].link.geometry
+  - base.link.geometry
+notes: >
+  Kinematic source: inferred from a dimension/length list (User Guide Table 9 "7 DoF spherical
+  wrist robot geometric parameters"), known only second-hand from search-engine excerpts of two
+  user-uploaded copies of the guide that agree (https://www.scribd.com/document/624143328/gen3,
+  https://www.manualslib.com/manual/1529186/Kinova-Gen3.html?page=49; partial agreement from
+  https://manualmachine.com/kinova/gen3/2576994-user-manual/). No document could be opened; the
+  official DH table, base and interface transforms and the zero-pose frame figure (Figure 70) were
+  not retrievable. The kinematics are therefore INFERRED and SECOND-HAND, and convention `offset`
+  is used. The raw lengths (156.4, 284.8, 5.4, 6.4, 210.4 x2, 208.4, 105.9 x2, 61.5 mm) are copied
+  unchanged, but every length-to-joint mapping, axis direction and offset sign is my judgement, so
+  joints[*].origin, joints[*].axis and ee.origin are all listed as estimates.
+  Mapping used: q = 0 is assumed to be the arm straight up (vertical candle pose), frames parallel
+  to the base; base mounting face -> J1 156.4 mm; J1 -> J2 = 284.8 - 156.4 = 128.4 mm up, with the
+  5.4 mm "joint 1-2 offset" placed laterally along -y; J2 -> J3 = 210.4 mm up with the 6.4 mm
+  "joint 2-3 offset" laterally along -y; J3 -> J4 210.4; J4 -> J5 208.4 (forearm); J5 -> J6 105.9;
+  J6 -> J7 105.9; J7 -> interface module 61.5. The offset directions (y, sign -) are guesses: the
+  excerpt gave neither direction nor sign, and the real arm may alternate them or carry an offset
+  at another joint (e.g. J3-J4) that the excerpt did not list. Axes are assumed alternating
+  roll/pitch: J1, J3, J5, J7 about z (along the link); J2, J4, J6 about +y; positive directions
+  are guesses. Consistency check (my arithmetic): 210.4+210.4+208.4+105.9+105.9+61.5 = 902.5 mm
+  from J2 to the interface module, matching the 902 mm rated reach.
+  Reach 902 mm (one-pager, 7 DoF column); its definition "measured from the actuator 2 frame to the
+  interface module frame" is a search-tool paraphrase of the manualmachine mirror, mapped to
+  shoulder -> ee_site (ee_site = interface module frame, no gripper).
+  Joint limits: Table 10 (second-hand, paraphrase, agreed in both copies) gives software limits
+  J2 +-126, J4 +-147, J6 +-117 deg; J1, J3, J5, J7 are continuous, so they have no limits.
+  Total mass 8.2 kg (one-pager, 7 DoF, no gripper). Payload 2.0 kg = full-range continuous
+  (one-pager); the mid-range continuous figure is 4.0 kg. Torques, speeds and repeatability are
+  omitted (paraphrase only or conflicting). Link radii (45 mm large actuators, 35 mm small) and
+  the base cylinder are rough estimates from the general size of the arm; no housing diameters
+  were found. No drawing cross-check dimensions were available, so `drawing` is omitted.

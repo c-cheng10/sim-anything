@@ -1,0 +1,595 @@
+{
+  "model": "runs/vx300s/run/iterations/iter_01/model.xml",
+  "spec": "runs/vx300s/run/iterations/iter_01/spec.yaml",
+  "passed": true,
+  "n_checks": 15,
+  "n_failed": 0,
+  "n_errors": 0,
+  "checks": [
+    {
+      "id": "compiles",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "loads with MuJoCo 3.3.0, mj_forward finite",
+      "fix_hint": null,
+      "details": {
+        "nq": 6,
+        "nv": 6,
+        "nbody": 8,
+        "njnt": 6,
+        "nu": 6,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'"
+      }
+    },
+    {
+      "id": "joint_structure",
+      "pass": true,
+      "measured": [
+        [
+          "waist",
+          "hinge"
+        ],
+        [
+          "shoulder",
+          "hinge"
+        ],
+        [
+          "elbow",
+          "hinge"
+        ],
+        [
+          "forearm_roll",
+          "hinge"
+        ],
+        [
+          "wrist_angle",
+          "hinge"
+        ],
+        [
+          "wrist_rotate",
+          "hinge"
+        ]
+      ],
+      "expected": [
+        [
+          "waist",
+          "hinge"
+        ],
+        [
+          "shoulder",
+          "hinge"
+        ],
+        [
+          "elbow",
+          "hinge"
+        ],
+        [
+          "forearm_roll",
+          "hinge"
+        ],
+        [
+          "wrist_angle",
+          "hinge"
+        ],
+        [
+          "wrist_rotate",
+          "hinge"
+        ]
+      ],
+      "tolerance": null,
+      "severity": "error",
+      "message": "6 joints match by name, type and chain order",
+      "fix_hint": null,
+      "details": {
+        "missing": [],
+        "extra": []
+      }
+    },
+    {
+      "id": "ee_site",
+      "pass": true,
+      "measured": "ee_site",
+      "expected": "ee_site",
+      "tolerance": null,
+      "severity": "error",
+      "message": "site 'ee_site' on last body 'wrist_rotate_link'",
+      "fix_hint": null,
+      "details": {
+        "site": "ee_site",
+        "last_body": "wrist_rotate_link",
+        "site_body": "wrist_rotate_link"
+      }
+    },
+    {
+      "id": "kinematics_match",
+      "pass": true,
+      "measured": {
+        "ee_position_m": 2.5438405243138006e-16,
+        "ee_orientation_rad": 5.902848294249749e-16,
+        "joint_axis_rad": 4.079219866531555e-16,
+        "joint_position_m": 1.851906475426323e-16
+      },
+      "expected": 0.0,
+      "tolerance": {
+        "position_m": 1e-06,
+        "orientation_rad": 1e-06
+      },
+      "severity": "error",
+      "message": "model kinematics match the spec on 20 configurations (max EE error 2.5e-16 m, 5.9e-16 rad)",
+      "fix_hint": null,
+      "details": {
+        "samples": 20,
+        "seed": 0,
+        "joints": [
+          {
+            "joint": "waist",
+            "axis_error_rad": 0.0,
+            "axis_line_offset_m": 0.0
+          },
+          {
+            "joint": "shoulder",
+            "axis_error_rad": 2.220446049250313e-16,
+            "axis_line_offset_m": 2.7755575615628914e-17
+          },
+          {
+            "joint": "elbow",
+            "axis_error_rad": 4.041272810440265e-16,
+            "axis_line_offset_m": 1.2245340233588212e-16
+          },
+          {
+            "joint": "forearm_roll",
+            "axis_error_rad": 3.040470972244059e-16,
+            "axis_line_offset_m": 9.588271079615954e-17
+          },
+          {
+            "joint": "wrist_angle",
+            "axis_error_rad": 3.4219371797089426e-16,
+            "axis_line_offset_m": 1.851906475426323e-16
+          },
+          {
+            "joint": "wrist_rotate",
+            "axis_error_rad": 4.079219866531555e-16,
+            "axis_line_offset_m": 1.6603526677605638e-16
+          }
+        ]
+      }
+    },
+    {
+      "id": "joint_limits",
+      "pass": true,
+      "measured": {
+        "waist": [
+          -3.14159265359,
+          3.14159265359
+        ],
+        "shoulder": [
+          -1.76278254451,
+          1.76278254451
+        ],
+        "elbow": [
+          -1.76278254451,
+          1.60570291183
+        ],
+        "forearm_roll": [
+          -3.14159265359,
+          3.14159265359
+        ],
+        "wrist_angle": [
+          -1.86750229963,
+          2.26892802759
+        ],
+        "wrist_rotate": [
+          -3.14159265359,
+          3.14159265359
+        ]
+      },
+      "expected": {
+        "waist": [
+          -3.141592653589793,
+          3.141592653589793
+        ],
+        "shoulder": [
+          -1.7627825445142729,
+          1.7627825445142729
+        ],
+        "elbow": [
+          -1.7627825445142729,
+          1.6057029118347832
+        ],
+        "forearm_roll": [
+          -3.141592653589793,
+          3.141592653589793
+        ],
+        "wrist_angle": [
+          -1.8675022996339325,
+          2.2689280275926285
+        ],
+        "wrist_rotate": [
+          -3.141592653589793,
+          3.141592653589793
+        ]
+      },
+      "tolerance": {
+        "hinge_rad": 0.001,
+        "slide_m": 0.0001
+      },
+      "severity": "error",
+      "message": "all joint ranges match the spec (max diff 4.78e-12)",
+      "fix_hint": null,
+      "details": {
+        "joints": [
+          {
+            "joint": "waist",
+            "model": [
+              -3.14159265359,
+              3.14159265359
+            ],
+            "spec": [
+              -3.141592653589793,
+              3.141592653589793
+            ],
+            "max_abs_diff": 2.0694557179012918e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "shoulder",
+            "model": [
+              -1.76278254451,
+              1.76278254451
+            ],
+            "spec": [
+              -1.7627825445142729,
+              1.7627825445142729
+            ],
+            "max_abs_diff": 4.2728043325723775e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "elbow",
+            "model": [
+              -1.76278254451,
+              1.60570291183
+            ],
+            "spec": [
+              -1.7627825445142729,
+              1.6057029118347832
+            ],
+            "max_abs_diff": 4.7832848792950244e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "forearm_roll",
+            "model": [
+              -3.14159265359,
+              3.14159265359
+            ],
+            "spec": [
+              -3.141592653589793,
+              3.141592653589793
+            ],
+            "max_abs_diff": 2.0694557179012918e-13,
+            "unit": "rad"
+          },
+          {
+            "joint": "wrist_angle",
+            "model": [
+              -1.86750229963,
+              2.26892802759
+            ],
+            "spec": [
+              -1.8675022996339325,
+              2.2689280275926285
+            ],
+            "max_abs_diff": 3.9326319978272295e-12,
+            "unit": "rad"
+          },
+          {
+            "joint": "wrist_rotate",
+            "model": [
+              -3.14159265359,
+              3.14159265359
+            ],
+            "spec": [
+              -3.141592653589793,
+              3.141592653589793
+            ],
+            "max_abs_diff": 2.0694557179012918e-13,
+            "unit": "rad"
+          }
+        ],
+        "missing_spec_limits": []
+      }
+    },
+    {
+      "id": "reach",
+      "pass": true,
+      "measured": 0.7827970900662246,
+      "expected": 0.75,
+      "tolerance": 0.05,
+      "severity": "error",
+      "message": "max reach 0.783 m within 4.4% of rated 0.750 m",
+      "fix_hint": null,
+      "details": {
+        "samples": 5000,
+        "seed": 0,
+        "sample_max": 0.7827573018385603,
+        "refined_max": 0.7827970900662246,
+        "relative_error": 0.04372945342163274,
+        "measured_from": "shoulder",
+        "measured_to": "ee_site",
+        "origin": "body 'shoulder_link' (2nd joint)",
+        "point": "site 'ee_site'",
+        "home_source": "keyframe 'home'",
+        "argmax_q": {
+          "waist": 2.5094347338941763,
+          "shoulder": -1.6196452412116102,
+          "elbow": -1.3736487397872719,
+          "forearm_roll": 2.236227016163669,
+          "wrist_angle": 0.0009556067923104901,
+          "wrist_rotate": -0.09612635344676068
+        },
+        "definition_estimated": true,
+        "definition_unstated": [],
+        "value_estimated": false
+      }
+    },
+    {
+      "id": "drawing",
+      "pass": true,
+      "measured": [
+        0.42705,
+        0.35955
+      ],
+      "expected": [
+        0.42675,
+        0.36
+      ],
+      "tolerance": null,
+      "severity": "error",
+      "message": "2 drawing dimension(s) match within tolerance",
+      "fix_hint": null,
+      "details": {
+        "dimensions": [
+          {
+            "index": 0,
+            "measure": "height",
+            "point": "wrist_center",
+            "measured": 0.42705,
+            "expected": 0.42675,
+            "tolerance": 0.001,
+            "estimated": true
+          },
+          {
+            "index": 1,
+            "measure": "horizontal",
+            "point": "wrist_center",
+            "measured": 0.35955,
+            "expected": 0.36,
+            "tolerance": 0.001,
+            "estimated": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "total_mass",
+      "pass": true,
+      "measured": 2.6917078869999997,
+      "expected": null,
+      "tolerance": null,
+      "severity": "info",
+      "message": "spec has no total_mass; model mass is 2.692 kg",
+      "fix_hint": null,
+      "details": {}
+    },
+    {
+      "id": "mass_plausibility",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "link densities, mass shares and mass per reach are plausible",
+      "fix_hint": null,
+      "details": {
+        "density_range_kg_m3": [
+          100.0,
+          20000.0
+        ],
+        "min_link_fraction": 0.005,
+        "min_kg_per_m_reach": 0.1,
+        "total_mass": 2.6917078869999997,
+        "density": {
+          "base": 1000.0000024610413,
+          "waist_link": 1000.0000000574943,
+          "shoulder_link": 999.9999951882766,
+          "elbow_link": 1000.0000395302636,
+          "forearm_roll_link": 1000.0000007671927,
+          "wrist_angle_link": 1000.0000007671927,
+          "wrist_rotate_link": 1000.000000637024
+        },
+        "link_fraction": {
+          "waist_link": 0.26469762318603335,
+          "shoulder_link": 0.24742330815929287,
+          "elbow_link": 0.04201694416627461,
+          "forearm_roll_link": 0.2431536026479682,
+          "wrist_angle_link": 0.02431536026479682,
+          "wrist_rotate_link": 0.09505664089173137
+        },
+        "kg_per_m_reach": 3.588943849333333
+      }
+    },
+    {
+      "id": "inertia_valid",
+      "pass": true,
+      "measured": null,
+      "expected": null,
+      "tolerance": null,
+      "severity": "error",
+      "message": "7 bodies have positive mass and valid inertia",
+      "fix_hint": null,
+      "details": {
+        "bodies_checked": 7
+      }
+    },
+    {
+      "id": "self_collision_home",
+      "pass": true,
+      "measured": 0.0,
+      "expected": 0.0,
+      "tolerance": 0.001,
+      "severity": "error",
+      "message": "no self-collision deeper than 1 mm at home (0 touching pairs)",
+      "fix_hint": null,
+      "details": {
+        "home_source": "keyframe 'home'",
+        "contacts": []
+      }
+    },
+    {
+      "id": "collision_exclusions",
+      "pass": true,
+      "measured": 0,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "warning",
+      "message": "3 excluded pair(s), all parent/child or separated only by zero-length links: base / waist_link (parent/child; MuJoCo does not filter a world-fixed parent); shoulder_link / forearm_roll_link (only zero-length links between them (origins coincide with the end of 'shoulder_link')); forearm_roll_link / wrist_rotate_link (only zero-length links between them (origins coincide with the end of 'forearm_roll_link'))",
+      "fix_hint": null,
+      "details": {
+        "excluded": [
+          {
+            "body1": "base",
+            "body2": "waist_link",
+            "spec1": "base.link",
+            "spec2": "joints[0].link",
+            "kind": "parent/child",
+            "reason": "parent/child; MuJoCo does not filter a world-fixed parent"
+          },
+          {
+            "body1": "shoulder_link",
+            "body2": "forearm_roll_link",
+            "spec1": "joints[1].link",
+            "spec2": "joints[3].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'shoulder_link')"
+          },
+          {
+            "body1": "forearm_roll_link",
+            "body2": "wrist_rotate_link",
+            "spec1": "joints[3].link",
+            "spec2": "joints[5].link",
+            "kind": "zero-length links between",
+            "reason": "only zero-length links between them (origins coincide with the end of 'forearm_roll_link')"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stable_hold",
+      "pass": true,
+      "measured": 0.010516526371514514,
+      "expected": 0.0,
+      "tolerance": {
+        "drift_hinge_rad": 0.05,
+        "drift_slide_m": 0.005,
+        "final_speed": 0.1
+      },
+      "severity": "error",
+      "message": "holds home for 2 s: max drift 0.0105, final speed 0.0000",
+      "fix_hint": null,
+      "details": {
+        "seconds": 2.0,
+        "timestep": 0.002,
+        "home_source": "keyframe 'home'",
+        "warnings": {},
+        "actuator_kinds": [
+          "position",
+          "position",
+          "position",
+          "position",
+          "position",
+          "position"
+        ],
+        "max_drift": {
+          "waist": 8.383245578972142e-24,
+          "shoulder": 0.01021400360406784,
+          "elbow": 0.010409840606791456,
+          "forearm_roll": 2.3096092179090116e-26,
+          "wrist_angle": 0.010516526371514514,
+          "wrist_rotate": 2.4360416871665895e-28
+        },
+        "final_speed": {
+          "waist": 6.628298777423812e-39,
+          "shoulder": 3.758646661957879e-17,
+          "elbow": 3.9746391750793706e-16,
+          "forearm_roll": 4.2720351489459815e-36,
+          "wrist_angle": 3.213181637511135e-16,
+          "wrist_rotate": 2.7946015709291823e-37
+        },
+        "tolerance": {
+          "drift_hinge_rad": 0.05,
+          "drift_slide_m": 0.005,
+          "speed": 0.1
+        },
+        "saturated_joints": []
+      }
+    },
+    {
+      "id": "actuators",
+      "pass": true,
+      "measured": 6,
+      "expected": 6,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every spec joint is driven by exactly one actuator",
+      "fix_hint": null,
+      "details": {
+        "actuators_by_joint": {
+          "waist": [
+            "waist_act"
+          ],
+          "shoulder": [
+            "shoulder_act"
+          ],
+          "elbow": [
+            "elbow_act"
+          ],
+          "forearm_roll": [
+            "forearm_roll_act"
+          ],
+          "wrist_angle": [
+            "wrist_angle_act"
+          ],
+          "wrist_rotate": [
+            "wrist_rotate_act"
+          ]
+        },
+        "nu": 6
+      }
+    },
+    {
+      "id": "sources_complete",
+      "pass": true,
+      "measured": 0,
+      "expected": 0,
+      "tolerance": null,
+      "severity": "error",
+      "message": "every number in the spec has a source or is listed as an estimate (16 of 37 estimated)",
+      "fix_hint": null,
+      "details": {
+        "uncovered": [],
+        "bad_sources": {},
+        "unmatched_keys": [],
+        "duplicate_keys": [],
+        "n_numbers": 37,
+        "n_estimated": 16,
+        "estimate_fraction": 0.43243243243243246
+      }
+    }
+  ],
+  "mujoco_version": "3.3.0"
+}

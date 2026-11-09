@@ -1,0 +1,162 @@
+{
+  "candidate": "/home/user/sim-anything/benchmark/runs/viperx_300s/team1/run/model.xml",
+  "reference": "/home/user/sim-anything/third_party/mujoco_menagerie/trossen_vx300s/vx300s.xml",
+  "robot": "viperx_300s",
+  "n_samples": 2000,
+  "seed": 0,
+  "dof_candidate": 6,
+  "dof_reference": 6,
+  "dof_match": true,
+  "conventions": [
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    },
+    {
+      "sign": 1,
+      "offset": 0.0
+    }
+  ],
+  "conventions_fitted": true,
+  "base_yaw_deg": 0.0,
+  "ee_position_error_mm": {
+    "mean": 107.19999999999997,
+    "p95": 107.20000000000007,
+    "max": 107.2000000000002
+  },
+  "ee_orientation_error_deg": {
+    "mean": 0.0,
+    "p95": 0.0,
+    "max": 0.0
+  },
+  "ee_orientation_error_aligned_deg": {
+    "mean": 6.306236611065153e-14,
+    "p95": 6.479282486462902e-14,
+    "max": 6.695237584461463e-14
+  },
+  "joint_limits": [
+    {
+      "candidate": "waist",
+      "reference": "waist",
+      "candidate_range": [
+        -3.14159265359,
+        3.14159265359
+      ],
+      "reference_range": [
+        -3.14158,
+        3.14158
+      ],
+      "lower_diff": -1.2653590000244463e-05,
+      "upper_diff": 1.2653590000244463e-05
+    },
+    {
+      "candidate": "shoulder",
+      "reference": "shoulder",
+      "candidate_range": [
+        -1.76278254451,
+        1.76278254451
+      ],
+      "reference_range": [
+        -1.85005,
+        1.25664
+      ],
+      "lower_diff": 0.08726745548999992,
+      "upper_diff": 0.5061425445100001
+    },
+    {
+      "candidate": "elbow",
+      "reference": "elbow",
+      "candidate_range": [
+        -1.76278254451,
+        1.60570291183
+      ],
+      "reference_range": [
+        -1.76278,
+        1.6057
+      ],
+      "lower_diff": -2.544510000035416e-06,
+      "upper_diff": 2.911830000007498e-06
+    },
+    {
+      "candidate": "forearm_roll",
+      "reference": "forearm_roll",
+      "candidate_range": [
+        -3.14159265359,
+        3.14159265359
+      ],
+      "reference_range": [
+        -3.14158,
+        3.14158
+      ],
+      "lower_diff": -1.2653590000244463e-05,
+      "upper_diff": 1.2653590000244463e-05
+    },
+    {
+      "candidate": "wrist_angle",
+      "reference": "wrist_angle",
+      "candidate_range": [
+        -1.86750229963,
+        2.26892802759
+      ],
+      "reference_range": [
+        -1.8675,
+        2.23402
+      ],
+      "lower_diff": -2.299629999980013e-06,
+      "upper_diff": 0.03490802758999978
+    },
+    {
+      "candidate": "wrist_rotate",
+      "reference": "wrist_rotate",
+      "candidate_range": [
+        -3.14159265359,
+        3.14159265359
+      ],
+      "reference_range": [
+        -3.14158,
+        3.14158
+      ],
+      "lower_diff": -1.2653590000244463e-05,
+      "upper_diff": 1.2653590000244463e-05
+    }
+  ],
+  "joint_limit_mae_deg": 3.000397128421221,
+  "mass_candidate": 2.6917078869999997,
+  "mass_reference": 3.7419390000000003,
+  "mass_diff": -1.0502311130000006,
+  "mass_rel_diff": -0.2806649475044891,
+  "score": 39.2562346996376,
+  "score_breakdown": {
+    "pos": 0.013732362576092604,
+    "orient": 0.9999999999999936,
+    "limits": 0.7407888012688468,
+    "mass": 0.24577845518003932,
+    "dof": 1.0
+  },
+  "kinematics_score": 29.55231161257786,
+  "disagreements": [
+    "shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg",
+    "wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg",
+    "total mass: candidate 2.69 kg vs reference 3.74 kg (-28%)"
+  ],
+  "notes": [
+    "reference has 2 unmapped joint(s) held at qpos0: left_finger, right_finger",
+    "reference mass includes the bodies of its unmapped joints"
+  ]
+}

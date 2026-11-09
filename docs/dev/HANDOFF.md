@@ -4,10 +4,10 @@ Final state of the autonomous build (internal development log). Resume from this
 
 ## State
 
-## Session 3 (in progress; resume from here)
-- Done: ponytail installed and audit done (no must-fix bugs; findings = plan items 2, 4, 7 plus a dead package-data entry, removed). P0.1 GitHub install: `pip install git+...` in a clean venv 15.6 s, toy loop passes; plugin marketplace add/install from `c-cheng10/sim-anything` works in an isolated config. P0.2 `tests/test_plugin.py`. P1.4 `drawing` spec field + check (15 checks).
-- Done: P0.1 real `/sim-anything UR3e` run from the GitHub install (416 s, $2.31, all four agents, passes, auditor "ready with caveats"). P1.5 scout guidance. P1.7 `kinematics_score` + `disagreements` in eval, all rounds re-scored (no old number changed).
-- Next: P1.6 variance runs (trimmed to fit the 8-run / $15 cap), then version 0.3.0 + docs.
+## Session 3 (0.3.0, done; stopped at the cost soft cap)
+- Done: ponytail audit (no must-fix bugs); P0.1 GitHub install verified (pip git+ 15.6 s; marketplace `c-cheng10/sim-anything`; real `/sim-anything UR3e`: 416 s, $2.31, passes, auditor "ready with caveats"); P0.2 `tests/test_plugin.py`; P0.3 known-bugs list re-checked (below); P1.4 `drawing` field + check; P1.5 scout guidance; P1.7 `kinematics_score` + `disagreements`, all rounds re-scored; P1.6 trimmed to one blind team run each for Kinova (13.1 mm) and ViperX (107.2 mm, EE at the table's tool point) in benchmark/runs/<id>/team1/, reported in RESULTS "Team variance"; version 0.3.0 everywhere.
+- Not done: P1.6 full 12-run variance (budget: 5/8 runs, $12.11/$15 used; two runs lost to the account usage limit); P2 (URDF export, examples/use_model.py, 3D viewer) skipped because caps passed 50%.
+- Next step: run the remaining team variance runs (other 4 dev robots, then second runs) with a fresh budget; consider teaching the skill to state the EE point explicitly (flange face vs tool point) since that, not kinematics, caused ViperX team1's error.
 
 ## Session 2 update (0.2.0)
 - Ponytail-style audit done; fixed: world-fixed base vs first-link contacts now count as self-collisions; one shared config sampler + motion transform (spec.py `sample_configs`, `motion_tf`); removed always-zero `ChainJoint.qpos_offset`; internal logs moved to docs/dev/.

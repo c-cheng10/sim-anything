@@ -50,7 +50,7 @@ Planned allocation: Phase 2: 5 | Phase 4: 6 | Round 1: ~3 review + 2 fix + 3 re-
 Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-end runs and $15 combined
 `total_cost_usd`; soft stop at 75% of any cap; P2 skipped once any cap passes 50%.
 
-**Running tally:** subagents 0 / 12 (0 tokens) | e2e runs 3 / 8 | e2e cost $6.36 / $15 | other `claude -p` $0.10
+**Running tally:** subagents 0 / 12 (0 tokens) | e2e runs 5 / 8 | e2e cost $12.11 / $15 (past the 75% soft stop: no more runs; P2 skipped) | other `claude -p` $0.10
 
 ## Subagent spawns
 | # | Purpose | Outcome | Tokens |
@@ -62,5 +62,7 @@ Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-e
 | 1 | P0.1 `/sim-anything UR3e` (plugin + CLI 0.2.0 installed from GitHub, isolated config) | all four agents ran; 2 iterations, both passed (0 errors, 2 warnings: unlimited wrist 3, reach definition unstated); auditor "ready with caveats"; UR host blocked, values from search excerpts | 416 s | 2.31 |
 | 2 | P1.6 `/sim-anything Kinova Gen3 (7-DOF), no gripper` (0.3.0 from GitHub, blind) | stopped by the account usage limit after sources.md + spec.yaml; not scored | 398 s | 2.05 |
 | 3 | P1.6 `/sim-anything Trossen ViperX 300 S ...` (0.3.0 from GitHub, blind, in parallel with #2) | stopped by the account usage limit; not scored | 394 s | 2.00 |
+| 4 | P1.6 `/sim-anything Kinova Gen3 (7-DOF), no gripper` (retry after the limit reset; blind) | all four agents; passed (iteration 2 after audit relabelling); kinematics inferred; 13.1 mm p95 | 592 s | 3.07 |
+| 5 | P1.6 `/sim-anything Trossen ViperX 300 S ...` (retry, blind, in parallel with #4) | all four agents; 15/15 checks on iteration 1, drawing dims within 1 mm; EE at the table's tool point: 107.2 mm p95 | 620 s | 2.68 |
 
 Other: one `claude -p "Reply with the single word: ok"` auth smoke test in the isolated config, $0.10.

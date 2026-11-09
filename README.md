@@ -198,6 +198,12 @@ flange distance (diagnostic only) the error is 1.1 mm p95.
   ViperX (0.3 mm) were built from tables the round-2 agents did not find or
   chose not to trust; run-to-run variance in finding the right public source is
   the dominant error. History: [benchmark/RESULTS.md](benchmark/RESULTS.md).
+* Team variance (0.3.0, one blind four-agent run each for the two robots that
+  varied most): Kinova Gen3 13.1 mm p95 (no DH table or drawing found;
+  kinematics inferred and labelled so), ViperX 300 S 107.2 mm p95 (Trossen's
+  table reproduced exactly and confirmed by two drawing dimensions, but the EE
+  site was put at the table's tool point, 107 mm from the reference point in
+  every pose). Neither run reduced the run-to-run spread; details in RESULTS.md.
 * Gallery: built by `python gallery/build.py` and deployed by
   `.github/workflows/pages.yml` once GitHub Pages is enabled for the repository.
 <!-- RESULTS:END -->

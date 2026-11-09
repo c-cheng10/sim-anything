@@ -1,0 +1,18 @@
+{
+  "robot": "vx300s",
+  "spec": "runs/vx300s/spec.yaml",
+  "max_iter": 8,
+  "iterations": [
+    {
+      "iteration": 1,
+      "timestamp": "2026-11-09T00:44:15+00:00",
+      "passed": true,
+      "n_errors": 0,
+      "n_failed": 0,
+      "failed_ids": [],
+      "note": "initial run",
+      "build_error": null
+    }
+  ],
+  "status": "passed"
+}

@@ -36,6 +36,7 @@ dev:
     kinematic_source: DH table (via third-party quote)
     kinematic_source_by_round:
       round2: dimension table (official guide lengths, lateral offsets omitted)
+      team1: inferred from the guide's link-length list (search excerpts of user-uploaded copies)
   - id: xarm7
     name: UFactory xArm 7
     manufacturer: UFactory
@@ -59,6 +60,7 @@ dev:
     kinematic_source: screw-axis (PoE) table
     kinematic_source_by_round:
       round2: reach/offset tables (shoulder height estimated)
+      team1: screw-axis (PoE) table, EE at the table's home tool point
 
 holdout:
   - id: ur10e

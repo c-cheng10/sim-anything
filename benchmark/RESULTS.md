@@ -49,6 +49,51 @@ Median p95 EE position error, robots with published DH: 9.3 mm (n=2)
   manufacturer hosts were blocked; torques for three UR10e joints come from a
   UR forum post (second-hand), the wrist-1 torque is an estimate.
 
+## Team variance (session 3, 0.3.0 four-agent team, blind)
+
+Planned: every dev robot twice through the real `/sim-anything` team (12 runs). Run: **one team run each
+for the two robots that varied most** (Kinova Gen3, ViperX 300 S). The session cap was 8 end-to-end runs and
+$15; one run went to the GitHub-install check, and two earlier attempts at these runs were stopped by the
+account usage limit ($4.05, not scored). Plugin and CLI 0.3.0 were installed from GitHub into an isolated
+config, the reference models were moved outside the repository while the agents ran, and the transcripts show
+all four agents running in both runs. Manufacturer and WebFetch access was blocked; values came from search
+excerpts (ViperX: Trossen's documentation repository on GitHub).
+
+| Robot | Kinematic source | Checks | Iterations | EE pos mean / p95 / max (mm) | Orient p95 aligned (deg) | Limit MAE (deg) | Mass cand / ref (kg) | Conventions fitted | Score | Kin. score |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Kinova Gen3 (7-DOF) | inferred from the guide's link-length list (search excerpts of user-uploaded copies) | all pass | 2 | 12.8 / 13.1 / 13.2 | 0.0 | 0.8 | 8.20 / 8.19 | yaw +0°, 4 sign flip(s), 0 offset(s) | 78.4 | 70.8 |
+| Trossen ViperX 300 S | screw-axis (PoE) table, EE at the table's home tool point | all pass | 1 | 107.2 / 107.2 / 107.2 | 0.0 | 3.0 | 2.69 / 3.74 | yaw +0°, 0 sign flip(s), 0 offset(s) | 39.3 | 29.6 |
+
+Datasheet vs reference disagreements (listed, not counted in the kinematics score):
+
+* Kinova Gen3 (7-DOF): joint_2 limits: candidate [-126, 126] deg vs reference joint_2 [-128, 128] deg
+* Kinova Gen3 (7-DOF): joint_6 limits: candidate [-117, 117] deg vs reference joint_6 [-120, 120] deg
+* Trossen ViperX 300 S: shoulder limits: candidate [-101, 101] deg vs reference shoulder [-106, 72] deg
+* Trossen ViperX 300 S: wrist_angle limits: candidate [-107, 130] deg vs reference wrist_angle [-107, 128] deg
+* Trossen ViperX 300 S: total mass: candidate 2.69 kg vs reference 3.74 kg (-28%)
+
+p95 EE error across all runs so far (single-agent rounds 0 / 1 / 2, then team run 1):
+
+| Robot | R0 | R1 | R2 | Team 1 | Mean | Range |
+|---|---|---|---|---|---|---|
+| Kinova Gen3 (7-DOF) | 0.4 | 0.4 | 24.5 | 13.1 | 9.6 | 0.4 - 24.5 |
+| Trossen ViperX 300 S | 0.3 | 0.3 | 7.6 | 107.2 | 28.9 | 0.3 - 107.2 |
+
+**Did the auditor and the drawing check reduce the spread? Not measurably.**
+* Kinova: the team found neither Kinova's DH table nor a zero-pose drawing (no `drawing` dimension, so the new
+  check could not run) and inferred the kinematics from the guide's link-length list, labelling every joint
+  placement an estimate and predicting "about 10 mm" error itself. 13.1 mm p95: between the earlier runs.
+* ViperX: the team found Trossen's screw-axis table, reproduced it exactly and added two drawing dimensions
+  that the `drawing` check confirmed within 1 mm. Its EE site, though, is the table's home tool point (177 mm
+  past the wrist-angle axis; the agent noted it is probably on the gripper), while the reference point is the
+  gripper-link origin fixed before round 0 (D15). The error is the same 107.2 mm in every configuration
+  (mean = p95 = max), the signature of a constant tool offset, not a joint error. The mapping was not changed
+  after seeing this.
+* The auditor said "ready with caveats" both times and flagged the right weaknesses (Kinova's inferred
+  kinematics, ViperX's EE point), but it cannot supply sources the scout did not find.
+* Two runs per robot cannot estimate spread; the dominant error is still which public source an agent can reach
+  and how it reads ambiguous points (here, where the "end effector" is).
+
 ## Round-over-round (dev set)
 
 All rounds scored with the final evaluator (rounds 0 and 1 were re-scored after
