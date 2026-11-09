@@ -150,9 +150,13 @@ on an existing model. The `robot-to-mujoco` skill holds the shared rules; it
 also works on its own (single agent) and triggers when you ask for a MuJoCo
 model of a robot arm.
 
-Measured on one real run (`/sim-anything Trossen WidowX 250 6DOF`, network
-without manufacturer sites): all four agents ran, 14/14 checks passed on the
-first iteration, auditor verdict "ready with caveats", 7 minutes, about $2.20.
+Measured on real runs (network without manufacturer sites): `/sim-anything
+Trossen WidowX 250 6DOF` (0.2.0, local install): all four agents ran, 14/14
+checks passed on the first iteration, auditor "ready with caveats", 7 minutes,
+about $2.20. `/sim-anything UR3e` with the CLI and plugin installed from GitHub
+in a clean environment: all four agents ran, passed (0 errors, 2 warnings) in
+two iterations, auditor "ready with caveats", 7 minutes, $2.31; the spec
+reproduces UR's published DH table.
 The single-agent flow did the same robot in 2 minutes for about $0.80, without
 the independent audit. Details: [plugin/README.md](plugin/README.md).
 
@@ -168,21 +172,21 @@ models (an external reference; not redistributed here — clone it into
 <!-- RESULTS:BEGIN -->
 **Dev set, final tool (round 2, fresh blind runs):**
 
-| Robot | Public kinematic source the agent used | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score |
-|---|---|---|---|---|---|---|
-| UR5e | DH table | all pass | 1 | 1.4 | 30.0 | 82.2 |
-| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 | 0.0 | 97.2 |
-| Kinova Gen3 (7-DOF) | official link-length table, lateral offsets omitted | all pass | 1 | 24.5 | 0.2 | 68.3 |
-| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 | 0.7 | 92.5 |
-| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 | 0.0 | 98.9 |
-| Trossen ViperX 300 S | reach/offset tables, shoulder height estimated | all pass | 1 | 7.6 | 3.0 | 74.1 |
+| Robot | Public kinematic source the agent used | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score | Kin. score |
+|---|---|---|---|---|---|---|---|
+| UR5e | DH table | all pass | 1 | 1.4 | 30.0 | 82.2 | 96.1 |
+| Franka Emika Panda | DH table (modified) | all pass | 2 | 0.0 | 0.0 | 97.2 | 100.0 |
+| Kinova Gen3 (7-DOF) | official link-length table, lateral offsets omitted | all pass | 1 | 24.5 | 0.2 | 68.3 | 55.4 |
+| UFactory xArm 7 | DH table (modified) | all pass | 1 | 0.0 | 0.7 | 92.5 | 100.0 |
+| KUKA LBR iiwa 14 R820 | dimension table | all pass | 1 | 0.0 | 0.0 | 98.9 | 100.0 |
+| Trossen ViperX 300 S | reach/offset tables, shoulder height estimated | all pass | 1 | 7.6 | 3.0 | 74.1 | 81.3 |
 
 **Holdout set (run once, never used during development):**
 
-| Robot | Public kinematic source | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score |
-|---|---|---|---|---|---|---|
-| UR10e | DH table | all pass | 1 | 17.2* | 30.0 | 60.0 |
-| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.3 | 0.0 | 94.9 |
+| Robot | Public kinematic source | Checks | Iter. | EE pos p95 (mm) | Limit MAE (deg) | Score | Kin. score |
+|---|---|---|---|---|---|---|---|
+| UR10e | DH table | all pass | 1 | 17.2* | 30.0 | 60.0 | 64.5 |
+| UFactory Lite 6 | DH table (modified) | all pass | 2 | 1.3 | 0.0 | 94.9 | 96.3 |
 
 \* The UR10e model follows UR's published flange distance (d6 = 116.55 mm); the
 reference model's flange site is 16.55 mm shorter. Measured at UR's published

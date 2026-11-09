@@ -34,13 +34,14 @@ Untested:
 - Manufacturer pages themselves: blocked network; values came from search excerpts.
 
 ## Known bugs / limitations
-- Source discovery varies run to run and dominates error (Kinova 0.4 -> 24.5 mm, ViperX 0.3 -> 7.6 mm between rounds).
-- Self-consistent but wrong specs pass the checks by design; only a reference eval catches them.
-- Evaluator: ties needing >= 4 simultaneous joint changes or > 128 tie solutions are best-effort; near-ties on imperfect candidates are decided by EE error only.
-- Collinear capsules meeting end to end look like a short middle link to the end-cap exclusion rule.
-- Matplotlib fallback renderer only depth-sorts whole geoms.
-- Agents running `pip install -e .` in a worktree hijack the shared editable install (prompt now forbids it; re-run `pip install -e .` in the main checkout if imports point into .claude/worktrees).
-- Score: ~25% (aligned orientation, DOF) is nearly free; limit/mass terms penalise sourced datasheet values where the reference chose differently (UR elbow ±360 vs ±180, datasheet masses).
+(re-checked in session 3; none of the remaining items has a small, safe fix)
+- Source discovery varies run to run and dominates error (Kinova 0.4 -> 24.5 mm, ViperX 0.3 -> 7.6 mm between rounds). Session 3: scout guidance sharpened and team variance runs measured (benchmark/RESULTS.md "Team variance").
+- Self-consistent but wrong specs pass the checks unless the spec carries a contradicting `drawing` dimension (0.3.0); without one only the auditor or a reference eval catches them.
+- Evaluator: ties needing >= 4 simultaneous joint changes or > 128 tie solutions are best-effort; near-ties on imperfect candidates are decided by EE error only. Equal-cost conventions can differ between evaluator versions (Kinova rounds 0-1 now report 1 flip + 1 offset instead of none; same numbers).
+- Collinear capsules meeting end to end look like a short middle link to the end-cap exclusion rule (geometry heuristic; changing it risks hiding real collisions, so left as is; every exclusion is reported).
+- Matplotlib fallback renderer only depth-sorts whole geoms (cosmetic; MuJoCo renderer works with OSMesa).
+- Agents running `pip install -e .` in a worktree hijack the shared editable install (process rule, not code).
+- Fixed in 0.3.0: the score penalised sourced datasheet limits/masses; `kinematics_score` now excludes them and `disagreements` lists them.
 
 ## Next 10 tasks (priority order)
 1. Allow manufacturer hosts in the environment network policy and re-gather inputs from primary documents (Kinova user guide DH table, Trossen docs, KUKA spec PDF).
