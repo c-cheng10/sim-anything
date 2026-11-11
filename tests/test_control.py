@@ -138,3 +138,23 @@ def test_collides_matches_contacts_without_touching_the_sim(model_path):
         seen.add(d.ncon > 0)
     assert seen == {True, False}  # the sample covers both cases
     assert np.array_equal(arm.data.qpos, live)
+
+
+def test_collides_ignores_contacts_between_scene_objects(model_path, tmp_path):
+    # a free cube resting on a table far from the arm must not make every arm pose "collide"
+    spec = mujoco.MjSpec.from_file(str(model_path))
+    spec.worldbody.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.1, 0.1, 0.05], pos=[3, 0, 0.05])
+    cube = spec.worldbody.add_body(pos=[3, 0, 0.12])
+    cube.add_freejoint()
+    cube.add_geom(type=mujoco.mjtGeom.mjGEOM_BOX, size=[0.02] * 3)
+    cube.mass, cube.inertia, cube.explicitinertial = 0.1, [3e-5] * 3, True
+    spec.keys[0].qpos = list(spec.keys[0].qpos) + [3, 0, 0.12, 1, 0, 0, 0]  # the home key covers the cube too
+    spec.compile()
+    p = tmp_path / "scene.xml"
+    p.write_text(spec.to_xml())
+    plain, scene = Arm(model_path), Arm(p)
+    assert scene.data.ncon > 0 and not scene.collides(scene.data.qpos[scene.qadr])
+    rng = np.random.default_rng(1)
+    for _ in range(50):  # self-collisions are still found, exactly as without the scene
+        q = rng.uniform(np.maximum(plain.lower, -np.pi), np.minimum(plain.upper, np.pi))
+        assert scene.collides(q) == plain.collides(q)

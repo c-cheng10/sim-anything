@@ -36,6 +36,7 @@ class Arm:
         if missing:
             raise ValueError(f"no position actuator for joint(s) {', '.join(missing)}")
         self.act = np.array([act[j] for j in ids])
+        self._arm = np.append(m.body_weldid[m.jnt_bodyid[ids]], 0)  # arm links + world-fixed bodies, by weld id
         self.site = m.site(ee_site).id
         self.reset()
 
@@ -97,11 +98,13 @@ class Arm:
         return best
 
     def collides(self, q, d: mujoco.MjData | None = None) -> bool:
-        """True if joint configuration ``q`` has any contact (checked on scratch data ``d``, not the live sim)."""
+        """True if joint configuration ``q`` makes the arm touch itself or fixed scenery (checked on scratch
+        data ``d``, not the live sim). Contacts involving free objects in the scene don't count."""
         d = mujoco.MjData(self.model) if d is None else d
         d.qpos[self.qadr] = q
         mujoco.mj_fwdPosition(self.model, d)
-        return d.ncon > 0
+        welds = self.model.body_weldid[self.model.geom_bodyid[d.contact.geom[:d.ncon]]]
+        return bool(np.isin(welds, self._arm).all(axis=1).any())
 
     def _dls(self, d, q, target_pos, target_quat, tol, max_iter, damping):
         """One DLS run from ``q``; leaves ``d`` at the returned configuration."""
