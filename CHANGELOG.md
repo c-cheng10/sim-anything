@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0
+
+- Control: `simanything.control.Arm` drives any built or imported model: state, joint targets, damped
+  least-squares IK (about 1e-6 m on 200 random toy-arm poses), smooth joint-space `move_to` (no path
+  planning), renders, and a self-collision test that ignores free scene objects. Gravity compensation is
+  enabled in memory.
+- Agents: `sim-anything serve model.xml` runs an MCP server (stdio) with get_state, set_joint_targets,
+  step, move_ee, reset and render; tool calls run one at a time (parallel calls used to crash it).
+- Data: `sim-anything rollouts` records smooth, self-collision-free random motion as npz episodes plus
+  meta.json (optional 128x128 frames); `simanything.gym_env.ReachEnv` is a Gymnasium reach task.
+- Import: `sim-anything import-urdf` loads an official URDF with MuJoCo's importer (kinematics, limits
+  and inertials kept), converts meshes (units to metres), keeps visuals, adds servos, a home keyframe
+  and an EE site, and simplifies collision (`hull` default, `primitives`, `coacd`). Rejects mimic joints.
+  Checked on a public UR5 URDF: 15/15 checks.
+- Optional extras: `mcp`, `rl`, `mesh`; CI installs them so their tests run.
+
 ## 0.3.0
 
 - Checker: new `drawing` check (15 checks). A spec can carry published drawing dimensions (`drawing`:

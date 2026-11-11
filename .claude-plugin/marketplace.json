@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Turn a real robot arm's public datasheets into a verified MuJoCo simulation.",
-    "version": "0.3.0"
+    "version": "0.4.0"
   },
   "plugins": [
     {
       "name": "sim-anything",
       "source": "./plugin",
       "description": "Reverse-engineer a robot arm into a verified MuJoCo simulation from public datasheets: /sim-anything runs a four-agent team (source scout, spec writer, loop fixer, auditor); /sim-anything-audit reviews an existing model.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": {
         "name": "c-cheng10"
       },
