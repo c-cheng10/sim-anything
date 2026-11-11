@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import mujoco
@@ -6,7 +7,7 @@ import pytest
 
 from simanything.builder import build_mjcf
 from simanything.control import Arm
-from simanything.rollout import random_path
+from simanything.rollout import random_path, record
 from simanything.spec import load_spec
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,3 +38,19 @@ def test_random_path_is_smooth_in_limits_and_collision_free(model_path):
         assert np.all(steps <= 1.875 / 50 * np.abs(path[-1] - q0) + 1e-9)  # min-jerk peak speed
         assert not any(_ncon(arm, q) for q in path)
         q0 = path[-1]
+
+
+def test_record_shapes_determinism_limits_and_no_collisions(model_path, tmp_path):
+    meta = json.loads(record(model_path, tmp_path / "a", episodes=2, steps=120, seed=7).read_text())
+    record(model_path, tmp_path / "b", episodes=2, steps=120, seed=7)
+    assert meta["joints"] == ["j1", "j2", "j3", "j4", "j5", "j6"] and meta["seed"] == 7 and meta["fps"] == 50
+    assert {k: v["shape"] for k, v in meta["arrays"].items()} == {
+        "qpos": [120, 6], "qvel": [120, 6], "ee_pos": [120, 3], "ee_quat": [120, 4], "action": [120, 6]}
+    arm = Arm(model_path)
+    for e in range(2):
+        a, b = np.load(tmp_path / "a" / f"episode_{e:03d}.npz"), np.load(tmp_path / "b" / f"episode_{e:03d}.npz")
+        assert sorted(a.files) == sorted(meta["arrays"]) and all(np.array_equal(a[k], b[k]) for k in a.files)
+        assert np.all(a["action"] >= arm.lower) and np.all(a["action"] <= arm.upper)
+        assert not any(_ncon(arm, q) for q in a["qpos"])
+    first, other = np.load(tmp_path / "a" / "episode_000.npz"), np.load(tmp_path / "a" / "episode_001.npz")
+    assert not np.array_equal(first["action"], other["action"])
