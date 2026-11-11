@@ -111,3 +111,27 @@ def _collision_mesh(model, body: int) -> tuple[Optional[np.ndarray], Optional[np
         n += len(v)
     return (np.vstack(verts), np.vstack(faces)) if verts else (None, None)
 
+
+def _full_precision(xml: str, model, meshdir: str) -> str:
+    """``xml`` from MjSpec.to_xml (which rounds to 6 digits) with the body frames, joints, inertials and sites of
+    ``model`` written exactly, so the kinematics match MuJoCo's own URDF import, and with ``meshdir``."""
+    def f(v) -> str:
+        return " ".join(repr(float(x)) for x in np.atleast_1d(v))
+
+    root = ET.fromstring(xml)
+    root.find("compiler").set("meshdir", meshdir)  # type: ignore[union-attr]
+    for el in root.iter("body"):
+        b = model.body(el.get("name"))
+        el.attrib.update(pos=f(b.pos), quat=f(b.quat))
+        inertial = el.find("inertial")
+        if inertial is not None:
+            inertial.attrib.pop("fullinertia", None)
+            inertial.attrib.update(pos=f(b.ipos), quat=f(b.iquat), mass=f(b.mass), diaginertia=f(b.inertia))
+    for el in root.iter("joint"):
+        j = model.joint(el.get("name"))
+        el.attrib.update(pos=f(j.pos), axis=f(j.axis))
+    for el in root.iter("site"):
+        s = model.site(el.get("name"))
+        el.attrib.update(pos=f(s.pos), quat=f(s.quat))
+    return ET.tostring(root, encoding="unicode")
+
