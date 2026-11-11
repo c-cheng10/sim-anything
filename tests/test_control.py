@@ -1,4 +1,6 @@
 import math
+import subprocess
+import sys
 from pathlib import Path
 
 import mujoco
@@ -107,3 +109,15 @@ def test_move_to_reaches_target(model_path):
         # measured <= 3 um settled over 50 targets (gravity feedforward); 1 mm still fails any sag
         assert np.linalg.norm(np.array(s["ee_pos"]) - pos) < 1e-3
         assert np.linalg.norm(s["qd"]) < 1e-2
+
+
+def test_render_writes_png(model_path, tmp_path):
+    from simanything import render
+
+    if render.detect_backend() != "mujoco":
+        pytest.skip("no offscreen MuJoCo GL renderer available")
+    out = tmp_path / "arm.png"
+    # a child process: MUJOCO_GL must be set before mujoco is imported
+    code = f"from simanything.control import Arm; Arm({str(model_path)!r}).render({str(out)!r})"
+    subprocess.run([sys.executable, "-c", code], env=render._child_env(render._gl_cache or ""), check=True, timeout=120)
+    assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"

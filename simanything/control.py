@@ -136,6 +136,18 @@ class Arm:
         rot = 0.0 if target_quat is None else float(np.linalg.norm(_rot_err(quat, target_quat)))
         return float(np.linalg.norm(np.asarray(target_pos, dtype=float) - pos)), rot
 
+    def render(self, path: str | Path) -> Path:
+        """Write a 640x480 PNG of the current state from the model's default free camera.
+
+        Headless, MuJoCo needs ``MUJOCO_GL=egl`` or ``osmesa`` set before it is imported.
+        """
+        from PIL import Image
+
+        with mujoco.Renderer(self.model, 480, 640) as r:
+            r.update_scene(self.data)
+            Image.fromarray(r.render()).save(path)
+        return Path(path)
+
 
 def _rot_err(quat: np.ndarray, target_quat) -> np.ndarray:
     """World-frame rotation vector taking orientation ``quat`` to ``target_quat`` (both w, x, y, z)."""
