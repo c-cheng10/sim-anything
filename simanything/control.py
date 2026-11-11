@@ -45,3 +45,14 @@ class Arm:
             mujoco.mj_resetData(self.model, self.data)
         self.data.ctrl[self.act] = self.data.qpos[self.qadr]
         mujoco.mj_forward(self.model, self.data)
+
+    def _ee(self, d: mujoco.MjData) -> tuple[np.ndarray, np.ndarray]:
+        quat = np.empty(4)
+        mujoco.mju_mat2Quat(quat, d.site_xmat[self.site])
+        return d.site_xpos[self.site].copy(), quat
+
+    def state(self) -> dict:
+        """Joint positions/velocities and the EE position and quaternion (w, x, y, z), in model units."""
+        pos, quat = self._ee(self.data)
+        return {"joints": self.joints, "q": self.data.qpos[self.qadr].tolist(), "qd": self.data.qvel[self.dadr].tolist(),
+                "ee_pos": pos.tolist(), "ee_quat": quat.tolist(), "time": self.data.time}

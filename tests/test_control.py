@@ -35,3 +35,10 @@ def test_reset_goes_home(model_path):
     arm.reset()
     home = arm.model.key("home").qpos
     assert np.allclose(arm.data.qpos, home) and np.allclose(arm.data.ctrl, home) and not arm.data.qvel.any()
+
+
+def test_state_at_home(model_path):
+    s = Arm(model_path).state()
+    # home is the stretched UR-like pose: EE at x = -(a2 + a3), y = -(d4 + d6), z = d1 - d5 (DH, metres)
+    assert np.allclose(s["ee_pos"], [-0.75, -0.22, 0.05]) and np.allclose(s["q"], 0) and np.allclose(s["qd"], 0)
+    assert np.isclose(np.linalg.norm(s["ee_quat"]), 1)
