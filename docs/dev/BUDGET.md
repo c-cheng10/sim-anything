@@ -71,9 +71,10 @@ Other: one `claude -p "Reply with the single word: ok"` auth smoke test in the i
 
 Caps: 6 subagent spawns (max 3 at once), no `/sim-anything` end-to-end runs needed.
 
-**Running tally:** subagents 2 / 6
+**Running tally:** subagents 3 / 6 (487k tokens)
 
 | # | Purpose | Outcome | Tokens |
 |---|---|---|---|
-| 1 | controller (`simanything/control.py`: IK, joint control) + MCP server + `serve` CLI + examples/use_model.py | running | |
-| 2 | `import-urdf`: official URDF import with collision simplification (primitives / hull / coacd) | running | |
+| 1 | controller (`simanything/control.py`: IK, joint control) + MCP server + `serve` CLI + examples/use_model.py | done: 11 commits merged; IK 1e-6 m on 200 toy poses; MCP checked over real stdio | 175k |
+| 2 | `import-urdf`: official URDF import with collision simplification (primitives / hull / coacd) | done: 8 commits merged (builder gains refactored into `servo_gains`); FK = MuJoCo's own URDF compile to 1e-9 | 184k |
+| 3 | `rollouts` exporter + Gymnasium `ReachEnv` + examples/train_reach.py | done: 7 commits merged; check_env passes; IK expert solves the env | 129k |
