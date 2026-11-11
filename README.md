@@ -361,7 +361,9 @@ yaw), which RESULTS.md lists per robot.
 
 ## Roadmap
 
-* Mesh import from manufacturer STEP/STL downloads where licences allow.
+* STEP (CAD) import and attaching official meshes to reverse-engineered specs
+  (URDF import with simplified collision exists: see above).
+* A path planner for `move_to` (it is a straight joint-space move today).
 * Gripper and end-effector modules; parallel and closed-chain mechanisms.
 * Dynamics identification hooks (fit masses/friction to logged data).
 * More benchmark robots and a measured-hardware reference.
@@ -370,10 +372,11 @@ yaw), which RESULTS.md lists per robot.
 
 ```
 simanything/   spec.py builder.py check/ evaluate.py render.py report.py loop.py cli.py
+               control.py mcp_server.py rollout.py gym_env.py urdf_import.py
 plugin/        Claude Code plugin: skill, 4 agents, /sim-anything and /sim-anything-audit
 benchmark/     robots.yaml, inputs/<robot>/, runs/<robot>/<round>/, RESULTS.md
 gallery/       static gallery site
-examples/      fictional example specs
+examples/      fictional example specs, use_model.py, train_reach.py
 docs/          CONTRACTS.md, spec.schema.json, dev/ (build logs)
 ```
 
