@@ -21,6 +21,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+mcp = ["mcp>=2"]
+rl = ["gymnasium>=1"]
+mesh = ["trimesh>=4", "pycollada>=0.7", "coacd>=1"]
 
 [project.scripts]
 sim-anything = "simanything.cli:main"
