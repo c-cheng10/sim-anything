@@ -94,3 +94,16 @@ def test_ik_from_given_start(model_path):
     mujoco.mj_kinematics(arm.model, d)
     q, perr, rerr = arm.ik(*arm._ee(d), q0=q0)
     assert np.allclose(q, q0) and perr < 1e-9 and rerr < 1e-9
+
+
+def test_move_to_reaches_target(model_path):
+    arm = Arm(model_path)
+    for pos, quat in _random_targets(arm, 5, seed=1, collision_free=True):
+        arm.reset()
+        perr, rerr = arm.move_to(pos, quat)
+        assert perr < 0.01 and rerr < 0.05  # measured <= 4 mm / 0.03 rad lag at the end of the 2 s move
+        arm.step(250)  # settle 0.5 s
+        s = arm.state()
+        # measured <= 3 um settled over 50 targets (gravity feedforward); 1 mm still fails any sag
+        assert np.linalg.norm(np.array(s["ee_pos"]) - pos) < 1e-3
+        assert np.linalg.norm(s["qd"]) < 1e-2

@@ -119,6 +119,23 @@ class Arm:
             q = np.clip(q + dq, self.lower, self.upper)
         return q, float(np.linalg.norm(err)), float(np.linalg.norm(err_rot))
 
+    def move_to(self, target_pos, target_quat=None, duration: float = 2.0) -> tuple[float, float]:
+        """IK, then a minimum-jerk joint-space move from the current pose through the actuators.
+
+        Steps the simulation for ``duration`` seconds; returns the final EE (position [m], orientation [rad])
+        error, the orientation error being 0 when ``target_quat`` is None.
+        """
+        q1, _, _ = self.ik(target_pos, target_quat)
+        q0 = self.data.qpos[self.qadr].copy()
+        n = max(1, round(duration / self.model.opt.timestep))
+        for i in range(1, n + 1):
+            s = i / n
+            self.set_targets(q0 + (q1 - q0) * s**3 * (10 - 15 * s + 6 * s**2))
+            self.step()
+        pos, quat = self._ee(self.data)
+        rot = 0.0 if target_quat is None else float(np.linalg.norm(_rot_err(quat, target_quat)))
+        return float(np.linalg.norm(np.asarray(target_pos, dtype=float) - pos)), rot
+
 
 def _rot_err(quat: np.ndarray, target_quat) -> np.ndarray:
     """World-frame rotation vector taking orientation ``quat`` to ``target_quat`` (both w, x, y, z)."""
