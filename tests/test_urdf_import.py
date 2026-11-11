@@ -151,3 +151,12 @@ def test_dae_in_millimetres_is_converted_to_metres(tmp_path):
                     '</collision></link></robot>')
     _prepare_urdf(urdf, tmp_path / "m", None)
     assert trimesh.load(tmp_path / "m" / "cube.stl").extents == pytest.approx([0.1, 0.1, 0.1])
+
+
+def test_mimic_joints_are_rejected_not_dropped(arm, tmp_path):
+    # MuJoCo's URDF importer ignores <mimic>; a gripper finger would then move on its own
+    text = arm.read_text().replace('<child link="link3"/>', '<child link="link3"/><mimic joint="j2"/>')
+    assert "<mimic" in text
+    arm.write_text(text)
+    with pytest.raises(ValueError, match="mimic"):
+        import_urdf(arm, tmp_path / "out" / "m.xml", package_root=tmp_path / "pkgs")

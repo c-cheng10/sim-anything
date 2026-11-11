@@ -30,6 +30,10 @@ def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> s
     import trimesh
 
     root = ET.parse(urdf).getroot()
+    mimic = [j.get("name") for j in root.iter("joint") if j.find("mimic") is not None]
+    if mimic:  # MuJoCo's importer drops <mimic>: the joint would move on its own
+        raise ValueError(f"mimic joint(s) {', '.join(mimic)} are not supported (e.g. coupled gripper fingers); "
+                         "remove them or the links they drive from the URDF")
     mesh_dir.mkdir(parents=True, exist_ok=True)
     names: dict[Path, str] = {}
     for el in root.iter("mesh"):
