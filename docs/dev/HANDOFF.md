@@ -4,6 +4,13 @@ Final state of the autonomous build (internal development log). Resume from this
 
 ## State
 
+## Session 4 (0.4.0, done)
+- Built with three builder subagents in worktrees (cherry-picked, one commit per function/part) plus one reviewer: `simanything/control.py` (`Arm`: state, targets, DLS IK, `move_to`, `collides`, render), `simanything/mcp_server.py` + `sim-anything serve`, `simanything/rollout.py` + `sim-anything rollouts`, `simanything/gym_env.py` (`ReachEnv`), `simanything/urdf_import.py` + `sim-anything import-urdf` (builder gains shared via `builder.servo_gains`). Extras `mcp`, `rl`, `mesh`; CI installs them.
+- Verified by running: full suite; examples/use_model.py (0.09 mm after move_to); examples/train_reach.py (IK expert solves every episode); README commands; MCP over real stdio (builder); a public UR5 URDF (example-robot-data, scratchpad only, not committed): all collision modes pass 15/15 model checks, hull/primitives import in ~1.4 s, coacd ~3 min; IK exact; `move_to` reached 25/30 random targets with hull, 1/30 with primitives (capsules 1.4-2.6x mesh volume) -> hull made the default.
+- Reviewer findings (6) all fixed with failing-first tests.
+- Not done / limits: `move_to` has no path planner (a 3-candidate route search gave no gain on the UR5 sample and was reverted); primitives mode has no grandparent/grandchild exclusions; rollout frames have a black background and the arm fills ~1/3 of the frame; no xacro/STEP import; mimic joints rejected, not supported; .dae import tested on synthetic files + the UR5 visuals.
+- Next step: a sampling path planner for `move_to` (or via-points from rollouts' `random_path`), grippers + a table/object scene for manipulation rollouts, LeRobot-format export if users ask.
+
 ## Session 3 (0.3.0, done; stopped at the cost soft cap)
 - Done: ponytail audit (no must-fix bugs); P0.1 GitHub install verified (pip git+ 15.6 s; marketplace `c-cheng10/sim-anything`; real `/sim-anything UR3e`: 416 s, $2.31, passes, auditor "ready with caveats"); P0.2 `tests/test_plugin.py`; P0.3 known-bugs list re-checked (below); P1.4 `drawing` field + check; P1.5 scout guidance; P1.7 `kinematics_score` + `disagreements`, all rounds re-scored; P1.6 trimmed to one blind team run each for Kinova (13.1 mm) and ViperX (107.2 mm, EE at the table's tool point) in benchmark/runs/<id>/team1/, reported in RESULTS "Team variance"; version 0.3.0 everywhere.
 - Not done: P1.6 full 12-run variance (budget: 5/8 runs, $12.11/$15 used; two runs lost to the account usage limit); P2 (URDF export, examples/use_model.py, 3D viewer) skipped because caps passed 50%.
