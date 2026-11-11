@@ -53,7 +53,10 @@ def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> s
             if out_ext == ext:
                 shutil.copyfile(src, mesh_dir / names[src])
             else:
-                trimesh.load(src, force="mesh").export(mesh_dir / names[src])
+                mesh = trimesh.load(src, force="mesh")
+                if mesh.units:  # e.g. a .dae in millimetres: trimesh records the unit but keeps the numbers
+                    mesh.convert_units("meters")
+                mesh.export(mesh_dir / names[src])
         el.set("filename", names[src])
     mj = root.find("mujoco")
     if mj is None:

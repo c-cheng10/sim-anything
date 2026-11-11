@@ -139,3 +139,15 @@ def test_cli_exit_codes(arm, tmp_path):
     (arm.parent.parent / "meshes" / "link2.obj").unlink()
     res = CliRunner().invoke(app, args)
     assert res.exit_code == 1 and "mesh '../meshes/link2.obj' not found" in res.output
+
+
+def test_dae_in_millimetres_is_converted_to_metres(tmp_path):
+    pytest.importorskip("collada")
+    txt = trimesh.exchange.dae.export_collada(trimesh.creation.box((100, 100, 100)))  # a 100 mm cube
+    txt = txt.decode() if isinstance(txt, bytes) else txt
+    (tmp_path / "cube.dae").write_text(txt.replace("<asset>", '<asset><unit meter="0.001" name="millimeter"/>', 1))
+    urdf = tmp_path / "r.urdf"
+    urdf.write_text('<robot name="r"><link name="a"><collision><geometry><mesh filename="cube.dae"/></geometry>'
+                    '</collision></link></robot>')
+    _prepare_urdf(urdf, tmp_path / "m", None)
+    assert trimesh.load(tmp_path / "m" / "cube.stl").extents == pytest.approx([0.1, 0.1, 0.1])
