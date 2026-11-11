@@ -30,3 +30,13 @@ def random_path(arm: Arm, rng: np.random.Generator, q0, n: int) -> np.ndarray:
         else:
             return path
     raise RuntimeError(f"no collision-free random target in {TRIES} tries")
+
+
+def camera(arm: Arm) -> mujoco.MjvCamera:
+    """A fixed free camera above the base, back by about twice the model's extent so the swinging arm stays in view."""
+    cam = mujoco.MjvCamera()
+    cam.lookat[:] = arm.model.body_pos[1]
+    cam.lookat[2] = arm.model.stat.center[2]
+    cam.distance = 2.2 * arm.model.stat.extent
+    cam.azimuth, cam.elevation = 135.0, -25.0
+    return cam
