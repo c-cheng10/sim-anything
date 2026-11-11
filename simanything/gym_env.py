@@ -9,7 +9,7 @@ import mujoco
 import numpy as np
 
 from .control import Arm
-from .rollout import FPS, random_path
+from .rollout import FPS, SIZE, camera, random_path
 
 MAX_DELTA = 0.05  # joint-target change per step at |action| = 1, rad (or m); 2.5 rad/s at 50 steps/s
 SUCCESS = 0.01  # m; EE-to-target distance that ends the episode
@@ -27,14 +27,17 @@ class ReachEnv(gym.Env):
     ``env.targets`` holds the current joint targets, ``env.target`` the target position, ``env.arm`` the Arm.
     """
 
-    def __init__(self, model_path: str | Path, max_steps: int = 200,
+    metadata = {"render_modes": ["rgb_array"], "render_fps": FPS}
+
+    def __init__(self, model_path: str | Path, max_steps: int = 200, render_mode: str | None = None,
                  ee_site: str = "ee_site"):
         self.arm = Arm(model_path, ee_site)
         n = len(self.arm.joints)
         self.action_space = gym.spaces.Box(-1.0, 1.0, (n,), np.float32)
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (2 * n + 6,), np.float64)
-        self.max_steps = max_steps
+        self.max_steps, self.render_mode = max_steps, render_mode
         self._sub = max(1, round(1 / (FPS * self.arm.model.opt.timestep)))
+        self._renderer = None
 
     def _obs(self) -> np.ndarray:
         s = self.arm.state()
@@ -62,3 +65,16 @@ class ReachEnv(gym.Env):
         success = dist < SUCCESS
         return (self._obs(), -dist + BONUS * success, success, self._t >= self.max_steps,
                 {"distance": dist, "is_success": success})
+
+    def render(self):
+        if self.render_mode != "rgb_array":
+            return None
+        if self._renderer is None:  # headless, MuJoCo needs MUJOCO_GL set before it is imported
+            self._renderer = mujoco.Renderer(self.arm.model, SIZE, SIZE)
+        self._renderer.update_scene(self.arm.data, camera(self.arm))
+        return self._renderer.render()
+
+    def close(self):
+        if self._renderer is not None:
+            self._renderer.close()
+            self._renderer = None

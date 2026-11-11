@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -48,3 +50,13 @@ def test_ik_driven_actions_reach_the_target(model_path):
                 break
         assert terminated and info["is_success"] and info["distance"] < 0.01 and rewards[-1] > rewards[0] + 0.5
 
+
+def test_render_rgb_array(model_path):
+    from simanything import render
+
+    if render.detect_backend() != "mujoco":
+        pytest.skip("no offscreen MuJoCo GL renderer available")
+    # a child process: MUJOCO_GL must be set before mujoco is imported
+    code = (f"from simanything.gym_env import ReachEnv; e = ReachEnv({str(model_path)!r}, render_mode='rgb_array'); "
+            "e.reset(seed=0); f = e.render(); e.close(); assert f.shape == (128, 128, 3) and f.any()")
+    subprocess.run([sys.executable, "-c", code], env=render._child_env(render._gl_cache or ""), check=True, timeout=120)
