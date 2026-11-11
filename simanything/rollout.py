@@ -28,12 +28,7 @@ def random_path(arm: Arm, rng: np.random.Generator, q0, n: int) -> np.ndarray:
     s = s**3 * (10 - 15 * s + 6 * s**2)
     for _ in range(TRIES):
         path = q0 + (rng.uniform(lo, hi) - q0) * s
-        for q in path:
-            d.qpos[arm.qadr] = q
-            mujoco.mj_fwdPosition(arm.model, d)
-            if d.ncon:
-                break
-        else:
+        if not any(arm.collides(q, d) for q in path):
             return path
     raise RuntimeError(f"no collision-free random target in {TRIES} tries")
 

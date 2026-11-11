@@ -87,15 +87,21 @@ class Arm:
         best, best_key = None, None
         for _ in range(1 + RESTARTS):
             res = self._dls(d, q, np.asarray(target_pos, dtype=float), target_quat, tol, max_iter, damping)
-            mujoco.mj_fwdPosition(self.model, d)  # contacts at the solution
-            solved = res[1] < tol and res[2] < tol
-            key = (not solved, d.ncon > 0, res[1] + res[2])
+            solved, hit = res[1] < tol and res[2] < tol, self.collides(res[0], d)
+            key = (not solved, hit, res[1] + res[2])
             if best is None or key < best_key:
                 best, best_key = res, key
-            if solved and d.ncon == 0:
+            if solved and not hit:
                 break
             q = rng.uniform(lo, hi)
         return best
+
+    def collides(self, q, d: mujoco.MjData | None = None) -> bool:
+        """True if joint configuration ``q`` has any contact (checked on scratch data ``d``, not the live sim)."""
+        d = mujoco.MjData(self.model) if d is None else d
+        d.qpos[self.qadr] = q
+        mujoco.mj_fwdPosition(self.model, d)
+        return d.ncon > 0
 
     def _dls(self, d, q, target_pos, target_quat, tol, max_iter, damping):
         """One DLS run from ``q``; leaves ``d`` at the returned configuration."""

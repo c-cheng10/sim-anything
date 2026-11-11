@@ -121,3 +121,20 @@ def test_render_writes_png(model_path, tmp_path):
     code = f"from simanything.control import Arm; Arm({str(model_path)!r}).render({str(out)!r})"
     subprocess.run([sys.executable, "-c", code], env=render._child_env(render._gl_cache or ""), check=True, timeout=120)
     assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+def test_collides_matches_contacts_without_touching_the_sim(model_path):
+    arm = Arm(model_path)
+    live = arm.data.qpos.copy()
+    assert not arm.collides(arm.data.qpos[arm.qadr])
+    rng = np.random.default_rng(0)
+    seen = set()
+    for _ in range(100):
+        q = rng.uniform(np.maximum(arm.lower, -np.pi), np.minimum(arm.upper, np.pi))
+        d = mujoco.MjData(arm.model)
+        d.qpos[arm.qadr] = q
+        mujoco.mj_fwdPosition(arm.model, d)
+        assert arm.collides(q) == (d.ncon > 0)
+        seen.add(d.ncon > 0)
+    assert seen == {True, False}  # the sample covers both cases
+    assert np.array_equal(arm.data.qpos, live)
