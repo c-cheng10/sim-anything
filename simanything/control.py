@@ -62,3 +62,7 @@ class Arm:
         q = np.clip(np.asarray(q, dtype=float), self.lower, self.upper)
         self.data.ctrl[self.act] = q
         return q
+
+    def step(self, n: int = 1) -> None:
+        """Advance the simulation ``n`` timesteps."""
+        mujoco.mj_step(self.model, self.data, nstep=n)

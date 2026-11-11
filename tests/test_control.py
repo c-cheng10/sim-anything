@@ -48,3 +48,10 @@ def test_set_targets_clips_to_limits(model_path):
     arm = Arm(model_path)
     got = arm.set_targets([0.1, 0.2, 4.0, -7.0, 0.0, 0.0])
     assert np.allclose(got, [0.1, 0.2, math.pi, -2 * math.pi, 0, 0]) and np.allclose(arm.data.ctrl[arm.act], got)
+
+
+def test_step_tracks_targets(model_path):
+    arm = Arm(model_path)
+    q = arm.set_targets([0.5, -0.4, 0.8, 0.3, -0.6, 0.2])
+    arm.step(1000)  # 2 s
+    assert np.isclose(arm.data.time, 2.0) and np.abs(arm.data.qpos[arm.qadr] - q).max() < 1e-3
