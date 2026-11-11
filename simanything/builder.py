@@ -657,31 +657,34 @@ def _shallow_joint_excludes(model, bodies: list[BodyPlan], si: Spec, already: se
     return out
 
 
-def _gains(model, si: Spec, dyn: _Dyn) -> None:
+def servo_gains(model, home: list[float], types: list[str], efforts: list[Optional[float]],
+                armature: list[float]) -> tuple[list[float], list[float]]:
+    """(kp, kv) per joint of a serial hinge/slide ``model`` (see "Actuators" above). ``types`` are
+    "hinge"/"slide", ``efforts`` the effort limits (or None); ``armature`` is raised in place where kp
+    would be too stiff for the time step."""
     import mujoco
 
     data = mujoco.MjData(model)
-    data.qpos[:] = [j.home for j in si.joints]
+    data.qpos[:] = home
     mujoco.mj_forward(model, data)
     g = np.array(data.qfrc_bias)
     Mdiag = np.array([data.qM[model.dof_Madr[i]] for i in range(model.nv)])
     kp, kv = [], []
-    for i, j in enumerate(si.joints):
-        t = j.type
+    for i, (t, effort) in enumerate(zip(types, efforts)):
         M = float(Mdiag[i])
         kp_hold = abs(g[i]) / HOLD_ERROR[t]
         kp_bw = M * WN ** 2
-        if j.effort_limit is not None:
-            kp_bw = min(kp_bw, j.effort_limit / SAT_ERROR[t])
+        if effort is not None:
+            kp_bw = min(kp_bw, effort / SAT_ERROR[t])
         k = max(kp_hold, kp_bw, 1e-3)
         cap = M * WN_MAX ** 2
         if k > cap:  # too stiff for the time step: add reflected-rotor-like armature
             extra = k / WN_MAX ** 2 - M
-            dyn.armature[i] += extra
+            armature[i] += extra
             M += extra
         kp.append(k)
         kv.append(2.0 * math.sqrt(k * M))
-    dyn.kp, dyn.kv = kp, kv
+    return kp, kv
 
 
 # --------------------------------------------------------------------------- #
@@ -707,7 +710,8 @@ def build_mjcf(spec: Spec) -> str:
     except Exception as e:  # noqa: BLE001
         raise ValueError(f"generated MJCF does not compile: {e}") from e
     excludes = excludes + _shallow_joint_excludes(model, bodies, si, {frozenset(e[:2]) for e in excludes})
-    _gains(model, si, dyn)
+    dyn.kp, dyn.kv = servo_gains(model, [j.home for j in si.joints], [j.type for j in si.joints],
+                                 [j.effort_limit for j in si.joints], dyn.armature)
     return _to_xml(spec, si, chain, bodies, dyn, excludes, notes, final=True)
 
 
@@ -721,4 +725,4 @@ def build_file(spec_path: str | Path, out_path: str | Path) -> Path:
     return out
 
 
-__all__ = ["build_mjcf", "build_file"]
+__all__ = ["build_mjcf", "build_file", "servo_gains"]
