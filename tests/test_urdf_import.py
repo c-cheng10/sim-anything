@@ -160,3 +160,12 @@ def test_mimic_joints_are_rejected_not_dropped(arm, tmp_path):
     arm.write_text(text)
     with pytest.raises(ValueError, match="mimic"):
         import_urdf(arm, tmp_path / "out" / "m.xml", package_root=tmp_path / "pkgs")
+
+
+def test_file_uri_mesh_paths_resolve(tmp_path):
+    trimesh.creation.box((0.1, 0.1, 0.1)).export(tmp_path / "c.stl")
+    urdf = tmp_path / "r.urdf"
+    urdf.write_text(f'<robot name="r"><link name="a"><collision><geometry><mesh filename="file://{tmp_path / "c.stl"}"/>'
+                    '</geometry></collision></link></robot>')
+    _prepare_urdf(urdf, tmp_path / "m", None)
+    assert (tmp_path / "m" / "c.stl").is_file()

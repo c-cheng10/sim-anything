@@ -37,7 +37,7 @@ def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> s
     mesh_dir.mkdir(parents=True, exist_ok=True)
     names: dict[Path, str] = {}
     for el in root.iter("mesh"):
-        fn = el.get("filename", "")
+        fn = el.get("filename", "").removeprefix("file://")  # xacro output often uses file:///abs/path
         if fn.startswith("package://"):
             if package_root is None:
                 raise ValueError(f"mesh '{fn}' uses package:// but no --package-root was given")
