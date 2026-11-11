@@ -1,10 +1,11 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 trimesh = pytest.importorskip("trimesh")
 
-from simanything.urdf_import import _prepare_urdf  # noqa: E402
+from simanything.urdf_import import _prepare_urdf, fit_primitive  # noqa: E402
 
 _INERTIA = '<inertia ixx="{i}" iyy="{i}" izz="{iz}" ixy="0" ixz="0" iyz="0"/>'
 
@@ -58,3 +59,19 @@ def test_prepare_resolves_package_and_relative_paths_and_converts(arm, tmp_path)
     assert "package://" not in text and 'discardvisual="false"' in text
     with pytest.raises(ValueError, match="package-root"):
         _prepare_urdf(arm, mesh_dir, None)
+
+
+def test_fit_capsule_to_cylinder_and_box_to_box():
+    T = trimesh.transformations.random_rotation_matrix(np.random.default_rng(0).random(3))
+    T[:3, 3] = [0.1, -0.2, 0.3]
+    cyl = trimesh.creation.cylinder(0.05, 0.4, sections=64).apply_transform(T)
+    g = fit_primitive(np.asarray(cyl.vertices))
+    seg = g["fromto"][3:] - g["fromto"][:3]
+    r = g["size"][0]
+    assert g["type"].name == "mjGEOM_CAPSULE"
+    assert r == pytest.approx(0.05, rel=0.02)
+    assert np.linalg.norm(seg) + 2 * r == pytest.approx(0.4, rel=0.02)
+    assert abs(seg @ T[:3, 2]) / np.linalg.norm(seg) == pytest.approx(1, abs=1e-6)
+    assert (g["fromto"][:3] + g["fromto"][3:]) / 2 == pytest.approx(T[:3, 3], abs=1e-9)
+    g = fit_primitive(np.asarray(trimesh.creation.box([0.06, 0.04, 0.15]).vertices))
+    assert g["type"].name == "mjGEOM_BOX" and sorted(g["size"]) == pytest.approx([0.02, 0.03, 0.075])

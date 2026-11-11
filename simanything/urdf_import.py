@@ -12,7 +12,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
+
+from .spec import mat_to_quat
+
 MUJOCO_MESH_SUFFIXES = (".stl", ".obj")  # what MuJoCo 3.3 loads; anything else is converted to .stl
+BOX_PREFERENCE = 0.8  # a box replaces the capsule only when its volume is below this share of the capsule's
+MIN_SIZE = 1e-4       # m; keeps flat or point-like meshes valid primitives
 
 
 def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> str:
@@ -55,3 +61,27 @@ def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> s
     comp.set("meshdir", str(mesh_dir.resolve()))
     comp.set("discardvisual", "false")
     return ET.tostring(root, encoding="unicode")
+
+
+def fit_primitive(verts: np.ndarray) -> dict:
+    """A capsule bounding ``verts`` (n x 3, link frame), or an oriented box when that is clearly smaller,
+    as MjSpec geom attributes. The capsule axis is the principal axis through the mesh's bounding-box
+    centre, its radius the largest vertex distance from that axis and its total length the mesh's extent
+    along it."""
+    import mujoco
+
+    c = verts.mean(axis=0)
+    R = np.linalg.eigh(np.cov((verts - c).T))[1][:, ::-1]  # principal axes, largest variance first
+    if np.linalg.det(R) < 0:
+        R[:, 2] *= -1
+    local = (verts - c) @ R
+    lo, hi = local.min(axis=0), local.max(axis=0)
+    mid_local = (lo + hi) / 2
+    mid = c + R @ mid_local
+    half = np.maximum((hi - lo) / 2, MIN_SIZE)
+    r = max(float(np.max(np.linalg.norm(local[:, 1:] - mid_local[1:], axis=1))), MIN_SIZE)
+    h = max(half[0] - r, MIN_SIZE)
+    if 8 * np.prod(half) < BOX_PREFERENCE * (np.pi * r ** 2 * 2 * h + 4 / 3 * np.pi * r ** 3):
+        return {"type": mujoco.mjtGeom.mjGEOM_BOX, "pos": mid, "quat": mat_to_quat(R), "size": half}
+    a = R[:, 0] * h
+    return {"type": mujoco.mjtGeom.mjGEOM_CAPSULE, "fromto": np.concatenate([mid - a, mid + a]), "size": [r, 0, 0]}
