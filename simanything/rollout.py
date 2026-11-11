@@ -53,6 +53,8 @@ def record(model_path: str | Path, out_dir: str | Path, episodes: int = 10, step
     ``SIZE``x``SIZE`` RGB ``image`` (headless, MuJoCo needs ``MUJOCO_GL`` set before it is imported).
     Deterministic for a given seed. Returns the meta.json path.
     """
+    if episodes < 1:
+        raise ValueError(f"episodes must be >= 1, got {episodes}")
     arm, out, rng = Arm(model_path, ee_site), Path(out_dir), np.random.default_rng(seed)
     out.mkdir(parents=True, exist_ok=True)
     sub = max(1, round(1 / (FPS * arm.model.opt.timestep)))

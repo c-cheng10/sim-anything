@@ -71,3 +71,8 @@ def test_cli_records_images_only_with_the_flag(model_path, tmp_path):
     img = np.load(tmp_path / "img" / "episode_000.npz")["image"]
     assert img.shape == (3, 128, 128, 3) and img.dtype == np.uint8 and img.any()
     assert json.loads((tmp_path / "img" / "meta.json").read_text())["arrays"]["image"]["shape"] == [3, 128, 128, 3]
+
+
+def test_zero_episodes_is_a_clear_error(model_path, tmp_path):
+    with pytest.raises(ValueError, match="episodes"):
+        record(model_path, tmp_path, episodes=0)
