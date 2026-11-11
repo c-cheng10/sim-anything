@@ -125,3 +125,17 @@ def test_coacd_gives_convex_pieces_per_link(arm, tmp_path):
     colliding = [g for g in range(m.ngeom) if m.geom_contype[g]]
     assert all("_cvx" in m.mesh(int(m.geom_dataid[g])).name for g in colliding)
     assert {m.body(int(m.geom_bodyid[g])).name for g in colliding} == {"world", "link1", "link2", "link3"}
+
+
+def test_cli_exit_codes(arm, tmp_path):
+    from typer.testing import CliRunner
+
+    from simanything.cli import app
+
+    out = tmp_path / "cli" / "model.xml"
+    args = ["import-urdf", str(arm), "-o", str(out), "--package-root", str(tmp_path / "pkgs")]
+    res = CliRunner().invoke(app, args)
+    assert res.exit_code == 0 and out.is_file()
+    (arm.parent.parent / "meshes" / "link2.obj").unlink()
+    res = CliRunner().invoke(app, args)
+    assert res.exit_code == 1 and "mesh '../meshes/link2.obj' not found" in res.output

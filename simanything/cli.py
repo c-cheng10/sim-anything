@@ -58,6 +58,26 @@ def build(spec: Path = typer.Argument(..., exists=True, dir_okay=False, help="sp
     typer.echo(str(out))
 
 
+@app.command("import-urdf")
+def import_urdf_cmd(urdf: Path = typer.Argument(..., exists=True, dir_okay=False, help="robot.urdf"),
+                    output: Path = typer.Option(..., "-o", "--output", help="MJCF file to write"),
+                    collision: str = typer.Option("primitives", "--collision", help="primitives | hull | coacd"),
+                    ee_link: Optional[str] = typer.Option(None, "--ee-link",
+                                                          help="link carrying the EE site (default: the last link)"),
+                    package_root: Optional[Path] = typer.Option(None, "--package-root", file_okay=False,
+                                                                help="folder holding the packages of package:// paths")
+                    ) -> None:
+    """Import an official URDF into MJCF with simplified collision, position servos, a home keyframe and an EE site."""
+    from .urdf_import import import_urdf
+
+    try:
+        out = import_urdf(urdf, output, collision=collision, ee_link=ee_link, package_root=package_root)
+    except Exception as e:  # noqa: BLE001 - a clean message instead of a traceback
+        typer.echo(f"import-urdf failed: {describe_exception(e)}", err=True)
+        raise typer.Exit(1)
+    typer.echo(str(out))
+
+
 @app.command()
 def check(model: Path = typer.Argument(..., exists=True, dir_okay=False, help="MJCF model"),
           spec: Optional[Path] = typer.Option(None, "--spec", exists=True, dir_okay=False),
