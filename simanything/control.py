@@ -56,3 +56,9 @@ class Arm:
         pos, quat = self._ee(self.data)
         return {"joints": self.joints, "q": self.data.qpos[self.qadr].tolist(), "qd": self.data.qvel[self.dadr].tolist(),
                 "ee_pos": pos.tolist(), "ee_quat": quat.tolist(), "time": self.data.time}
+
+    def set_targets(self, q) -> np.ndarray:
+        """Set joint position targets (clipped to the joint limits); returns what was set."""
+        q = np.clip(np.asarray(q, dtype=float), self.lower, self.upper)
+        self.data.ctrl[self.act] = q
+        return q
