@@ -19,7 +19,8 @@ from .spec import mat_to_quat
 MUJOCO_MESH_SUFFIXES = (".stl", ".obj")  # what MuJoCo 3.3 loads; anything else is converted to .stl
 BOX_PREFERENCE = 0.8  # a box replaces the capsule only when its volume is below this share of the capsule's
 MIN_SIZE = 1e-4       # m; keeps flat or point-like meshes valid primitives
-COLLISION_MODES = ("primitives", "hull")
+COLLISION_MODES = ("primitives", "hull", "coacd")
+COACD_MAX_PIECES = 8  # "a few" convex pieces per link
 EE_SITE = "ee_site"
 
 
@@ -114,6 +115,19 @@ def _collision_mesh(model, body: int) -> tuple[Optional[np.ndarray], Optional[np
     return (np.vstack(verts), np.vstack(faces)) if verts else (None, None)
 
 
+def _convex_pieces(verts: np.ndarray, faces: np.ndarray, mesh_dir: Path, name: str) -> list[str]:
+    """Convex decomposition of a link mesh with coacd, written as ``<name>_cvx<k>.stl`` in ``mesh_dir``."""
+    import coacd
+    import trimesh
+
+    coacd.set_log_level("error")
+    files = []
+    for k, (v, f) in enumerate(coacd.run_coacd(coacd.Mesh(verts, faces), max_convex_hull=COACD_MAX_PIECES)):
+        files.append(f"{name}_cvx{k}.stl")
+        trimesh.Trimesh(v, f).export(mesh_dir / files[-1])
+    return files
+
+
 def _full_precision(xml: str, model, meshdir: str) -> str:
     """``xml`` from MjSpec.to_xml (which rounds to 6 digits) with the body frames, joints, inertials and sites of
     ``model`` written exactly, so the kinematics match MuJoCo's own URDF import, and with ``meshdir``."""
@@ -141,9 +155,9 @@ def _full_precision(xml: str, model, meshdir: str) -> str:
 def import_urdf(urdf: str | Path, out: str | Path, collision: str = "primitives", ee_link: Optional[str] = None,
                 package_root: str | Path | None = None) -> Path:
     """Import ``urdf`` with MuJoCo's URDF importer and write a checked MJCF to ``out`` (meshes go to
-    ``<out stem>_meshes/`` next to it). ``collision``: "primitives" (one capsule or box per link) or "hull"
-    (MuJoCo's convex hull of each collision mesh). The EE site goes at ``ee_link``'s origin (default: the
-    last link)."""
+    ``<out stem>_meshes/`` next to it). ``collision``: "primitives" (one capsule or box per link), "hull"
+    (MuJoCo's convex hull of each collision mesh) or "coacd" (a few convex pieces per link). The EE site
+    goes at ``ee_link``'s origin (default: the last link)."""
     import mujoco
 
     from .builder import servo_gains
@@ -178,7 +192,12 @@ def import_urdf(urdf: str | Path, out: str | Path, collision: str = "primitives"
             for g in sb.geoms:
                 if _is_collision_mesh(g.type, g.contype, g.conaffinity):
                     g.delete()
-            sb.add_geom(**fit_primitive(verts))
+            if collision == "primitives":
+                sb.add_geom(**fit_primitive(verts))
+                continue
+            for fn in _convex_pieces(verts, faces, mesh_dir, sb.name):
+                spec.add_mesh(name=Path(fn).stem, file=fn)
+                sb.add_geom(type=mujoco.mjtGeom.mjGEOM_MESH, meshname=Path(fn).stem)
 
     # One position servo per joint with the builder's gains, holding home = zero clipped into the limits
     home = [float(np.clip(0.0, *model.jnt_range[j])) if model.jnt_limited[j] else 0.0 for j in range(model.njnt)]

@@ -117,3 +117,11 @@ def test_primitives_pass_model_checks_and_hull_keeps_meshes(arm, tmp_path):
     assert m.ngeom - len(colliding) == 4  # the visual meshes stay, without contacts
     _, m = _import(arm, tmp_path, "hull")
     assert {int(m.geom_type[g]) for g in range(m.ngeom) if m.geom_contype[g]} == {int(mujoco.mjtGeom.mjGEOM_MESH)}
+
+
+def test_coacd_gives_convex_pieces_per_link(arm, tmp_path):
+    pytest.importorskip("coacd")
+    out, m = _import(arm, tmp_path, "coacd")
+    colliding = [g for g in range(m.ngeom) if m.geom_contype[g]]
+    assert all("_cvx" in m.mesh(int(m.geom_dataid[g])).name for g in colliding)
+    assert {m.body(int(m.geom_bodyid[g])).name for g in colliding} == {"world", "link1", "link2", "link3"}
