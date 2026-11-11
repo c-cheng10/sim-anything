@@ -183,3 +183,10 @@ def test_usage_errors_exit_1_not_2(tmp_path, monkeypatch, args):
 
 def test_help_still_exits_0():
     assert _runner().invoke(app, ["loop", "--help"]).exit_code == 0
+
+
+def test_serve_unknown_ee_site_fails_cleanly(tmp_path):
+    model = tmp_path / "arm.xml"
+    assert _runner().invoke(app, ["build", str(ROOT / "examples" / "toy_6dof_dh.yaml"), "-o", str(model)]).exit_code == 0
+    res = _runner().invoke(app, ["serve", str(model), "--ee-site", "nope"])
+    assert res.exit_code == 1 and "serve failed" in res.stderr and "nope" in res.stderr

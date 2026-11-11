@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Optional
@@ -209,6 +210,25 @@ def validate(spec: Path = typer.Argument(..., exists=True, dir_okay=False)) -> N
         typer.echo(f"FAILED: {s.name}, {s.dof} DOF, " + "; ".join(problems))
         raise typer.Exit(1)
     typer.echo(f"ok: {s.name}, {s.dof} DOF, every number has a source or estimate")
+
+
+@app.command()
+def serve(model: Path = typer.Argument(..., exists=True, dir_okay=False, help="MJCF model"),
+          ee_site: str = typer.Option("ee_site", "--ee-site", help="end-effector site")) -> None:
+    """Serve the model to agents over MCP (stdio): state, joint targets, stepping, EE moves, renders."""
+    from . import render
+
+    if render.detect_backend() == "mujoco" and render._gl_cache:  # before mujoco loads, so render works headless
+        os.environ.setdefault("MUJOCO_GL", render._gl_cache)
+    try:
+        from .control import Arm
+        from .mcp_server import make_server
+
+        server = make_server(Arm(model, ee_site))
+    except Exception as e:  # noqa: BLE001 - a clean message instead of a traceback
+        typer.echo(f"serve failed: {describe_exception(e)}", err=True)
+        raise typer.Exit(1)
+    server.run()  # stdio
 
 
 def main() -> None:  # pragma: no cover
