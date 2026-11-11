@@ -34,4 +34,14 @@ class Arm:
             raise ValueError(f"no position actuator for joint(s) {', '.join(missing)}")
         self.act = np.array([act[j] for j in ids])
         self.site = m.site(ee_site).id
-        mujoco.mj_forward(m, self.data)
+        self.reset()
+
+    def reset(self) -> None:
+        """Back to the ``home`` keyframe (qpos0 if the model has none), holding that pose."""
+        key = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "home")
+        if key >= 0:
+            mujoco.mj_resetDataKeyframe(self.model, self.data, key)
+        else:
+            mujoco.mj_resetData(self.model, self.data)
+        self.data.ctrl[self.act] = self.data.qpos[self.qadr]
+        mujoco.mj_forward(self.model, self.data)

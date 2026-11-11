@@ -26,3 +26,12 @@ def test_load(model_path):
     assert [arm.model.actuator(a).name for a in arm.act] == [f"{j}_act" for j in arm.joints]
     with pytest.raises(KeyError):
         Arm(model_path, ee_site="nope")
+
+
+def test_reset_goes_home(model_path):
+    arm = Arm(model_path)
+    arm.data.qpos[:] = 0.3
+    arm.data.ctrl[:] = 0.3
+    arm.reset()
+    home = arm.model.key("home").qpos
+    assert np.allclose(arm.data.qpos, home) and np.allclose(arm.data.ctrl, home) and not arm.data.qvel.any()
