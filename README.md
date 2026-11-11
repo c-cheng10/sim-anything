@@ -224,6 +224,51 @@ with `ReachEnv("model.xml")`. `python examples/train_reach.py` runs it with a
 random policy and an IK expert (the expert reaches every target within 1 cm;
 random motion ends 0.76-0.97 m away).
 
+## Import an official URDF
+
+When the maker publishes a URDF, import it instead of reverse-engineering a spec:
+
+```bash
+pip install "sim-anything[mesh] @ git+https://github.com/c-cheng10/sim-anything"
+```
+
+```bash
+sim-anything import-urdf robot.urdf -o model.xml --package-root ~/ros_ws/src
+```
+
+```bash
+sim-anything check model.xml
+```
+
+MuJoCo's own URDF importer keeps the official kinematics, joint limits and
+inertials. sim-anything copies the meshes into `model_meshes/` next to the
+output (converting formats MuJoCo cannot read, such as .dae, to .stl), keeps
+the visual meshes as non-colliding geoms, and adds one position servo per joint
+(same gain rule as the builder), a `home` keyframe (zero, clipped into the
+limits) and an `ee_site` at `--ee-link`'s origin (default: the last link).
+`package://pkg/...` paths resolve against `--package-root/pkg/...`, relative
+paths against the URDF's folder. Plain URDF only (no xacro); fixed-base arms
+with revolute, continuous and prismatic joints.
+
+Collision geometry per link (`--collision`):
+
+* `hull` (default): MuJoCo's convex hull of each link's collision mesh.
+* `primitives`: one fitted capsule (or box) per link. Coarse: on a public UR5
+  URDF the capsules were 1.4-2.6x the mesh volume and neighbouring capsules
+  overlapped in most motions (1 of 30 random targets reachable by a straight
+  joint move, vs 25 of 30 with `hull`). Use it only for quick previews.
+* `coacd`: a few convex pieces per link (CoACD); closest to the mesh, but slow
+  (about 3 minutes for the UR5 vs 1.4 s for the other modes).
+
+Measured on the UR5 URDF from the public
+[example-robot-data](https://github.com/Gepetto/example-robot-data) repository:
+all three modes compile and pass all 15 checks, and `Arm` IK is exact on the
+imported model.
+
+Licence note: vendor URDFs and meshes stay on your machine. sim-anything reads
+them locally and never downloads or redistributes them; check the vendor's
+licence before sharing the generated `model_meshes/`.
+
 ## Results
 
 Each benchmark model was generated **blind**: the agent saw only public web

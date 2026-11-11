@@ -36,6 +36,7 @@ All commands are subcommands of the `sim-anything` console script
 | `sim-anything validate spec.yaml` | Schema validation + the source hygiene of `sources_complete` (section 4): numbers lacking a source/estimate, `sources` values that are not an http(s) URL or `doc:<relative path>`, and `sources`/`estimates` keys naming no field (each with a suggestion: `did you mean ...?` from the closest field path, or the whole vector path for a key naming one element). A key in both `sources` and `estimates` prints a `warning:` line only. Last line `ok: ...` on success, `FAILED: ...` otherwise. | 0 ok, 1 otherwise |
 | `sim-anything serve model.xml [--ee-site ee_site]` | MCP server over stdio exposing an `Arm` (tools `get_state`, `set_joint_targets`, `step`, `move_ee`, `reset`, `render`). Needs the `mcp` extra. Sets `MUJOCO_GL` to the probed offscreen backend if unset. | runs until stdin closes; 1 if the model or EE site does not load or `mcp` is missing (message on stderr) |
 | `sim-anything rollouts model.xml -o DIR [-n EPISODES=10] [--steps N=300] [--seed S=0] [--images] [--ee-site ee_site]` | Records random joint-target rollouts to `DIR/episode_XXX.npz` + `DIR/meta.json` (section 9); prints the meta.json path. Sets `MUJOCO_GL` to the probed offscreen backend if unset. | 0 ok, 1 on bad input or failure (`rollouts failed: ...` on stderr) |
+| `sim-anything import-urdf URDF -o OUT [--collision hull\|primitives\|coacd] [--ee-link LINK] [--package-root DIR]` | Import a URDF with MuJoCo's importer into a self-contained MJCF (meshes in `<OUT stem>_meshes/`), with simplified collision (default `hull`), one `<joint>_act` position servo per joint, a `home` keyframe and `ee_site`. Needs the `mesh` extra. | 0 written; 1 bad input (missing mesh, unknown link or collision mode, unsupported joint; message on stderr) |
 | `sim-anything schema [-o file]` | Print/write the spec JSON schema (`docs/spec.schema.json`). | 0 |
 
 `loop` is deliberately a single step: the FIX step is the agent reading
@@ -283,7 +284,7 @@ rounds.
 |---|---|
 | `simanything.spec` | `Spec`, `load_spec(path)`, `dump_spec(spec, path)`, `Spec.to_si()`, `Spec.chain()` / `build_chain(spec) -> Chain` (body poses in SI, DH folded in), `Chain.fk(q) -> 4x4`, `dh_to_offset`, `dh_fk`, `iter_numeric_fields`, `uncovered_fields`, `path_covers`, `is_estimate`, source hygiene helpers `bad_source_values`, `unmatched_keys`, `suggest_key`, `describe_key`, `duplicate_keys`, `json_schema()` |
 | `simanything.schemas` | `CheckResult`, `CheckReport`, `Mapping`, `EvalResult`, `History`, `IterationRecord` |
-| `simanything.builder` | `build_mjcf(spec: Spec) -> str`, `build_file(spec_path, out_path) -> Path` |
+| `simanything.builder` | `build_mjcf(spec: Spec) -> str`, `build_file(spec_path, out_path) -> Path`, `servo_gains(model, home, types, efforts, armature) -> (kp, kv)` (shared with the URDF importer) |
 | `simanything.check` | `run_checks(model_path, spec_path=None, *, seed=0, n_reach_samples=5000) -> CheckReport` |
 | `simanything.evaluate` | `load_mapping(path) -> Mapping`, `evaluate(candidate_path, reference_path, mapping, *, n_samples=2000, seed=0) -> EvalResult` |
 | `simanything.render` | `detect_backend() -> str`, `render_views(model_path, out_dir, *, width=640, height=480, backend="auto") -> dict[str, Path | str]` (keys `front`, `side`, `top`, `backend`) |
@@ -292,6 +293,7 @@ rounds.
 | `simanything.control` | `Arm(model_path, ee_site="ee_site")` with `.joints`, `.lower`, `.upper`, `reset()`, `state() -> dict`, `set_targets(q) -> ndarray`, `step(n=1)`, `collides(q) -> bool`, `ik(target_pos, target_quat=None, q0=None, tol=1e-6, max_iter=200, damping=1e-3) -> (q, pos_err_m, rot_err_rad)`, `move_to(target_pos, target_quat=None, duration=2.0) -> (pos_err_m, rot_err_rad)` (straight minimum-jerk joint move, no path planning), `render(path) -> Path`; gravity compensation is enabled in memory. `simanything.mcp_server.make_server(arm)` |
 | `simanything.rollout` | `record(model_path, out_dir, episodes=10, steps=300, seed=0, images=False, ee_site="ee_site") -> Path` (meta.json path; deterministic per seed), `random_path(arm, rng, q0, n) -> ndarray (n, dof)` (minimum-jerk path to a random in-limit target, unlimited joints within ±pi, redrawn until no point self-collides), `camera(arm) -> MjvCamera` |
 | `simanything.gym_env` | `ReachEnv(model_path, max_steps=200, render_mode=None, ee_site="ee_site")`: Gymnasium env (`rl` extra). Obs (float64, 2·dof+6): q, qd, ee_pos, target_pos. Action: [-1,1]^dof × `MAX_DELTA` (0.05 rad) added to the joint targets. Reward: −distance [m], +1 and terminated within 1 cm; truncated after `max_steps` steps of 0.02 s. `render_mode="rgb_array"`: 128×128×3 uint8 |
+| `simanything.urdf_import` | `import_urdf(urdf, out, collision="hull", ee_link=None, package_root=None) -> Path`, `fit_primitive(verts) -> dict` (capsule or box geom attributes in the link frame) |
 
 ## 7. MJCF produced by the builder
 
