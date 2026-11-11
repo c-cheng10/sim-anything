@@ -34,6 +34,7 @@ All commands are subcommands of the `sim-anything` console script
 | `sim-anything eval candidate.xml --reference ref.xml --map map.yaml --json` | Score candidate vs reference (section 5). `--samples N` (default 2000), `--seed`, `-o eval.json` also writes the file. | 0, 1 on an invalid map, a model that does not load or a mapped joint/site/body that does not exist (message on stderr) |
 | `sim-anything loop spec.yaml --run-dir runs/x --max-iter 8 [--note "what changed"] [--json]` | ONE build+check iteration, recorded in the run dir (section 3). Every new iteration (pass, fail or build failure) re-renders and rewrites the report, so they always match `check.json`. | 0 passed, 1 checks failed (agent should edit the spec and run `loop` again), 2 max iterations reached without passing, or the spec changed but the cap kept it from being built and checked |
 | `sim-anything validate spec.yaml` | Schema validation + the source hygiene of `sources_complete` (section 4): numbers lacking a source/estimate, `sources` values that are not an http(s) URL or `doc:<relative path>`, and `sources`/`estimates` keys naming no field (each with a suggestion: `did you mean ...?` from the closest field path, or the whole vector path for a key naming one element). A key in both `sources` and `estimates` prints a `warning:` line only. Last line `ok: ...` on success, `FAILED: ...` otherwise. | 0 ok, 1 otherwise |
+| `sim-anything serve model.xml [--ee-site ee_site]` | MCP server over stdio exposing an `Arm` (tools `get_state`, `set_joint_targets`, `step`, `move_ee`, `reset`, `render`). Needs the `mcp` extra. Sets `MUJOCO_GL` to the probed offscreen backend if unset. | runs until stdin closes; 1 if the model or EE site does not load or `mcp` is missing (message on stderr) |
 | `sim-anything schema [-o file]` | Print/write the spec JSON schema (`docs/spec.schema.json`). | 0 |
 
 `loop` is deliberately a single step: the FIX step is the agent reading
@@ -287,6 +288,7 @@ rounds.
 | `simanything.render` | `detect_backend() -> str`, `render_views(model_path, out_dir, *, width=640, height=480, backend="auto") -> dict[str, Path | str]` (keys `front`, `side`, `top`, `backend`) |
 | `simanything.report` | `write_report(run_dir) -> tuple[Path, Path]` |
 | `simanything.loop` | `LoopOutcome`, `loop_step(spec_path, run_dir, *, max_iter=8, note=None) -> LoopOutcome` |
+| `simanything.control` | `Arm(model_path, ee_site="ee_site")` with `.joints`, `.lower`, `.upper`, `reset()`, `state() -> dict`, `set_targets(q) -> ndarray`, `step(n=1)`, `collides(q) -> bool`, `ik(target_pos, target_quat=None, q0=None, tol=1e-6, max_iter=200, damping=1e-3) -> (q, pos_err_m, rot_err_rad)`, `move_to(target_pos, target_quat=None, duration=2.0) -> (pos_err_m, rot_err_rad)` (straight minimum-jerk joint move, no path planning), `render(path) -> Path`; gravity compensation is enabled in memory. `simanything.mcp_server.make_server(arm)` |
 
 ## 7. MJCF produced by the builder
 

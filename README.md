@@ -160,6 +160,46 @@ reproduces UR's published DH table.
 The single-agent flow did the same robot in 2 minutes for about $0.80, without
 the independent audit. Details: [plugin/README.md](plugin/README.md).
 
+## Control a model (Python or agents over MCP)
+
+`simanything.control.Arm` drives any built (or imported) model through its
+position servos:
+
+```python
+from simanything.control import Arm
+
+arm = Arm("runs/toy/model.xml")          # EE site "ee_site" by default
+arm.set_targets([0.5, -1.0, 1.2, 0, 0.6, 0]); arm.step(1000)
+print(arm.state())                       # q, qd, ee_pos, ee_quat (w, x, y, z), time
+q, pos_err, rot_err = arm.ik([-0.5, -0.2, 0.3])        # add a quaternion for a full pose
+pos_err, rot_err = arm.move_to([-0.5, -0.2, 0.3], duration=2.0)
+```
+
+IK is damped least squares on MuJoCo's site Jacobian within the joint limits,
+retrying from random starts when a start gets stuck or ends in a self-collision
+(200 random poses of the toy arm: worst error about 1e-6 m). `move_to` is a
+smooth straight move in joint space, not a path planner: only the end pose is
+checked for collisions, so the arm can get stuck on itself on the way, and the
+returned error says so (on an imported UR5 with hull collision, 25 of 30
+random reachable, collision-free targets were reached within 1 mm from home;
+for 7 of the 30 no straight joint path from home was free of self-contact, and
+the failure inspected had the upper arm resting against the base). `Arm` adds gravity compensation through the actuators, in memory only;
+the model file is unchanged. Example: `python examples/use_model.py`.
+
+To let an agent drive the arm, install the MCP extra and register the server
+as a stdio MCP server (in Claude Code: `claude mcp add arm -- sim-anything serve runs/toy/model.xml`):
+
+```bash
+pip install "sim-anything[mcp] @ git+https://github.com/c-cheng10/sim-anything"
+```
+
+```bash
+sim-anything serve runs/toy/model.xml
+```
+
+Tools: `get_state`, `set_joint_targets`, `step`, `move_ee` (IK + move),
+`reset`, `render` (returns the path of a PNG of the current state).
+
 ## Results
 
 Each benchmark model was generated **blind**: the agent saw only public web
