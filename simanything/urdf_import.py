@@ -85,3 +85,29 @@ def fit_primitive(verts: np.ndarray) -> dict:
         return {"type": mujoco.mjtGeom.mjGEOM_BOX, "pos": mid, "quat": mat_to_quat(R), "size": half}
     a = R[:, 0] * h
     return {"type": mujoco.mjtGeom.mjGEOM_CAPSULE, "fromto": np.concatenate([mid - a, mid + a]), "size": [r, 0, 0]}
+
+
+def _is_collision_mesh(geom_type, contype, conaffinity) -> bool:
+    import mujoco
+
+    return int(geom_type) == int(mujoco.mjtGeom.mjGEOM_MESH) and bool(contype or conaffinity)
+
+
+def _collision_mesh(model, body: int) -> tuple[Optional[np.ndarray], Optional[np.ndarray]]:
+    """Vertices (in the body frame) and faces of all colliding mesh geoms of ``body``, merged."""
+    import mujoco
+
+    verts, faces, n = [], [], 0
+    for g in range(model.ngeom):
+        if model.geom_bodyid[g] != body or not _is_collision_mesh(model.geom_type[g], model.geom_contype[g],
+                                                                 model.geom_conaffinity[g]):
+            continue
+        m = model.geom_dataid[g]
+        v = model.mesh_vert[model.mesh_vertadr[m]:model.mesh_vertadr[m] + model.mesh_vertnum[m]]
+        R = np.zeros(9)
+        mujoco.mju_quat2Mat(R, model.geom_quat[g])
+        verts.append(v @ R.reshape(3, 3).T + model.geom_pos[g])
+        faces.append(model.mesh_face[model.mesh_faceadr[m]:model.mesh_faceadr[m] + model.mesh_facenum[m]] + n)
+        n += len(v)
+    return (np.vstack(verts), np.vstack(faces)) if verts else (None, None)
+
