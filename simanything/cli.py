@@ -61,7 +61,7 @@ def build(spec: Path = typer.Argument(..., exists=True, dir_okay=False, help="sp
 @app.command("import-urdf")
 def import_urdf_cmd(urdf: Path = typer.Argument(..., exists=True, dir_okay=False, help="robot.urdf"),
                     output: Path = typer.Option(..., "-o", "--output", help="MJCF file to write"),
-                    collision: str = typer.Option("primitives", "--collision", help="primitives | hull | coacd"),
+                    collision: str = typer.Option("hull", "--collision", help="hull (convex hull of each link mesh) | primitives (one capsule or box per link: coarser) | coacd (convex pieces: slow)"),
                     ee_link: Optional[str] = typer.Option(None, "--ee-link",
                                                           help="link carrying the EE site (default: the last link)"),
                     package_root: Optional[Path] = typer.Option(None, "--package-root", file_okay=False,

@@ -152,7 +152,7 @@ def _full_precision(xml: str, model, meshdir: str) -> str:
     return ET.tostring(root, encoding="unicode")
 
 
-def import_urdf(urdf: str | Path, out: str | Path, collision: str = "primitives", ee_link: Optional[str] = None,
+def import_urdf(urdf: str | Path, out: str | Path, collision: str = "hull", ee_link: Optional[str] = None,
                 package_root: str | Path | None = None) -> Path:
     """Import ``urdf`` with MuJoCo's URDF importer and write a checked MJCF to ``out`` (meshes go to
     ``<out stem>_meshes/`` next to it). ``collision``: "primitives" (one capsule or box per link), "hull"
