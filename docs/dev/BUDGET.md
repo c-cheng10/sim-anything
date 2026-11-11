@@ -66,3 +66,12 @@ Caps (hard): 12 subagent spawns (max 3 at once); 8 real `/sim-anything` end-to-e
 | 5 | P1.6 `/sim-anything Trossen ViperX 300 S ...` (retry, blind, in parallel with #4) | all four agents; 15/15 checks on iteration 1, drawing dims within 1 mm; EE at the table's tool point: 107.2 mm p95 | 620 s | 2.68 |
 
 Other: one `claude -p "Reply with the single word: ok"` auth smoke test in the isolated config, $0.10.
+
+# Session 4 (overnight feature build: controller + MCP, rollouts + Gymnasium env, URDF import)
+
+Caps: 6 subagent spawns (max 3 at once), no `/sim-anything` end-to-end runs needed.
+
+**Running tally:** subagents 0 / 6
+
+| # | Purpose | Outcome | Tokens |
+|---|---|---|---|
