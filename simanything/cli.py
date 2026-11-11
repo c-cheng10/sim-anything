@@ -251,6 +251,29 @@ def serve(model: Path = typer.Argument(..., exists=True, dir_okay=False, help="M
     server.run()  # stdio
 
 
+@app.command()
+def rollouts(model: Path = typer.Argument(..., exists=True, dir_okay=False, help="MJCF model"),
+             output: Path = typer.Option(..., "-o", "--output", help="directory for episode_XXX.npz and meta.json"),
+             episodes: int = typer.Option(10, "-n", "--episodes", min=1),
+             steps: int = typer.Option(300, "--steps", min=1, help="recorded steps per episode (50 per second)"),
+             seed: int = typer.Option(0, "--seed"),
+             images: bool = typer.Option(False, "--images", help="also record 128x128 RGB frames"),
+             ee_site: str = typer.Option("ee_site", "--ee-site", help="end-effector site")) -> None:
+    """Record smooth random joint-target rollouts as episode_XXX.npz files plus meta.json."""
+    from . import render
+
+    if images and render.detect_backend() == "mujoco" and render._gl_cache:  # before mujoco loads
+        os.environ.setdefault("MUJOCO_GL", render._gl_cache)
+    try:
+        from .rollout import record
+
+        meta = record(model, output, episodes=episodes, steps=steps, seed=seed, images=images, ee_site=ee_site)
+    except Exception as e:  # noqa: BLE001 - a clean message instead of a traceback
+        typer.echo(f"rollouts failed: {describe_exception(e)}", err=True)
+        raise typer.Exit(1)
+    typer.echo(str(meta))
+
+
 def main() -> None:  # pragma: no cover
     app()
 

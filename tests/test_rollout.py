@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import mujoco
@@ -54,3 +56,18 @@ def test_record_shapes_determinism_limits_and_no_collisions(model_path, tmp_path
         assert not any(_ncon(arm, q) for q in a["qpos"])
     first, other = np.load(tmp_path / "a" / "episode_000.npz"), np.load(tmp_path / "a" / "episode_001.npz")
     assert not np.array_equal(first["action"], other["action"])
+
+
+def test_cli_records_images_only_with_the_flag(model_path, tmp_path):
+    from simanything import render
+
+    if render.detect_backend() != "mujoco":
+        pytest.skip("no offscreen MuJoCo GL renderer available")
+    cmd = [sys.executable, "-m", "simanything", "rollouts", str(model_path), "-n", "1", "--steps", "3"]
+    env = render._child_env(render._gl_cache or "")
+    subprocess.run(cmd + ["-o", str(tmp_path / "plain")], env=env, check=True, timeout=120)
+    subprocess.run(cmd + ["-o", str(tmp_path / "img"), "--images"], env=env, check=True, timeout=120)
+    assert "image" not in np.load(tmp_path / "plain" / "episode_000.npz").files
+    img = np.load(tmp_path / "img" / "episode_000.npz")["image"]
+    assert img.shape == (3, 128, 128, 3) and img.dtype == np.uint8 and img.any()
+    assert json.loads((tmp_path / "img" / "meta.json").read_text())["arrays"]["image"]["shape"] == [3, 128, 128, 3]
