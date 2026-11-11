@@ -200,6 +200,30 @@ sim-anything serve runs/toy/model.xml
 Tools: `get_state`, `set_joint_targets`, `step`, `move_ee` (IK + move),
 `reset`, `render` (returns the path of a PNG of the current state).
 
+## Rollouts and a Gymnasium environment
+
+Record smooth, self-collision-free random motion of a model as training data
+(for world models or policies):
+
+```bash
+sim-anything rollouts runs/toy/model.xml -o runs/toy/rollouts -n 20 --steps 300 --seed 0 --images
+```
+
+Each episode starts at home and moves to a new random in-limit joint target
+every 2 s along a minimum-jerk path checked for self-collision, recorded at 50
+steps/s: joint positions and velocities, EE pose, the commanded joint targets
+and, with `--images`, 128x128 RGB frames from a fixed camera. One
+`episode_XXX.npz` per episode plus `meta.json`; the same seed gives the same
+data. Format: [docs/CONTRACTS.md](docs/CONTRACTS.md) section 9.
+
+`simanything.gym_env.ReachEnv` is a Gymnasium reach task on the same model
+(`pip install "sim-anything[rl] @ git+https://github.com/c-cheng10/sim-anything"`):
+move the end effector to within 1 cm of a random reachable target; actions are
+joint-target changes. Nothing is registered with Gymnasium; create it directly
+with `ReachEnv("model.xml")`. `python examples/train_reach.py` runs it with a
+random policy and an IK expert (the expert reaches every target within 1 cm;
+random motion ends 0.76-0.97 m away).
+
 ## Results
 
 Each benchmark model was generated **blind**: the agent saw only public web

@@ -35,6 +35,7 @@ All commands are subcommands of the `sim-anything` console script
 | `sim-anything loop spec.yaml --run-dir runs/x --max-iter 8 [--note "what changed"] [--json]` | ONE build+check iteration, recorded in the run dir (section 3). Every new iteration (pass, fail or build failure) re-renders and rewrites the report, so they always match `check.json`. | 0 passed, 1 checks failed (agent should edit the spec and run `loop` again), 2 max iterations reached without passing, or the spec changed but the cap kept it from being built and checked |
 | `sim-anything validate spec.yaml` | Schema validation + the source hygiene of `sources_complete` (section 4): numbers lacking a source/estimate, `sources` values that are not an http(s) URL or `doc:<relative path>`, and `sources`/`estimates` keys naming no field (each with a suggestion: `did you mean ...?` from the closest field path, or the whole vector path for a key naming one element). A key in both `sources` and `estimates` prints a `warning:` line only. Last line `ok: ...` on success, `FAILED: ...` otherwise. | 0 ok, 1 otherwise |
 | `sim-anything serve model.xml [--ee-site ee_site]` | MCP server over stdio exposing an `Arm` (tools `get_state`, `set_joint_targets`, `step`, `move_ee`, `reset`, `render`). Needs the `mcp` extra. Sets `MUJOCO_GL` to the probed offscreen backend if unset. | runs until stdin closes; 1 if the model or EE site does not load or `mcp` is missing (message on stderr) |
+| `sim-anything rollouts model.xml -o DIR [-n EPISODES=10] [--steps N=300] [--seed S=0] [--images] [--ee-site ee_site]` | Records random joint-target rollouts to `DIR/episode_XXX.npz` + `DIR/meta.json` (section 9); prints the meta.json path. Sets `MUJOCO_GL` to the probed offscreen backend if unset. | 0 ok, 1 on bad input or failure (`rollouts failed: ...` on stderr) |
 | `sim-anything schema [-o file]` | Print/write the spec JSON schema (`docs/spec.schema.json`). | 0 |
 
 `loop` is deliberately a single step: the FIX step is the agent reading
@@ -289,6 +290,8 @@ rounds.
 | `simanything.report` | `write_report(run_dir) -> tuple[Path, Path]` |
 | `simanything.loop` | `LoopOutcome`, `loop_step(spec_path, run_dir, *, max_iter=8, note=None) -> LoopOutcome` |
 | `simanything.control` | `Arm(model_path, ee_site="ee_site")` with `.joints`, `.lower`, `.upper`, `reset()`, `state() -> dict`, `set_targets(q) -> ndarray`, `step(n=1)`, `collides(q) -> bool`, `ik(target_pos, target_quat=None, q0=None, tol=1e-6, max_iter=200, damping=1e-3) -> (q, pos_err_m, rot_err_rad)`, `move_to(target_pos, target_quat=None, duration=2.0) -> (pos_err_m, rot_err_rad)` (straight minimum-jerk joint move, no path planning), `render(path) -> Path`; gravity compensation is enabled in memory. `simanything.mcp_server.make_server(arm)` |
+| `simanything.rollout` | `record(model_path, out_dir, episodes=10, steps=300, seed=0, images=False, ee_site="ee_site") -> Path` (meta.json path; deterministic per seed), `random_path(arm, rng, q0, n) -> ndarray (n, dof)` (minimum-jerk path to a random in-limit target, unlimited joints within ±pi, redrawn until no point self-collides), `camera(arm) -> MjvCamera` |
+| `simanything.gym_env` | `ReachEnv(model_path, max_steps=200, render_mode=None, ee_site="ee_site")`: Gymnasium env (`rl` extra). Obs (float64, 2·dof+6): q, qd, ee_pos, target_pos. Action: [-1,1]^dof × `MAX_DELTA` (0.05 rad) added to the joint targets. Reward: −distance [m], +1 and terminated within 1 cm; truncated after `max_steps` steps of 0.02 s. `render_mode="rgb_array"`: 128×128×3 uint8 |
 
 ## 7. MJCF produced by the builder
 
@@ -336,3 +339,21 @@ benchmark/RESULTS.md
 Blindness: agents that write specs never read `third_party/`, Menagerie, URDF/MJCF/SDF/xacro
 robot-description files, or any eval output. Fixes to the tool are generic: no robot-specific
 code or constants.
+
+## 9. Rollout format (`sim-anything rollouts`)
+
+`episode_XXX.npz` (XXX = 000, 001, ...), T = `--steps` rows recorded at `fps` (50/s). Row t is the state before step t
+and the targets commanded for it:
+
+| key | shape | dtype | meaning |
+|---|---|---|---|
+| `qpos` | (T, dof) | float64 | joint positions (rad or m) |
+| `qvel` | (T, dof) | float64 | joint velocities |
+| `ee_pos` | (T, 3) | float64 | EE site position (m, world) |
+| `ee_quat` | (T, 4) | float64 | EE site orientation (w, x, y, z) |
+| `action` | (T, dof) | float64 | commanded joint position targets, within the joint limits |
+| `image` | (T, 128, 128, 3) | uint8 | RGB frame from a fixed camera; only with `--images` |
+
+`meta.json`: `model` (absolute path), `joints` (names, in column order), `lower` / `upper` (joint limits; `null` =
+unlimited), `timestep` (physics step, s), `fps`, `episodes`, `seed`, `arrays` (`{key: {"shape": [...], "dtype": "..."}}`
+for one episode).
