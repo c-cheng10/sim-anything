@@ -1,3 +1,4 @@
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -5,7 +6,10 @@ import pytest
 
 trimesh = pytest.importorskip("trimesh")
 
-from simanything.urdf_import import _prepare_urdf, fit_primitive  # noqa: E402
+import mujoco  # noqa: E402
+
+from simanything.check import run_checks  # noqa: E402
+from simanything.urdf_import import _prepare_urdf, fit_primitive, import_urdf  # noqa: E402
 
 _INERTIA = '<inertia ixx="{i}" iyy="{i}" izz="{iz}" ixy="0" ixz="0" iyz="0"/>'
 
@@ -75,3 +79,41 @@ def test_fit_capsule_to_cylinder_and_box_to_box():
     assert (g["fromto"][:3] + g["fromto"][3:]) / 2 == pytest.approx(T[:3, 3], abs=1e-9)
     g = fit_primitive(np.asarray(trimesh.creation.box([0.06, 0.04, 0.15]).vertices))
     assert g["type"].name == "mjGEOM_BOX" and sorted(g["size"]) == pytest.approx([0.02, 0.03, 0.075])
+
+
+def _import(arm, tmp_path, collision="primitives"):
+    out = import_urdf(arm, tmp_path / "out" / "model.xml", collision=collision, package_root=tmp_path / "pkgs")
+    return out, mujoco.MjModel.from_xml_path(str(out))
+
+
+def test_import_keeps_urdf_kinematics_exactly(arm, tmp_path):
+    out, m = _import(arm, tmp_path)
+    root = ET.parse(arm).getroot()  # MuJoCo's direct URDF compile, meshes stripped (inertials are explicit)
+    for link in root.iter("link"):
+        for el in link.findall("visual") + link.findall("collision"):
+            link.remove(el)
+    ref = mujoco.MjModel.from_xml_string(ET.tostring(root, encoding="unicode"))
+    d, dr = mujoco.MjData(m), mujoco.MjData(ref)
+    rng = np.random.default_rng(1)
+    for _ in range(20):
+        d.qpos[:] = dr.qpos[:] = rng.uniform(ref.jnt_range[:, 0], ref.jnt_range[:, 1])
+        mujoco.mj_kinematics(m, d)
+        mujoco.mj_kinematics(ref, dr)
+        for b in range(1, ref.nbody):
+            i = m.body(ref.body(b).name).id
+            assert np.abs(d.xpos[i] - dr.xpos[b]).max() < 1e-9 and np.abs(d.xmat[i] - dr.xmat[b]).max() < 1e-9
+        tool = dr.xpos[ref.body("link3").id] + dr.xmat[ref.body("link3").id].reshape(3, 3) @ [0, 0, 0.15]
+        assert np.abs(d.site("ee_site").xpos - tool).max() < 1e-9
+    assert np.array_equal(m.body_mass, ref.body_mass) and np.abs(m.body_inertia - ref.body_inertia).max() < 1e-12
+    assert [m.actuator(a).name for a in range(m.nu)] == ["j1_act", "j2_act", "j3_act"] and m.nkey == 1
+
+
+def test_primitives_pass_model_checks_and_hull_keeps_meshes(arm, tmp_path):
+    out, m = _import(arm, tmp_path)
+    report = run_checks(out)
+    assert report.n_errors == 0, [c.message for c in report.checks if not c.passed]
+    colliding = [int(m.geom_type[g]) for g in range(m.ngeom) if m.geom_contype[g]]
+    assert colliding and int(mujoco.mjtGeom.mjGEOM_MESH) not in colliding
+    assert m.ngeom - len(colliding) == 4  # the visual meshes stay, without contacts
+    _, m = _import(arm, tmp_path, "hull")
+    assert {int(m.geom_type[g]) for g in range(m.ngeom) if m.geom_contype[g]} == {int(mujoco.mjtGeom.mjGEOM_MESH)}

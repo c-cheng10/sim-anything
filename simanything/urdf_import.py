@@ -19,6 +19,8 @@ from .spec import mat_to_quat
 MUJOCO_MESH_SUFFIXES = (".stl", ".obj")  # what MuJoCo 3.3 loads; anything else is converted to .stl
 BOX_PREFERENCE = 0.8  # a box replaces the capsule only when its volume is below this share of the capsule's
 MIN_SIZE = 1e-4       # m; keeps flat or point-like meshes valid primitives
+COLLISION_MODES = ("primitives", "hull")
+EE_SITE = "ee_site"
 
 
 def _prepare_urdf(urdf: Path, mesh_dir: Path, package_root: Optional[Path]) -> str:
@@ -135,3 +137,74 @@ def _full_precision(xml: str, model, meshdir: str) -> str:
         el.attrib.update(pos=f(s.pos), quat=f(s.quat))
     return ET.tostring(root, encoding="unicode")
 
+
+def import_urdf(urdf: str | Path, out: str | Path, collision: str = "primitives", ee_link: Optional[str] = None,
+                package_root: str | Path | None = None) -> Path:
+    """Import ``urdf`` with MuJoCo's URDF importer and write a checked MJCF to ``out`` (meshes go to
+    ``<out stem>_meshes/`` next to it). ``collision``: "primitives" (one capsule or box per link) or "hull"
+    (MuJoCo's convex hull of each collision mesh). The EE site goes at ``ee_link``'s origin (default: the
+    last link)."""
+    import mujoco
+
+    from .builder import servo_gains
+    from .check.context import HINGE, SLIDE
+
+    if collision not in COLLISION_MODES:
+        raise ValueError(f"unknown collision mode '{collision}'; use one of {', '.join(COLLISION_MODES)}")
+    urdf, out = Path(urdf), Path(out)
+    mesh_dir = out.parent / f"{out.stem}_meshes"
+    spec = mujoco.MjSpec.from_string(_prepare_urdf(urdf, mesh_dir, None if package_root is None else Path(package_root)))
+    links = [b.name for b in spec.bodies[1:]]
+    ee = ee_link or links[-1]  # shortcut: the last link in tree order; branched trees need --ee-link
+    if ee not in links:
+        raise ValueError(f"EE link '{ee}' is not a link of {urdf.name}; links: {', '.join(links)}")
+    spec.body(ee).add_site(name=EE_SITE)
+    spec.compiler.fusestatic = True  # links on fixed joints merge into their parent; the EE site moves with them
+    model = spec.compile()
+    # after fusing, the MjSpec's own state is stale (MuJoCo 3.3): continue from the fused MJCF
+    spec = mujoco.MjSpec.from_string(_full_precision(spec.to_xml(), model, str(mesh_dir.resolve())))
+    model = spec.compile()
+    bad = [model.joint(j).name for j in range(model.njnt) if model.jnt_type[j] not in (HINGE, SLIDE)]
+    if bad:
+        raise ValueError(f"unsupported joint(s) {', '.join(bad)}: only revolute, continuous and prismatic joints "
+                         "of a fixed-base arm are supported")
+
+    if collision != "hull":
+        for b in range(model.nbody):
+            verts, faces = _collision_mesh(model, b)
+            if verts is None:
+                continue
+            sb = spec.body(model.body(b).name)
+            for g in sb.geoms:
+                if _is_collision_mesh(g.type, g.contype, g.conaffinity):
+                    g.delete()
+            sb.add_geom(**fit_primitive(verts))
+
+    # One position servo per joint with the builder's gains, holding home = zero clipped into the limits
+    home = [float(np.clip(0.0, *model.jnt_range[j])) if model.jnt_limited[j] else 0.0 for j in range(model.njnt)]
+    efforts = [float(model.jnt_actfrcrange[j, 1]) if model.jnt_actfrclimited[j] and model.jnt_actfrcrange[j, 1] > 0
+               else None for j in range(model.njnt)]
+    armature = [float(a) for a in model.dof_armature]
+    kp, kv = servo_gains(model, home, ["hinge" if t == HINGE else "slide" for t in model.jnt_type], efforts, armature)
+    for j in range(model.njnt):
+        name = model.joint(j).name
+        spec.joint(name).armature = armature[j]
+        act = spec.add_actuator(name=f"{name}_act", target=name, trntype=mujoco.mjtTrn.mjTRN_JOINT,
+                                biastype=mujoco.mjtBias.mjBIAS_AFFINE)
+        act.gainprm[0], act.biasprm[1], act.biasprm[2] = kp[j], -kp[j], -kv[j]  # what <position kp kv> sets
+        if model.jnt_limited[j]:
+            act.ctrlrange = model.jnt_range[j]
+        if efforts[j] is not None:
+            act.forcerange = [-efforts[j], efforts[j]]
+    spec.add_key(name="home", qpos=home, ctrl=home)
+    # MuJoCo filters parent/child contacts except when the parent is welded to the world (the fused base)
+    for b in range(1, model.nbody):
+        p = model.body_parentid[b]
+        if model.body_weldid[p] == 0 and model.body_jntnum[b]:
+            spec.add_exclude(bodyname1=model.body(p).name, bodyname2=model.body(b).name)
+    spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+
+    model = spec.compile()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(_full_precision(spec.to_xml(), model, mesh_dir.name), encoding="utf-8")
+    return out
