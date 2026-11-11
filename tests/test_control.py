@@ -55,3 +55,42 @@ def test_step_tracks_targets(model_path):
     q = arm.set_targets([0.5, -0.4, 0.8, 0.3, -0.6, 0.2])
     arm.step(1000)  # 2 s
     assert np.isclose(arm.data.time, 2.0) and np.abs(arm.data.qpos[arm.qadr] - q).max() < 1e-3
+
+
+def _random_targets(arm, n, seed=0, collision_free=False):
+    """EE poses (pos, quat) from FK of random in-limit configurations."""
+    rng, d, out = np.random.default_rng(seed), mujoco.MjData(arm.model), []
+    lo, hi = np.maximum(arm.lower, -np.pi), np.minimum(arm.upper, np.pi)
+    while len(out) < n:
+        d.qpos[arm.qadr] = rng.uniform(lo, hi)
+        mujoco.mj_forward(arm.model, d)
+        if not (collision_free and d.ncon):
+            out.append(arm._ee(d))
+    return out
+
+
+def test_ik_reaches_random_targets_within_limits(model_path):
+    arm = Arm(model_path)
+    before = arm.data.qpos.copy()
+    for pos, quat in _random_targets(arm, 20):
+        q, perr, rerr = arm.ik(pos)
+        assert perr < 1e-3 and rerr == 0
+        assert np.all(q >= arm.lower) and np.all(q <= arm.upper)
+        q, perr, rerr = arm.ik(pos, quat)
+        assert perr < 1e-3 and rerr < 1e-3
+        assert np.all(q >= arm.lower) and np.all(q <= arm.upper)
+        d = mujoco.MjData(arm.model)  # the returned q really puts the EE there
+        d.qpos[arm.qadr] = q
+        mujoco.mj_kinematics(arm.model, d)
+        assert np.linalg.norm(d.site_xpos[arm.site] - pos) < 1e-3
+    assert np.array_equal(arm.data.qpos, before)  # the live sim is untouched
+
+
+def test_ik_from_given_start(model_path):
+    arm = Arm(model_path)
+    q0 = np.array([0.3, -1.0, 1.2, -0.5, 0.7, 0.1])
+    d = mujoco.MjData(arm.model)
+    d.qpos[arm.qadr] = q0
+    mujoco.mj_kinematics(arm.model, d)
+    q, perr, rerr = arm.ik(*arm._ee(d), q0=q0)
+    assert np.allclose(q, q0) and perr < 1e-9 and rerr < 1e-9

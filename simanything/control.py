@@ -7,6 +7,9 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+MAX_STEP = 0.3  # rad (or m) per DLS iteration; larger steps overshoot into local minima more often
+RESTARTS = 20  # random restarts after a failed start; 200 random toy_6dof_dh poses needed at most 10
+
 
 class Arm:
     """A serial arm in a built MJCF model, driven through its position actuators."""
@@ -66,3 +69,61 @@ class Arm:
     def step(self, n: int = 1) -> None:
         """Advance the simulation ``n`` timesteps."""
         mujoco.mj_step(self.model, self.data, nstep=n)
+
+    def ik(self, target_pos, target_quat=None, q0=None, tol: float = 1e-6, max_iter: int = 200,
+           damping: float = 1e-3) -> tuple[np.ndarray, float, float]:
+        """Damped least-squares IK for the EE site, within the joint limits.
+
+        Starts from ``q0`` (default: the current joint positions) on a scratch MjData, so the live
+        simulation is untouched. A start that ends in a local minimum or in a self-collision is retried
+        from seeded random in-limit configurations. Position-only when ``target_quat`` (w, x, y, z) is None.
+        Returns the best ``(q, position error [m], orientation error [rad])``.
+        """
+        d = mujoco.MjData(self.model)
+        d.qpos[:] = self.data.qpos
+        q = self.data.qpos[self.qadr] if q0 is None else np.asarray(q0, dtype=float)
+        rng = np.random.default_rng(0)
+        lo, hi = np.maximum(self.lower, -np.pi), np.minimum(self.upper, np.pi)
+        best, best_key = None, None
+        for _ in range(1 + RESTARTS):
+            res = self._dls(d, q, np.asarray(target_pos, dtype=float), target_quat, tol, max_iter, damping)
+            mujoco.mj_fwdPosition(self.model, d)  # contacts at the solution
+            solved = res[1] < tol and res[2] < tol
+            key = (not solved, d.ncon > 0, res[1] + res[2])
+            if best is None or key < best_key:
+                best, best_key = res, key
+            if solved and d.ncon == 0:
+                break
+            q = rng.uniform(lo, hi)
+        return best
+
+    def _dls(self, d, q, target_pos, target_quat, tol, max_iter, damping):
+        """One DLS run from ``q``; leaves ``d`` at the returned configuration."""
+        m = self.model
+        q = np.clip(q, self.lower, self.upper)
+        jacp, jacr = np.zeros((3, m.nv)), np.zeros((3, m.nv))
+        for it in range(max_iter + 1):
+            d.qpos[self.qadr] = q
+            mujoco.mj_kinematics(m, d)
+            mujoco.mj_comPos(m, d)  # mj_jacSite needs the com-based quantities
+            pos, quat = self._ee(d)
+            err = target_pos - pos
+            err_rot = np.zeros(3) if target_quat is None else _rot_err(quat, target_quat)
+            if (np.linalg.norm(err) < tol and np.linalg.norm(err_rot) < tol) or it == max_iter:
+                break
+            mujoco.mj_jacSite(m, d, jacp, jacr, self.site)
+            J, e = (jacp, err) if target_quat is None else (np.vstack([jacp, jacr]), np.concatenate([err, err_rot]))
+            J = J[:, self.dadr]
+            dq = J.T @ np.linalg.solve(J @ J.T + damping**2 * np.eye(len(e)), e)
+            dq *= min(1.0, MAX_STEP / max(np.abs(dq).max(), 1e-12))  # small steps keep DLS out of wild jumps
+            q = np.clip(q + dq, self.lower, self.upper)
+        return q, float(np.linalg.norm(err)), float(np.linalg.norm(err_rot))
+
+
+def _rot_err(quat: np.ndarray, target_quat) -> np.ndarray:
+    """World-frame rotation vector taking orientation ``quat`` to ``target_quat`` (both w, x, y, z)."""
+    neg, dq, vel, t = np.empty(4), np.empty(4), np.empty(3), np.asarray(target_quat, dtype=float)
+    mujoco.mju_negQuat(neg, quat)
+    mujoco.mju_mulQuat(dq, t / np.linalg.norm(t), neg)
+    mujoco.mju_quat2Vel(vel, dq, 1.0)
+    return vel
